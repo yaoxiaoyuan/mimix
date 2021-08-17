@@ -8,7 +8,7 @@ import os
 import random
 import numpy as np
 import torch
-from tokenizer import build_tokenizer
+from tokenization import build_tokenizer
 from utils import real_path, load_vocab
 
 class Dataset():
@@ -141,8 +141,8 @@ class S2SDataset(Dataset):
         except:
             return []
         
-        x = self.src_tokenizer.tokenize(src)
-        y = self.trg_tokenizer.tokenize(trg)
+        x = self.src_tokenizer.tokenize_to_ids(src)
+        y = self.trg_tokenizer.tokenize_to_ids(trg)
 
         x = x[:self.src_max_len]
         y = y[:self.trg_max_len - 1]
@@ -203,7 +203,7 @@ class LMDataset(Dataset):
         """
         trg = line.strip()
 
-        y = self.trg_tokenizer.tokenize(trg)
+        y = self.trg_tokenizer.tokenize_to_ids(trg)
             
         y = y[:self.trg_max_len - 1]
         y = [self.BOS] + y + [self.EOS]
@@ -267,7 +267,7 @@ class ClassifyDataset(Dataset):
         except:
             return []
         
-        x = self.src_tokenizer.tokenize(src)
+        x = self.src_tokenizer.tokenize_to_ids(src)
 
         x = [self.CLS] + x[:self.src_max_len - 1]
         if self.label2id is not None:
@@ -332,7 +332,7 @@ class SequenceLabelingDataset(Dataset):
         except:
             return []
         
-        x = self.src_tokenizer.tokenize(src)
+        x = self.src_tokenizer.tokenize_to_ids(src)
 
         x = x[:self.src_max_len]
         y = [self.label2id[s] for s in label.split()][:self.src_max_len]
@@ -397,7 +397,7 @@ class BiLMDataset(Dataset):
         """
         trg = line.strip()
         
-        y = self.trg_tokenizer.tokenize(trg)
+        y = self.trg_tokenizer.tokenize_to_ids(trg)
         
         return y,trg
 
@@ -419,12 +419,12 @@ def build_dataset(train_config, model_config, dataset="train"):
         
         src_tokenizer = build_tokenizer(
                 tokenizer=model_config["src_tokenizer"],
-                vocab=model_config["src_vocab"], 
+                vocab_file=model_config["src_vocab"], 
                 pre_tokenized=model_config.get("pre_tokenized",False),  
                 pre_vectorized=model_config.get("pre_vectorized",False))
         trg_tokenizer = build_tokenizer(
                 tokenizer=model_config["trg_tokenizer"],
-                vocab=model_config["trg_vocab"], 
+                vocab_file=model_config["trg_vocab"], 
                 pre_tokenized=model_config.get("pre_tokenized",False),  
                 pre_vectorized=model_config.get("pre_vectorized",False))
         
@@ -441,7 +441,7 @@ def build_dataset(train_config, model_config, dataset="train"):
     elif model_config["task"] == "lm":
         trg_tokenizer = build_tokenizer(
                 tokenizer=model_config["trg_tokenizer"],
-                vocab=model_config["trg_vocab"], 
+                vocab_file=model_config["trg_vocab"], 
                 pre_tokenized=model_config.get("pre_tokenized",False),  
                 pre_vectorized=model_config.get("pre_vectorized",False))
         
@@ -456,7 +456,7 @@ def build_dataset(train_config, model_config, dataset="train"):
     elif model_config["task"] == "classify":
         src_tokenizer = build_tokenizer(
                 tokenizer=model_config["src_tokenizer"],
-                vocab=model_config["src_vocab"], 
+                vocab_file=model_config["src_vocab"], 
                 pre_tokenized=model_config.get("pre_tokenized",False),  
                 pre_vectorized=model_config.get("pre_vectorized",False))
         
@@ -477,7 +477,7 @@ def build_dataset(train_config, model_config, dataset="train"):
     elif model_config["task"] == "bi-lm":
         trg_tokenizer = build_tokenizer(
                 tokenizer=model_config["trg_tokenizer"],
-                vocab=model_config["trg_vocab"], 
+                vocab_file=model_config["trg_vocab"], 
                 pre_tokenized=model_config.get("pre_tokenized",False),  
                 pre_vectorized=model_config.get("pre_vectorized",False))
         
@@ -493,7 +493,7 @@ def build_dataset(train_config, model_config, dataset="train"):
     elif model_config["task"] == "sequence_labeling":
         src_tokenizer = build_tokenizer(
                 tokenizer=model_config["src_tokenizer"],
-                vocab=model_config["src_vocab"], 
+                vocab_file=model_config["src_vocab"], 
                 pre_tokenized=model_config.get("pre_tokenized",False),  
                 pre_vectorized=model_config.get("pre_vectorized",False))
 

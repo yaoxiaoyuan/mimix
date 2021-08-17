@@ -859,10 +859,7 @@ class Embedding(nn.Module):
     def get_embedding(self):
         """
         """
-        W = self.W
-        if self.scale_embedding == True:
-            W = W * np.sqrt(self.embedding_size)
-        return W
+        return self.W
 
 
 class FactorizedEmbedding(nn.Module):
@@ -1002,7 +999,7 @@ class LayerNorm(nn.Module):
     def forward(self, x):
         """
         """
-        eps = 1e-6
+        eps = 1e-12
         mean = x.mean(dim=-1, keepdim=True)
         std = x.std(dim=-1, unbiased=False, keepdim=True)
         norm = self.alpha * (x - mean) / (std + eps) + self.bias
@@ -1015,7 +1012,7 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None):
     d = query.size(-1)
     #B x n_heads x L_q x L_k
     scores = torch.matmul(query, key.transpose(-2, -1)) / np.sqrt(d)
-
+    
     if attn_mask is not None:
         attn_mask = attn_mask.bool()
         scores = scores.masked_fill(attn_mask, -1e9)
@@ -1492,7 +1489,8 @@ class Decoder(nn.Module):
         self.share_emb_out_proj = share_emb_out_proj
         if share_emb_out_proj == False: 
             self.W = nn.Parameter(torch.Tensor(trg_vocab_size, d_model))
-
+        self.b = nn.Parameter(torch.Tensor(trg_vocab_size))
+        
         self.reset_parameters()
     
     
@@ -1502,6 +1500,7 @@ class Decoder(nn.Module):
         stdv = 1.0 / np.sqrt(self.d_model)
         if self.share_emb_out_proj == False: 
             self.W.data.uniform_(-stdv, stdv)
+        self.b.data.zero_()
             
             
     def forward(self, y, enc_output, self_attn_mask, dec_enc_attn_mask, 
@@ -1542,7 +1541,7 @@ class Decoder(nn.Module):
         else:
             W = trg_embedding.get_embedding()
             
-        logits = F.linear(dec_output, W)
+        logits = F.linear(dec_output, W) + self.b
         
         outputs = [logits]
         if return_states == True:
@@ -1612,7 +1611,7 @@ class Decoder(nn.Module):
         else:
             W = trg_embedding.get_embedding()
             
-        logits = F.linear(dec_output, W)
+        logits = F.linear(dec_output, W) + self.b
         
         logits = logits.view(-1, self.trg_vocab_size)
         
@@ -1741,6 +1740,8 @@ class LMDecoder(nn.Module):
         if share_emb_out_proj == False: 
             self.W = nn.Parameter(torch.Tensor(trg_vocab_size, d_model))
         
+        self.b = nn.Parameter(torch.Tensor(trg_vocab_size))
+        
         self.reset_parameters()
     
     
@@ -1750,8 +1751,9 @@ class LMDecoder(nn.Module):
         stdv = 1.0 / np.sqrt(self.d_model)
         if self.share_emb_out_proj == False: 
             self.W.data.uniform_(-stdv, stdv)
+        self.b.data.zero_()
             
-            
+        
     def forward(self, y, self_attn_mask, return_states=False):
         """
         """
@@ -1781,7 +1783,7 @@ class LMDecoder(nn.Module):
             W = self.W
         else:
             W = self.trg_embedding.get_embedding()
-        logits = F.linear(dec_output, W)
+        logits = F.linear(dec_output, W) + self.b
         
         outputs = [logits]
         if return_states == True:
@@ -1835,7 +1837,7 @@ class LMDecoder(nn.Module):
         else:
             W = self.trg_embedding.get_embedding()
         
-        logits = F.linear(dec_output, W)
+        logits = F.linear(dec_output, W) + self.b
         
         logits = logits.view(-1, self.trg_vocab_size)
         

@@ -6,7 +6,7 @@ Created on Thu Aug 29 10:34:48 2019
 """
 import random
 import torch
-from tokenizer import build_tokenizer
+from tokenization import build_tokenizer
 from decoding import beam_search, sample
 from decoding import beam_search_with_constraints, sample_with_constraints
 from decoding import lm_sample, lm_sample_with_constraints
@@ -98,7 +98,7 @@ class EncDecGenerator():
                       add_eos=False):
         """
         """        
-        src_ids = list(map(self.src_tokenizer.tokenize, src_list))
+        src_ids = list(map(self.src_tokenizer.tokenize_to_ids, src_list))
         x = cut_and_pad_seq_list(src_ids,
                                  self.src_max_len, 
                                  self.model.PAD,
@@ -106,7 +106,7 @@ class EncDecGenerator():
         
         y = None
         if trg_list is not None:
-            prefix_ids = list(map(self.trg_tokenizer.tokenize, trg_list))
+            prefix_ids = list(map(self.trg_tokenizer.tokenize_to_ids, trg_list))
             if add_bos == True:
                 prefix_ids = [[self.model.BOS] + seq for seq in prefix_ids]
             if add_eos == True:
@@ -132,7 +132,8 @@ class EncDecGenerator():
     
     def predict(self, src_list, prefix_list=None):
         """
-        """       
+        """    
+        self.model.eval()
         x,y = self.encode_inputs(src_list, prefix_list)
         
         with torch.no_grad():
@@ -267,7 +268,7 @@ class EncDecGenerator():
         for i,src in enumerate(src_list):
             tmp = []
             for j in range(i*beam_size, (i+1)*beam_size):
-                trg = self.trg_tokenizer.detokenize(hypothesis[j])
+                trg = self.trg_tokenizer.detokenize_ids(hypothesis[j])
                 
                 trg = trg.replace(self.pad_tok, "").strip()
                 if trg.endswith(self.eos_tok):
@@ -302,7 +303,7 @@ class LMGenerator():
         
         self.trg_tokenizer = build_tokenizer(
                 tokenizer=config["trg_tokenizer"],
-                vocab=config["trg_vocab"], 
+                vocab_file=config["trg_vocab"], 
                 pre_tokenized=config.get("pre_tokenized", False),  
                 pre_vectorized=config.get("pre_vectorized", False))
         self.use_cuda = config.get("use_cuda", False)
@@ -342,7 +343,7 @@ class LMGenerator():
     def encode_inputs(self, trg_list):
         """
         """
-        trg_ids = list(map(self.trg_tokenizer.tokenize, trg_list))
+        trg_ids = list(map(self.trg_tokenizer.tokenize_to_ids, trg_list))
         y = cut_and_pad_seq_list(trg_ids,
                                  self.trg_max_len, 
                                  self.model.PAD,
@@ -411,7 +412,7 @@ class LMGenerator():
 
         detokenize_res = []
         for hyp,score in zip(hypothesis, scores):
-            trg = self.trg_tokenizer.detokenize(hyp)
+            trg = self.trg_tokenizer.detokenize_ids(hyp)
             
             trg = trg.replace(self.pad_tok, "").strip()
             if trg.endswith(self.eos_tok):
@@ -458,7 +459,7 @@ class BiLMGenerator():
     def encode_inputs(self, trg_list):
         """
         """        
-        trg_ids = list(map(self.trg_tokenizer.tokenize, trg_list))
+        trg_ids = list(map(self.trg_tokenizer.tokenize_to_ids, trg_list))
         y = cut_and_pad_seq_list(trg_ids,
                                  self.trg_max_len, 
                                  self.model.PAD,
@@ -503,7 +504,7 @@ class BiLMGenerator():
                     idx += 1
                 else:
                     _trg.append(ww)
-            trg = self.trg_tokenizer.detokenize(_trg)
+            trg = self.trg_tokenizer.detokenize_ids(_trg)
 
             res.append([trg, _trg])
         
@@ -545,7 +546,7 @@ class TextClassifier():
     def encode_inputs(self, src_list):
         """
         """        
-        src_ids = list(map(self.src_tokenizer.tokenize, src_list))
+        src_ids = list(map(self.src_tokenizer.tokenize_to_ids, src_list))
         x = cut_and_pad_seq_list(src_ids,
                                  self.src_max_len-1, 
                                  self.model.PAD,
@@ -620,7 +621,7 @@ class SequenceLabeler():
     def encode_inputs(self, src_list):
         """
         """        
-        src_ids = list(map(self.src_tokenizer.tokenize, src_list))
+        src_ids = list(map(self.src_tokenizer.tokenize_to_ids, src_list))
         x = cut_and_pad_seq_list(src_ids,
                                  self.src_max_len, 
                                  self.model.PAD,
@@ -644,13 +645,13 @@ class SequenceLabeler():
             if self.model.use_crf == True:
                 labels = crf_model_decoding(self.model, x)
             else:
-                labels = self.model([x,None])[0].argmax(-1)
+                labels = self.model.compute_logits([x])
                 
         labels = labels.cpu().numpy()
 
         res = []
         for i,src in enumerate(src_list):
-            tokens = self.src_tokenizer.tokenize_str2list(src)
+            tokens = self.src_tokenizer.tokenize(src)
             _labels = [self.id2label[label] for label in labels[i]]
             res.append([src_list[i], list(zip(tokens, _labels))])
         

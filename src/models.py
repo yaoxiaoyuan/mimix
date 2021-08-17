@@ -12,6 +12,7 @@ from layers import Embedding, GRU,LSTM
 from layers import Encoder,Decoder,LMDecoder
 from layers import RNNEncoder,AttentionDecoder
 from layers import CRF
+from pretrain import Bert
 
 class TransformerClassifer(nn.Module):
     """
@@ -29,7 +30,7 @@ class TransformerClassifer(nn.Module):
                  dropout, 
                  n_class,
                  embedding_size=None, 
-                 share_layer_config=False, 
+                 share_layer_params=False, 
                  n_share_across_layers=0,
                  use_pre_norm=True, 
                  activation="relu", 
@@ -63,13 +64,16 @@ class TransformerClassifer(nn.Module):
                                n_enc_layers, 
                                dropout,
                                embedding_size,
-                               share_layer_config, 
+                               share_layer_params, 
                                n_share_across_layers,
                                use_pre_norm,
                                activation, 
                                scale_embedding)
         
+        self.W_pool = nn.Parameter(torch.Tensor(d_model, d_model))
+        self.b_pool = nn.Parameter(torch.Tensor(d_model))
         self.W = nn.Parameter(torch.Tensor(d_model, n_class))
+        self.b = nn.Parameter(torch.Tensor(n_class))
         
         self.reset_parameters()
     
@@ -78,9 +82,10 @@ class TransformerClassifer(nn.Module):
         """
         """
         stdv = 1.0 / np.sqrt(self.d_model)
-        for weight in [self.W]:
+        for weight in [self.W_pool, self.W]:
             weight.data.uniform_(-stdv, stdv)
-    
+        for weight in [self.b_pool, self.b]:
+            weight.data.zero()
     
     def get_attn_mask(self, seq_query, seq_key):
         """
@@ -103,9 +108,11 @@ class TransformerClassifer(nn.Module):
                                    enc_self_attn_mask, 
                                    return_states=return_states)
 
-        enc_output = enc_outputs[0][:,0,:]
+        enc_output = enc_outputs[-1][:,0,:]
 
-        logits = torch.matmul(enc_output, self.W)
+        enc_output = torch.tanh(F.linear(enc_output, self.W_pool) + self.b_pool)
+        
+        logits = torch.matmul(enc_output, self.W) + self.b
         
         outputs = [logits]
         
@@ -131,7 +138,7 @@ class TransformerCRF(nn.Module):
                  dropout, 
                  n_labels,
                  embedding_size=None, 
-                 share_layer_config=False,
+                 share_layer_params=False,
                  n_share_across_layers=0,
                  use_pre_norm=True, 
                  activation="relu", 
@@ -167,7 +174,7 @@ class TransformerCRF(nn.Module):
                                n_enc_layers,
                                dropout,
                                embedding_size,
-                               share_layer_config, 
+                               share_layer_params, 
                                n_share_across_layers,
                                use_pre_norm,
                                activation, 
@@ -247,7 +254,7 @@ class TransformerSeqCls(nn.Module):
                  dropout, 
                  n_labels,
                  embedding_size=None, 
-                 share_layer_config=False,
+                 share_layer_params=False,
                  n_share_across_layers=0,
                  use_pre_norm=True, 
                  activation="relu", 
@@ -283,7 +290,7 @@ class TransformerSeqCls(nn.Module):
                                n_enc_layers,
                                dropout,
                                embedding_size,
-                               share_layer_config, 
+                               share_layer_params, 
                                n_share_across_layers,
                                use_pre_norm,
                                activation, 
@@ -314,7 +321,7 @@ class TransformerSeqCls(nn.Module):
     def forward(self, inputs, return_states=False):
         """
         """
-        x,y = inputs[:2]
+        x = inputs[0]
         enc_self_attn_mask = self.get_attn_mask(x, x)
 
         enc_outputs = self.encoder(x, 
@@ -329,6 +336,12 @@ class TransformerSeqCls(nn.Module):
             outputs = outputs + enc_outputs 
             
         return outputs
+    
+    
+    def compute_logits(self, inputs):
+        """
+        """
+        return self.forward(inputs)[0].argmax(-1)
 
 
 class CnnTextClassifier(nn.Module):
@@ -758,7 +771,7 @@ class Transformer(nn.Module):
                  share_src_trg_emb=False, 
                  share_emb_out_proj=False, 
                  embedding_size=None, 
-                 share_layer_config=False, 
+                 share_layer_params=False, 
                  n_share_across_layers=1,
                  use_pre_norm=True, 
                  activation="relu", 
@@ -801,7 +814,7 @@ class Transformer(nn.Module):
                                n_enc_layers,
                                dropout, 
                                embedding_size,
-                               share_layer_config, 
+                               share_layer_params, 
                                n_share_across_layers,
                                use_pre_norm, 
                                activation, 
@@ -817,7 +830,7 @@ class Transformer(nn.Module):
                                n_dec_layers,
                                dropout,
                                embedding_size,
-                               share_layer_config, 
+                               share_layer_params, 
                                n_share_across_layers,
                                share_src_trg_emb,
                                share_emb_out_proj,
@@ -960,7 +973,7 @@ class TransformerLM(nn.Module):
                  dropout=0, 
                  share_emb_out_proj=False, 
                  embedding_size=None, 
-                 share_layer_config=False, 
+                 share_layer_params=False, 
                  n_share_across_layers=1,
                  use_pre_norm=True, 
                  activation="relu", 
@@ -1001,7 +1014,7 @@ class TransformerLM(nn.Module):
                                  dropout,
                                  share_emb_out_proj, 
                                  embedding_size, 
-                                 share_layer_config,
+                                 share_layer_params,
                                  n_share_across_layers,
                                  use_pre_norm, 
                                  activation, 
@@ -1080,7 +1093,7 @@ class TransformerBiLM(nn.Module):
                  dropout, 
                  share_emb_out_proj=False, 
                  embedding_size=None, 
-                 share_layer_config=False, 
+                 share_layer_params=False, 
                  n_share_across_layers=0,
                  use_pre_norm=True,
                  activation="relu", 
@@ -1113,7 +1126,7 @@ class TransformerBiLM(nn.Module):
                                n_enc_layers, 
                                dropout,
                                embedding_size,
-                               share_layer_config, 
+                               share_layer_params, 
                                n_share_across_layers,
                                use_pre_norm,
                                activation, 
@@ -1230,7 +1243,7 @@ def build_transformer_model(config):
     share_src_trg_emb = config["share_src_trg_emb"]
     share_emb_out_proj = config.get("share_emb_out_proj", False)
     embedding_size = config.get("embedding_size", None)
-    share_layer_config = config.get("share_layer_config", False)
+    share_layer_params = config.get("share_layer_params", False)
     n_share_across_layers = config.get("n_share_across_layers", 1)
     use_pre_norm = config.get("use_pre_norm", True)
     activation = config.get("activation", "relu")
@@ -1252,7 +1265,7 @@ def build_transformer_model(config):
                               share_src_trg_emb, 
                               share_emb_out_proj,
                               embedding_size,
-                              share_layer_config, 
+                              share_layer_params, 
                               n_share_across_layers,
                               use_pre_norm,
                               activation,
@@ -1287,7 +1300,7 @@ def build_transformer_lm_model(config):
     n_dec_layers = config["n_dec_layers"]
     dropout = config.get("dropout", 0)
     share_emb_out_proj = config.get("share_emb_out_proj", False)
-    share_layer_config = config.get("share_layer_config", False)
+    share_layer_params = config.get("share_layer_params", False)
     embedding_size = config.get("embedding_size", None)
     n_share_across_layers = config.get("n_share_across_layers", 1)
     use_pre_norm = config.get("use_pre_norm", True)
@@ -1306,7 +1319,7 @@ def build_transformer_lm_model(config):
                                 dropout, 
                                 share_emb_out_proj,
                                 embedding_size,
-                                share_layer_config,
+                                share_layer_params,
                                 n_share_across_layers,
                                 use_pre_norm,
                                 activation,
@@ -1368,7 +1381,7 @@ def build_transformer_bi_lm_model(config):
     n_enc_layers = config["n_enc_layers"]
     dropout = config.get("dropout", 0)
     share_emb_out_proj = config.get("share_emb_out_proj", False)
-    share_layer_config = config.get("share_layer_config", False)
+    share_layer_params = config.get("share_layer_params", False)
     embedding_size = config.get("embedding_size", None)
     n_share_across_layers = config.get("n_share_across_layers", 1)
     use_pre_norm = config.get("use_pre_norm", True)
@@ -1387,7 +1400,7 @@ def build_transformer_bi_lm_model(config):
                                   dropout, 
                                   share_emb_out_proj,
                                   embedding_size,
-                                  share_layer_config,
+                                  share_layer_params,
                                   n_share_across_layers,
                                   use_pre_norm,
                                   activation,
@@ -1396,11 +1409,57 @@ def build_transformer_bi_lm_model(config):
     return transformer
 
 
+def build_bert_model(config):
+    """
+    """
+    src_vocab_size = config["src_vocab_size"]
+    src_max_len = config["src_max_len"]
+    n_heads = config["n_heads"]
+    d_model = config["d_model"]
+    d_ff = config["d_ff"]
+    d_qk = config.get("d_qk", d_model//n_heads) 
+    d_v = config.get("d_v", d_model//n_heads) 
+    n_enc_layers = config["n_enc_layers"]
+    dropout = config.get("dropout", 0)
+    n_types = config.get("n_types", 2)
+    share_emb_out_proj = config.get("share_emb_out_proj", False)
+    share_layer_params = config.get("share_layer_params", False)
+    embedding_size = config.get("embedding_size", None)
+    n_share_across_layers = config.get("n_share_across_layers", 1)
+    use_pre_norm = config.get("use_pre_norm", False)
+    activation = config.get("activation", "gelu")
+    
+    symbol2id = {}
+    bert = Bert(symbol2id, 
+                src_vocab_size, 
+                src_max_len, 
+                n_heads, 
+                d_model, 
+                d_ff, 
+                d_qk,
+                d_v, 
+                n_enc_layers,
+                n_types,
+                dropout, 
+                embedding_size=embedding_size, 
+                share_layer_params=share_layer_params, 
+                n_share_across_layers=n_share_across_layers,
+                use_pre_norm=use_pre_norm, 
+                activation=activation,
+                output_mlm=True,
+                output_cls=False,
+                share_emb_out_proj=share_emb_out_proj)
+
+    return bert
+
+
 def build_bi_lm_model(config):
     """
     """
     if config["model"] == "transformer":
         model = build_transformer_bi_lm_model(config)
+    elif config["model"] == "bert":
+        model = build_bert_model(config)
     else:
         raise ValueError("model not correct!")
         
@@ -1420,7 +1479,7 @@ def build_transformer_classify_model(config):
     n_enc_layers = config["n_enc_layers"]
     dropout = config.get("dropout", 0)
     n_class = config["n_class"]
-    share_layer_config = config.get("share_layer_config", False)
+    share_layer_params = config.get("share_layer_params", False)
     n_share_across_layers = config.get("n_share_across_layers", 1)
     embedding_size = config.get("embedding_size", None)
     use_pre_norm = config.get("use_pre_norm", True)
@@ -1439,7 +1498,7 @@ def build_transformer_classify_model(config):
                                        dropout, 
                                        n_class,
                                        embedding_size,
-                                       share_layer_config, 
+                                       share_layer_params, 
                                        n_share_across_layers,
                                        use_pre_norm,
                                        activation,
@@ -1461,7 +1520,7 @@ def build_transformer_crf_model(config):
     n_enc_layers = config["n_enc_layers"]
     dropout = config.get("dropout", 0)
     n_labels = config["n_labels"]
-    share_layer_config = config.get("share_layer_config", False)
+    share_layer_params = config.get("share_layer_params", False)
     n_share_across_layers = config.get("n_share_across_layers", 1)
     embedding_size = config.get("embedding_size", None)
     use_pre_norm = config.get("use_pre_norm", True)
@@ -1480,7 +1539,7 @@ def build_transformer_crf_model(config):
                                  dropout, 
                                  n_labels,
                                  embedding_size,
-                                 share_layer_config, 
+                                 share_layer_params, 
                                  n_share_across_layers,
                                  use_pre_norm,
                                  activation,
@@ -1502,7 +1561,7 @@ def build_transformer_seq_cls_model(config):
     n_enc_layers = config["n_enc_layers"]
     dropout = config.get("dropout", 0)
     n_labels = config["n_labels"]
-    share_layer_config = config.get("share_layer_config", False)
+    share_layer_params = config.get("share_layer_params", False)
     n_share_across_layers = config.get("n_share_across_layers", 1)
     embedding_size = config.get("embedding_size", None)
     use_pre_norm = config.get("use_pre_norm", True)
@@ -1521,7 +1580,7 @@ def build_transformer_seq_cls_model(config):
                                     dropout, 
                                     n_labels,
                                     embedding_size,
-                                    share_layer_config, 
+                                    share_layer_params, 
                                     n_share_across_layers,
                                     use_pre_norm,
                                     activation,

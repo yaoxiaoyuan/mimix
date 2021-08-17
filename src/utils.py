@@ -72,12 +72,12 @@ def load_config(config_file):
     train_config["symbol2id"] = symbol2id
     
     for symbol in symbols:
-        if symbol in train_config:
-            train_config["symbols"][symbol] = train_config[symbol]
+        if symbol + "2tok" in train_config:
+            train_config["symbols"][symbol] = train_config[symbol + "2tok"]
     
     for symbol in symbols:
-        if symbol in train_config:
-            train_config["symbol2id"][symbol] = train_config[symbol]   
+        if symbol + "2id" in train_config:
+            train_config["symbol2id"][symbol] = train_config[symbol + "2id"]   
     
     return train_config
 
@@ -131,9 +131,12 @@ def load_vocab(vocab_path):
     """
     """
     vocab = {}
-    for line in open(vocab_path, "rb"):
+    for i,line in enumerate(open(vocab_path, "rb")):
         line = line.decode("utf-8").strip()
-        word, word_id = line.split("\t")
+        if "\t" in line:
+            word, word_id = line.split("\t")
+        else:
+            word, word_id = line, i
         vocab[word] = int(word_id)
     
     return vocab
@@ -168,6 +171,8 @@ def load_model(config):
     for k,v in model.named_parameters():
         if k in state_dict:
             param_dict[k] = state_dict[k] 
+        else:
+            print("warn: weight %s not found in model file" % k)
 
     model.load_state_dict(param_dict, False)
 

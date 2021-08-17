@@ -7,6 +7,7 @@ Created on Fri Nov 20 17:40:07 2020
 import re
 from abc import abstractmethod
 from utils import load_vocab
+import bert_tokenizer
 
 def is_alphabet(ch):
     """
@@ -73,14 +74,14 @@ def is_space(ch):
 class Tokenizer():
     """
     """
-    def __init__(self, vocab, pre_tokenized, pre_vectorized):
+    def __init__(self, vocab_file, pre_tokenized, pre_vectorized):
         """
         """
         self.vocab = None
         self.id2word = None
         
         if pre_vectorized == False:
-            self.vocab = load_vocab(vocab)
+            self.vocab = load_vocab(vocab_file)
             self.id2word = {self.vocab[w]:w for w in self.vocab}
             
         self.pre_tokenized = pre_tokenized
@@ -88,20 +89,20 @@ class Tokenizer():
     
     
     @abstractmethod
-    def tokenize_str2list(self, text):
+    def tokenize(self, text):
         """
         """
         pass
     
     
     @abstractmethod
-    def detokenize_tokens(self, tokens):
+    def detokenize(self, tokens):
         """
         """
         pass
 
 
-    def convert_word2id(self, tokenized):
+    def convert_tokens_to_ids(self, tokenized):
         """
         """
         unk = self.vocab["_unk_"]
@@ -109,22 +110,22 @@ class Tokenizer():
         return word_ids
 
 
-    def convert_id2word(self, word_ids):
+    def convert_ids_to_tokens(self, word_ids):
         """
         """
         tokens = [self.id2word.get(word, "_unk_") for word in word_ids]
         return tokens
 
 
-    def tokenize(self, text):
+    def tokenize_to_ids(self, text):
         """
         """
         if self.pre_vectorized == False:
             if self.pre_tokenized == False:
-                tokens = self.tokenize_str2list(text)
+                tokens = self.tokenize(text)
             else:
                 tokens = text.split()
-            word_ids = self.convert_word2id(tokens)
+            word_ids = self.convert_tokens_to_ids(tokens)
         else:
             tokens = text.split()
             word_ids = [int(word) for word in tokens]
@@ -132,13 +133,13 @@ class Tokenizer():
         return word_ids
     
     
-    def detokenize(self, word_ids):
+    def detokenize_ids(self, word_ids):
         """
         """
         if self.pre_vectorized == False:
-            tokens = self.convert_id2word(word_ids)
+            tokens = self.convert_ids_to_tokens(word_ids)
             if self.pre_tokenized == False:
-                text = self.detokenize_tokens(tokens)
+                text = self.detokenize(tokens)
             else:
                 text = " ".join(tokens)
         else:
@@ -150,14 +151,14 @@ class Tokenizer():
 class SpaceTokenizer(Tokenizer):
     """
     """
-    def __init__(self, vocab, pre_tokenized, pre_vectorized):
+    def __init__(self, vocab_file, pre_tokenized, pre_vectorized):
         """
         """
         super(SpaceTokenizer,self).__init__(
-                vocab, pre_tokenized, pre_vectorized)
+                vocab_file, pre_tokenized, pre_vectorized)
     
     
-    def tokenize_str2list(self, text):
+    def tokenize(self, text):
         """
         """
         tokens = text.split()
@@ -165,7 +166,7 @@ class SpaceTokenizer(Tokenizer):
         return tokens
     
     
-    def detokenize_tokens(self, tokens):
+    def detokenize(self, tokens):
         """
         """
         text = " ".join(tokens)
@@ -173,14 +174,14 @@ class SpaceTokenizer(Tokenizer):
         return text
     
 
-class WordPieceTokenizer(Tokenizer):
+class MimixTokenizer(Tokenizer):
     """
     """
-    def __init__(self, vocab, pre_tokenized, pre_vectorized):
+    def __init__(self, vocab_file, pre_tokenized, pre_vectorized):
         """
         """
-        super(WordPieceTokenizer,self).__init__(
-                vocab, pre_tokenized, pre_vectorized)
+        super(MimixTokenizer,self).__init__(
+                vocab_file, pre_tokenized, pre_vectorized)
         
         if pre_vectorized == False:
             self.tri_tree = self.build_tri_tree(self.vocab)
@@ -241,7 +242,7 @@ class WordPieceTokenizer(Tokenizer):
         return tokenized
 
     
-    def tokenize_str2list(self, text):
+    def tokenize(self, text):
         """
         """
         text = text.strip().lower()
@@ -333,7 +334,7 @@ class WordPieceTokenizer(Tokenizer):
         return tokens
 
 
-    def detokenize_tokens(self, tokens):
+    def detokenize(self, tokens):
         """
         """
         text = ""
@@ -367,17 +368,38 @@ class WordPieceTokenizer(Tokenizer):
         return text
 
 
+class BertTokenizer(Tokenizer):
+    """
+    """
+    def __init__(self, vocab_file, pre_tokenized, pre_vectorized):
+        """
+        """
+        super(BertTokenizer,self).__init__(
+                vocab_file, pre_tokenized, pre_vectorized)
+        self.tokenizer = bert_tokenizer.FullTokenizer(vocab_file)
+        
+        
+    def tokenize(self, text):
+        """
+        """
+        return self.tokenizer.tokenize(text)
+        
+
 def build_tokenizer(**args):
     """
     """
     if args["tokenizer"] == "default":
-        tokenizer = SpaceTokenizer(vocab=args["vocab"], 
+        tokenizer = SpaceTokenizer(vocab_file=args["vocab_file"], 
                                    pre_tokenized=args["pre_tokenized"], 
                                    pre_vectorized=args["pre_vectorized"])
-    elif args["tokenizer"] == "wordpiece":
-        tokenizer = WordPieceTokenizer(vocab=args["vocab"], 
-                                       pre_tokenized=args["pre_tokenized"], 
-                                       pre_vectorized=args["pre_vectorized"])
+    elif args["tokenizer"] == "mimix":
+        tokenizer = MimixTokenizer(vocab_file=args["vocab_file"], 
+                                   pre_tokenized=args["pre_tokenized"], 
+                                   pre_vectorized=args["pre_vectorized"])
+    elif args["tokenizer"] == "bert":
+        tokenizer = BertTokenizer(vocab_file=args["vocab_file"], 
+                                  pre_tokenized=args["pre_tokenized"], 
+                                  pre_vectorized=args["pre_vectorized"])
     else:
         raise ValueError("tokenizer not correct!")
         
