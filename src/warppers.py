@@ -31,12 +31,12 @@ class EncDecGenerator():
             
         self.src_tokenizer = build_tokenizer(
                 tokenizer=config["src_tokenizer"],
-                vocab=config["src_vocab"], 
+                vocab_file=config["src_vocab"], 
                 pre_tokenized=config.get("pre_tokenized", False),  
                 pre_vectorized=config.get("pre_vectorized", False))
         self.trg_tokenizer = build_tokenizer(
                 tokenizer=config["trg_tokenizer"],
-                vocab=config["trg_vocab"], 
+                vocab_file=config["trg_vocab"], 
                 pre_tokenized=config.get("pre_tokenized", False),  
                 pre_vectorized=config.get("pre_vectorized", False))
         
@@ -445,7 +445,7 @@ class BiLMGenerator():
         
         self.trg_tokenizer = build_tokenizer(
                 tokenizer=config["trg_tokenizer"],
-                vocab=config["trg_vocab"], 
+                vocab_file=config["trg_vocab"], 
                 pre_tokenized=config.get("pre_tokenized", False),  
                 pre_vectorized=config.get("pre_vectorized", False))
         
@@ -533,7 +533,7 @@ class TextClassifier():
         
         self.src_tokenizer = build_tokenizer(
                 tokenizer=config["src_tokenizer"],
-                vocab=config["src_vocab"], 
+                vocab_file=config["src_vocab"], 
                 pre_tokenized=config.get("pre_tokenized", False),  
                 pre_vectorized=config.get("pre_vectorized", False))
 
@@ -608,7 +608,7 @@ class SequenceLabeler():
         
         self.src_tokenizer = build_tokenizer(
                 tokenizer=config["src_tokenizer"],
-                vocab=config["src_vocab"], 
+                vocab_file=config["src_vocab"], 
                 pre_tokenized=config.get("pre_tokenized", False),  
                 pre_vectorized=config.get("pre_vectorized", False))
 
