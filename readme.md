@@ -52,7 +52,7 @@ Training data details are listed below.
 
 1. Download conf and model data: https://pan.baidu.com/s/1aQOGLOjNtabA7YyWOdH1Sg code: eegm
 2. Put conf and model under mimix folder
-3. cd src and run: python interact.py --conf ../conf/poet_base_conf
+3. cd src and run: python interact.py --conf ../conf/shi_base_conf
 
 ### Chinese news summarization Generator
 
