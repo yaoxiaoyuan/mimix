@@ -14,7 +14,8 @@ def init_search(model, batch_size):
     """
     """
     vocab_size = model.trg_vocab_size
-    y = torch.ones(batch_size, 1, dtype=torch.long)
+    y = torch.zeros(batch_size, 1, dtype=torch.long) + model.BOS
+    
     log_probs = torch.zeros(batch_size, 1, dtype=torch.float)
     finished = torch.zeros(batch_size, 1, dtype=torch.uint8)
     hypothesis = torch.ones(batch_size, 0, dtype=torch.long)

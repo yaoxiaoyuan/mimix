@@ -4,6 +4,7 @@ Created on Tue Aug 13 13:29:30 2019
 
 @author: lyn
 """
+import math
 import numpy as np
 import torch
 import torch.nn as nn
@@ -896,6 +897,7 @@ class PositionEmbedding(nn.Module):
     """
     def __init__(self, max_len, d_model, need_train=False):
         super(PositionEmbedding, self).__init__()
+        self.embedding_size = d_model
         self.need_train = need_train
         if need_train == False:
             W = torch.zeros(max_len, d_model)
@@ -911,8 +913,9 @@ class PositionEmbedding(nn.Module):
     def reset_parameters(self):
         """
         """
+        stdv = 1.0 / np.sqrt(self.embedding_size)
         for weight in self.parameters():
-            weight.data.uniform_(-1, 1)
+            weight.data.uniform_(-stdv, stdv)
         
     def forward(self, x, start_pos=0):
         """
@@ -940,6 +943,14 @@ class Dropout(nn.Module):
             scale = (1.0/(1-self.p))
             return x * rand * scale
         return x
+
+
+def gelu_new(x):
+    """
+    Implementation of the GELU activation function currently in Google BERT repo (identical to OpenAI GPT). Also see
+    the Gaussian Error Linear Units paper: https://arxiv.org/abs/1606.08415
+    """
+    return 0.5 * x * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (x + 0.044715 * torch.pow(x, 3.0))))
 
 
 class FeedForward(nn.Module):
@@ -979,6 +990,9 @@ class FeedForward(nn.Module):
         elif self.activation == "gelu":
             x = F.linear(F.gelu(F.linear(x, self.W1) + self.b1), 
                          self.W2) + self.b2
+        elif self.activation == "gelu_new":
+            x = F.linear(gelu_new(F.linear(x, self.W1) + self.b1), 
+                         self.W2) + self.b2
         x = self.dropout(x)
         return x
 
@@ -986,11 +1000,12 @@ class FeedForward(nn.Module):
 class LayerNorm(nn.Module):
     """
     """
-    def __init__(self, d_model):
+    def __init__(self, d_model, eps=1e-5):
         """
         """
         super(LayerNorm, self).__init__()
         
+        self.eps = eps
         self.d_model = d_model
         self.alpha = nn.Parameter(torch.ones(self.d_model))
         self.bias = nn.Parameter(torch.zeros(self.d_model))
@@ -999,14 +1014,14 @@ class LayerNorm(nn.Module):
     def forward(self, x):
         """
         """
-        eps = 1e-12
+        
         mean = x.mean(dim=-1, keepdim=True)
         std = x.std(dim=-1, unbiased=False, keepdim=True)
-        norm = self.alpha * (x - mean) / (std + eps) + self.bias
+        norm = self.alpha * (x - mean) / (std + self.eps) + self.bias
         return norm
 
 
-def scaled_dot_product_attention(query, key, value, attn_mask=None):
+def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout=None):
     """
     """
     d = query.size(-1)
@@ -1018,14 +1033,17 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None):
         scores = scores.masked_fill(attn_mask, -1e9)
     
     attn_scores = F.softmax(scores, dim = -1)
-        
+    
+    if dropout is not None:
+        attn_scores = dropout(attn_scores)
+    
     return torch.matmul(attn_scores, value), attn_scores
 
 
 class MultiHeadAttention(nn.Module):
     """
     """
-    def __init__(self, n_heads, d_model, d_qk, d_v, dropout=0):
+    def __init__(self, n_heads, d_model, d_qk, d_v, dropout=0, attn_dropout=0):
         """
         """
         super(MultiHeadAttention, self).__init__()
@@ -1033,6 +1051,7 @@ class MultiHeadAttention(nn.Module):
         self.n_heads = n_heads
         self.d_model = d_model
         self.dropout = Dropout(dropout)
+        self.attn_dropout = Dropout(attn_dropout)
         self.d_qk = d_qk
         self.d_v = d_v
         self.W_q = nn.Parameter(torch.Tensor(n_heads*d_qk, d_model))
@@ -1061,7 +1080,6 @@ class MultiHeadAttention(nn.Module):
         """
         #B x L x d_model -> B x l x (d*n_heads)
         query = F.linear(query, self.W_q) + self.b_q
-        
         if cached_kv == False:
             key = F.linear(key, self.W_k) + self.b_k
             value = F.linear(value, self.W_v) + self.b_v
@@ -1081,11 +1099,12 @@ class MultiHeadAttention(nn.Module):
         
         if attn_mask is not None:
             attn_mask = attn_mask.unsqueeze(1).repeat(1, self.n_heads, 1, 1)
-        
+
         output, attn_scores = scaled_dot_product_attention(query, 
                                                            key, 
                                                            value, 
-                                                           attn_mask)
+                                                           attn_mask,
+                                                           self.attn_dropout)
         
         #B x n_heads x L x d -> B x L x n_heads x d -> B x L x d_model
         output = output.transpose(1,2)
@@ -1219,8 +1238,17 @@ class CRF(nn.Module):
 class EncoderLayer(nn.Module):
     """
     """
-    def __init__(self, n_heads, d_model, d_ff, d_qk, d_v,
-                 dropout=0, use_pre_norm=True, activation="relu"):
+    def __init__(self, 
+                 n_heads, 
+                 d_model, 
+                 d_ff, 
+                 d_qk, 
+                 d_v,
+                 dropout=0,
+                 attn_dropout=0,
+                 ln_eps=1e-5,
+                 use_pre_norm=True, 
+                 activation="relu"):
         """
         """
         super(EncoderLayer, self).__init__()
@@ -1229,11 +1257,15 @@ class EncoderLayer(nn.Module):
         self.dropout = Dropout(dropout)
         self.d = d_model // n_heads
 
-        self.attention = MultiHeadAttention(n_heads, d_model, d_qk, d_v, 
-                                            dropout)
-        self.norm_1 = LayerNorm(d_model)
+        self.attention = MultiHeadAttention(n_heads,
+                                            d_model, 
+                                            d_qk, 
+                                            d_v, 
+                                            dropout,
+                                            attn_dropout)
+        self.norm_1 = LayerNorm(d_model, ln_eps)
         self.ffn = FeedForward(d_model, d_ff, activation, dropout)
-        self.norm_2 = LayerNorm(d_model)
+        self.norm_2 = LayerNorm(d_model, ln_eps)
         self.use_pre_norm = use_pre_norm
         
         
@@ -1266,10 +1298,30 @@ class EncoderLayer(nn.Module):
 class Encoder(nn.Module):
     """
     """
-    def __init__(self, src_vocab_size, src_max_len, n_heads, d_model, d_ff, 
-                 d_qk, d_v, n_layers, dropout=0, embedding_size=None,
-                 share_layer_params=False, n_share_across_layers=1,
-                 use_pre_norm=True, activation="relu", scale_embedding=False):
+    def __init__(self, 
+                 src_vocab_size, 
+                 src_max_len, 
+                 n_heads, 
+                 d_model,
+                 d_ff, 
+                 d_qk,
+                 d_v, 
+                 n_layers, 
+                 dropout=0, 
+                 attn_dropout=0,
+                 emb_dropout=0,
+                 ln_eps=1e-5,
+                 embedding_size=None,
+                 share_layer_params=False, 
+                 n_share_across_layers=1,
+                 use_pre_norm=True, 
+                 activation="relu", 
+                 scale_embedding=False,
+                 norm_before_pred=False,
+                 norm_after_embedding=False,
+                 pos_need_train=False,
+                 add_segment_embedding=False,
+                 n_types=None):
         """
         """
         super(Encoder, self).__init__()
@@ -1279,6 +1331,8 @@ class Encoder(nn.Module):
         self.share_layer_params = share_layer_params
         self.n_share_across_layers = n_share_across_layers
         self.scale_embedding = scale_embedding
+        self.norm_before_pred = norm_before_pred
+        self.norm_after_embedding = norm_after_embedding
         
         if embedding_size is None:
             self.src_embedding = Embedding(src_vocab_size, 
@@ -1289,38 +1343,73 @@ class Encoder(nn.Module):
                                                      embedding_size,
                                                      d_model)
 
-        self.pos_embedding = PositionEmbedding(src_max_len, d_model)
-        self.dropout = Dropout(dropout)
+        self.pos_embedding = PositionEmbedding(src_max_len, 
+                                               d_model, 
+                                               pos_need_train)
+        
+        self.add_segment_embedding = add_segment_embedding
+        self.n_types = n_types
+        if add_segment_embedding == True:
+            self.type_embedding = Embedding(self.n_types, self.d_model)
+        
+        if self.norm_after_embedding == True:
+            self.norm_emb = LayerNorm(self.d_model)
+        
+        self.emb_dropout = Dropout(emb_dropout)
         
         if share_layer_params == False:
             self.layers = nn.ModuleList([
-                    EncoderLayer(n_heads, d_model, d_ff, d_qk, d_v,
+                    EncoderLayer(n_heads, 
+                                 d_model, 
+                                 d_ff, 
+                                 d_qk, 
+                                 d_v,
                                  dropout=dropout,
-                                 use_pre_norm=use_pre_norm,
+                                 attn_dropout=attn_dropout,
+                                 ln_eps=ln_eps,
+                                 use_pre_norm=use_pre_norm,                                 
                                  activation=activation)
                     for _ in range(n_layers)])
         else:
             layers = []
             for i in range(n_layers):
                 if i % n_share_across_layers == 0:
-                    layer = EncoderLayer(n_heads, d_model, d_ff, d_qk, d_v,
+                    layer = EncoderLayer(n_heads,
+                                         d_model, 
+                                         d_ff, 
+                                         d_qk, 
+                                         d_v,
                                          dropout=dropout, 
+                                         attn_dropout=attn_dropout,
+                                         ln_eps=ln_eps,
                                          use_pre_norm=use_pre_norm,
                                          activation=activation)
                     layers.append(layer)
             self.layers = nn.ModuleList(layers)
     
+        if self.norm_before_pred == True:
+            self.norm = LayerNorm(self.d_model)
     
-    def forward(self, x, attn_mask, return_states=False):
+    
+    def forward(self, x, attn_mask, x_type=None, return_states=False):
         """
         """
         enc_self_attn_list = []
         
         word_embeded = self.src_embedding(x)
 
-        enc_output = word_embeded + self.pos_embedding(x)
-        embeded = enc_output
-        enc_output = self.dropout(enc_output)
+        embeded = word_embeded + self.pos_embedding(x)
+        enc_output = embeded
+        
+        if self.add_segment_embedding == True:
+            embeded = embeded + self.type_embedding(x_type)
+            enc_output = embeded
+           
+        if self.norm_after_embedding == True:
+            embeded = self.norm_emb(embeded)
+            enc_output = embeded
+        
+        enc_output = self.emb_dropout(enc_output)
         
         enc_states = [enc_output]
         
@@ -1335,6 +1424,9 @@ class Encoder(nn.Module):
             enc_self_attn_list.append(enc_attn_scores)
             enc_states.append(enc_output)
         
+        if self.norm_before_pred == True:
+            enc_output = self.norm(enc_output)
+        
         outputs = [enc_output]
         if return_states == True:
             outputs = outputs + [embeded, enc_states, enc_self_attn_list]
@@ -1345,20 +1437,38 @@ class Encoder(nn.Module):
 class DecoderLayer(nn.Module):
     """
     """
-    def __init__(self, n_heads, d_model, d_ff, d_qk, d_v, 
-                 dropout=0, use_pre_norm=True, activation="relu"):
+    def __init__(self, 
+                 n_heads,
+                 d_model, 
+                 d_ff, 
+                 d_qk, 
+                 d_v, 
+                 dropout=0,
+                 attn_dropout=0,
+                 ln_eps=1e-5,
+                 use_pre_norm=True,
+                 activation="relu"):
         """
         """
         super(DecoderLayer, self).__init__()
-        self.self_attention = MultiHeadAttention(n_heads, d_model, d_qk, d_v, 
-                                                 dropout)
-        self.norm_1 = LayerNorm(d_model)
-        self.enc_attention = MultiHeadAttention(n_heads, d_model, d_qk, d_v, 
-                                                dropout)
-        self.norm_2 = LayerNorm(d_model)
+        self.self_attention = MultiHeadAttention(n_heads,
+                                                 d_model, 
+                                                 d_qk, 
+                                                 d_v, 
+                                                 dropout,
+                                                 attn_dropout)
+        self.norm_1 = LayerNorm(d_model,ln_eps)
+        self.enc_attention = MultiHeadAttention(n_heads,
+                                                d_model, 
+                                                d_qk, 
+                                                d_v, 
+                                                dropout,
+                                                attn_dropout)
+        self.norm_2 = LayerNorm(d_model,ln_eps)
         self.ffn = FeedForward(d_model, d_ff, activation, dropout)
-        self.norm_3 = LayerNorm(d_model)
+        self.norm_3 = LayerNorm(d_model,ln_eps)
         self.use_pre_norm = use_pre_norm
+        
         
     def forward(self, dec_output, 
                 enc_keys, enc_values, self_attn_mask, dec_enc_attn_mask,
@@ -1443,12 +1553,31 @@ class DecoderLayer(nn.Module):
 class Decoder(nn.Module):
     """
     """
-    def __init__(self, trg_vocab_size, trg_max_len, n_heads, 
-                 d_model, d_ff, d_qk, d_v, n_layers, dropout=0, 
+    def __init__(self, 
+                 trg_vocab_size, 
+                 trg_max_len, 
+                 n_heads, 
+                 d_model, 
+                 d_ff, 
+                 d_qk,
+                 d_v, 
+                 n_layers, 
+                 dropout=0, 
+                 attn_dropout=0,
+                 emb_dropout=0,
+                 ln_eps=1e-5,
                  embedding_size=None,
-                 share_layer_params=False, n_share_across_layers=1,
-                 share_src_trg_emb=False,  share_emb_out_proj=False,
-                 use_pre_norm=True, activation="relu", scale_embedding=False):
+                 share_layer_params=False, 
+                 n_share_across_layers=1,
+                 share_src_trg_emb=False, 
+                 share_emb_out_proj=False,
+                 use_pre_norm=True, 
+                 activation="relu", 
+                 scale_embedding=False,
+                 norm_before_pred=False,
+                 norm_after_embedding=False,
+                 pos_need_train=False,
+                 use_proj_bias=False):
         """
         """
         super(Decoder, self).__init__()
@@ -1459,19 +1588,32 @@ class Decoder(nn.Module):
         self.share_layer_params = share_layer_params
         self.n_share_across_layers = n_share_across_layers
         self.scale_embedding = scale_embedding
+        self.norm_before_pred = norm_before_pred
+        self.norm_after_embedding = norm_after_embedding
         
         if share_src_trg_emb == False:
             self.trg_embedding = Embedding(trg_vocab_size, 
                                            d_model, 
                                            scale_embedding)
             
-        self.dropout = Dropout(dropout)
-        self.pos_embedding = PositionEmbedding(trg_max_len, d_model)
+        self.emb_dropout = Dropout(emb_dropout)
+        self.pos_embedding = PositionEmbedding(trg_max_len, 
+                                               d_model, 
+                                               pos_need_train)
+        
+        if self.norm_after_embedding == True:
+            self.norm_emb = LayerNorm(self.d_model)
         
         if share_layer_params == False:
             self.layers = nn.ModuleList([
-                    DecoderLayer(n_heads, d_model, d_ff, d_qk, d_v,
+                    DecoderLayer(n_heads, 
+                                 d_model, 
+                                 d_ff, 
+                                 d_qk, 
+                                 d_v,
                                  dropout=dropout,
+                                 attn_dropout=attn_dropout,
+                                 ln_eps=ln_eps,
                                  use_pre_norm=use_pre_norm,
                                  activation=activation)
                     for _ in range(n_layers)])
@@ -1479,8 +1621,14 @@ class Decoder(nn.Module):
             layers = []
             for i in range(n_layers):
                 if i % n_share_across_layers == 0:
-                    layer = DecoderLayer(n_heads, d_model, d_ff, d_qk, d_v,
+                    layer = DecoderLayer(n_heads,
+                                         d_model, 
+                                         d_ff, 
+                                         d_qk, 
+                                         d_v,
                                          dropout=dropout,
+                                         attn_dropout=attn_dropout,
+                                         ln_eps=ln_eps,
                                          use_pre_norm=use_pre_norm,
                                          activation=activation)
                     layers.append(layer)
@@ -1489,7 +1637,12 @@ class Decoder(nn.Module):
         self.share_emb_out_proj = share_emb_out_proj
         if share_emb_out_proj == False: 
             self.W = nn.Parameter(torch.Tensor(trg_vocab_size, d_model))
-        self.b = nn.Parameter(torch.Tensor(trg_vocab_size))
+        self.use_proj_bias = use_proj_bias
+        if use_proj_bias == True:
+            self.b = nn.Parameter(torch.Tensor(trg_vocab_size))
+
+        if self.norm_before_pred == True:
+            self.norm = LayerNorm(d_model)
         
         self.reset_parameters()
     
@@ -1500,7 +1653,8 @@ class Decoder(nn.Module):
         stdv = 1.0 / np.sqrt(self.d_model)
         if self.share_emb_out_proj == False: 
             self.W.data.uniform_(-stdv, stdv)
-        self.b.data.zero_()
+        if self.use_proj_bias == True:
+            self.b.data.zero_()
             
             
     def forward(self, y, enc_output, self_attn_mask, dec_enc_attn_mask, 
@@ -1514,7 +1668,9 @@ class Decoder(nn.Module):
             
         dec_output = word_embeded + self.pos_embedding(y)
         embeded = dec_output
-        dec_output = self.dropout(dec_output)
+        if self.norm_after_embedding == True:
+            dec_output = self.norm_emb(dec_output)
+        dec_output = self.emb_dropout(dec_output)
 
         self_attn_scores_list = []
         enc_attn_scores_list = []
@@ -1535,6 +1691,9 @@ class Decoder(nn.Module):
             self_attn_scores_list.append(self_attn_scores)
             enc_attn_scores_list.append(enc_attn_scores)
             dec_states.append(dec_output)
+
+        if self.norm_before_pred == True:
+            dec_output = self.norm(dec_output)
             
         if self.share_emb_out_proj == False:
             W = self.W
@@ -1579,7 +1738,9 @@ class Decoder(nn.Module):
         word_embeded = trg_embedding(y)
             
         dec_output = word_embeded + self.pos_embedding(y, steps)
-
+        if self.norm_after_embedding == True:
+            dec_output = self.norm_emb(dec_output)
+        
         dec_enc_attn_list = []
         dec_self_attn_list = []
 
@@ -1605,6 +1766,9 @@ class Decoder(nn.Module):
             dec_self_attn_list.append(self_attn_scores)
             dec_kv_list[i][0] = dec_keys
             dec_kv_list[i][1] = dec_values
+
+        if self.norm_before_pred == True:
+            dec_output = self.norm(dec_output)
             
         if self.share_emb_out_proj == False:
             W = self.W
@@ -1623,17 +1787,31 @@ class Decoder(nn.Module):
 class LMDecoderLayer(nn.Module):
     """
     """
-    def __init__(self, n_heads, d_model, d_ff, d_qk, d_v, 
-                 dropout=0, use_pre_norm=True, activation="relu"):
+    def __init__(self, 
+                 n_heads, 
+                 d_model,
+                 d_ff, 
+                 d_qk, 
+                 d_v, 
+                 dropout=0,
+                 attn_dropout=0,
+                 ln_eps=1e-5,
+                 use_pre_norm=True,
+                 activation="relu"):
         """
         """
         super(LMDecoderLayer, self).__init__()
-        self.self_attention = MultiHeadAttention(n_heads, d_model, d_qk, d_v, 
-                                                 dropout)
-        self.norm_1 = LayerNorm(d_model)
+        self.self_attention = MultiHeadAttention(n_heads,
+                                                 d_model, 
+                                                 d_qk, 
+                                                 d_v, 
+                                                 dropout,
+                                                 attn_dropout)
+        self.norm_1 = LayerNorm(d_model, ln_eps)
         self.ffn = FeedForward(d_model, d_ff, activation, dropout)
-        self.norm_3 = LayerNorm(d_model)
+        self.norm_2 = LayerNorm(d_model, ln_eps)
         self.use_pre_norm = use_pre_norm
+        
         
     def forward(self, dec_output, self_attn_mask, 
                 cached_kv=False, dec_keys=None, dec_values=None):
@@ -1662,17 +1840,18 @@ class LMDecoderLayer(nn.Module):
                                                            dec_values, 
                                                            self_attn_mask,
                                                            cached_kv)
+
         dec_output = residual + dec_output
         if self.use_pre_norm == False:
             dec_output = self.norm_1(dec_output)
             
         residual = dec_output
         if self.use_pre_norm == True:
-            dec_output = self.norm_3(dec_output)
+            dec_output = self.norm_2(dec_output)
         dec_output = self.ffn(dec_output)
         dec_output = residual + dec_output
         if self.use_pre_norm == False:
-            dec_output = self.norm_3(dec_output)
+            dec_output = self.norm_2(dec_output)
             
         outputs = [dec_output, self_attn_scores]
         if cached_kv == True:
@@ -1690,11 +1869,30 @@ class LMDecoderLayer(nn.Module):
 class LMDecoder(nn.Module):
     """
     """
-    def __init__(self, trg_vocab_size, trg_max_len, n_heads, 
-                 d_model, d_ff, d_qk, d_v, n_layers, dropout, 
-                 share_emb_out_proj=False, embedding_size=None,
-                 share_layer_params=False, n_share_across_layers=1,
-                 use_pre_norm=True, activation="relu", scale_embedding=False):
+    def __init__(self, 
+                 trg_vocab_size, 
+                 trg_max_len, 
+                 n_heads, 
+                 d_model, 
+                 d_ff, 
+                 d_qk, 
+                 d_v, 
+                 n_layers, 
+                 dropout=0, 
+                 attn_dropout=0,
+                 emb_dropout=0,
+                 ln_eps=1e-5,
+                 share_emb_out_proj=False, 
+                 embedding_size=None,
+                 share_layer_params=False,
+                 n_share_across_layers=1,
+                 use_pre_norm=True, 
+                 activation="relu", 
+                 scale_embedding=False,
+                 norm_before_pred=False,
+                 norm_after_embedding=False,
+                 pos_need_train=False,
+                 use_proj_bias=True):
         """
         """
         super(LMDecoder, self).__init__()
@@ -1705,6 +1903,9 @@ class LMDecoder(nn.Module):
         self.share_layer_params = share_layer_params
         self.n_share_across_layers = n_share_across_layers
         self.scale_embedding = scale_embedding
+        self.use_pre_norm = use_pre_norm
+        self.norm_before_pred = norm_before_pred
+        self.norm_after_embedding = norm_after_embedding
         
         if embedding_size is None:
             self.trg_embedding = Embedding(trg_vocab_size, 
@@ -1714,13 +1915,23 @@ class LMDecoder(nn.Module):
             self.trg_embedding = FactorizedEmbedding(trg_vocab_size, 
                                                      embedding_size,
                                                      d_model)
-        self.dropout = Dropout(dropout)
-        self.pos_embedding = PositionEmbedding(trg_max_len, d_model)
-        
+        self.emb_dropout = Dropout(emb_dropout)
+        self.pos_embedding = PositionEmbedding(trg_max_len,
+                                               d_model,
+                                               pos_need_train)
+        if self.norm_after_embedding == True:
+            self.norm_emb = LayerNorm(self.d_model)
+            
         if share_layer_params == False:
             self.layers = nn.ModuleList([
-                    LMDecoderLayer(n_heads, d_model, d_ff, d_qk, d_v,
+                    LMDecoderLayer(n_heads, 
+                                   d_model, 
+                                   d_ff, 
+                                   d_qk, 
+                                   d_v,
                                    dropout=dropout,
+                                   attn_dropout=attn_dropout,
+                                   ln_eps=ln_eps,
                                    use_pre_norm=use_pre_norm,
                                    activation=activation)
                     for _ in range(n_layers)])
@@ -1728,8 +1939,14 @@ class LMDecoder(nn.Module):
             layers = []
             for i in range(n_layers):
                 if i % n_share_across_layers == 0:
-                    layer = LMDecoderLayer(n_heads, d_model, d_ff, d_qk, d_v,
+                    layer = LMDecoderLayer(n_heads, 
+                                           d_model,
+                                           d_ff, 
+                                           d_qk,
+                                           d_v,
                                            dropout=dropout,
+                                           attn_dropout=attn_dropout,
+                                           ln_eps=ln_eps,
                                            use_pre_norm=use_pre_norm,
                                            activation=activation)
 
@@ -1740,7 +1957,12 @@ class LMDecoder(nn.Module):
         if share_emb_out_proj == False: 
             self.W = nn.Parameter(torch.Tensor(trg_vocab_size, d_model))
         
-        self.b = nn.Parameter(torch.Tensor(trg_vocab_size))
+        self.use_proj_bias = use_proj_bias
+        if use_proj_bias == True:
+            self.b = nn.Parameter(torch.Tensor(trg_vocab_size))
+        
+        if self.norm_before_pred == True:
+            self.norm = LayerNorm(d_model)
         
         self.reset_parameters()
     
@@ -1751,7 +1973,8 @@ class LMDecoder(nn.Module):
         stdv = 1.0 / np.sqrt(self.d_model)
         if self.share_emb_out_proj == False: 
             self.W.data.uniform_(-stdv, stdv)
-        self.b.data.zero_()
+        if self.use_proj_bias == True:
+            self.b.data.zero_()
             
         
     def forward(self, y, self_attn_mask, return_states=False):
@@ -1762,7 +1985,9 @@ class LMDecoder(nn.Module):
         embeded = self.trg_embedding(y)
             
         dec_output = embeded + self.pos_embedding(y)
-        dec_output = self.dropout(dec_output)
+        if self.norm_after_embedding == True:
+            dec_output = self.norm_emb(dec_output)
+        dec_output = self.emb_dropout(dec_output)
 
         dec_states.append(dec_output)
 
@@ -1778,12 +2003,17 @@ class LMDecoder(nn.Module):
             dec_states.append(dec_output)
             self_attn_scores_list.append(self_attn_scores)
             
-                
+        
+        if self.norm_before_pred == True:
+            dec_output = self.norm(dec_output)
+            
         if self.share_emb_out_proj == False: 
             W = self.W
         else:
             W = self.trg_embedding.get_embedding()
-        logits = F.linear(dec_output, W) + self.b
+        logits = F.linear(dec_output, W) 
+        if self.use_proj_bias:
+            logits = logits + self.b
         
         outputs = [logits]
         if return_states == True:
@@ -1811,9 +2041,11 @@ class LMDecoder(nn.Module):
         """
         """
         embeded = self.trg_embedding(y)
-            
+        
         dec_output = embeded + self.pos_embedding(y, steps)
-
+        if self.norm_after_embedding == True:
+            dec_output = self.norm_emb(dec_output)
+        
         dec_self_attn_list = []
         
         for i in range(self.n_layers):
@@ -1828,16 +2060,22 @@ class LMDecoder(nn.Module):
                                     dec_kv_list[i][0], 
                                     dec_kv_list[i][1])
             dec_output, self_attn_scores, dec_keys, dec_values = outputs
+
             dec_kv_list[i][0] = dec_keys
             dec_kv_list[i][1] = dec_values
             dec_self_attn_list.append(self_attn_scores)
+
+        if self.norm_before_pred == True:
+            dec_output = self.norm(dec_output)
 
         if self.share_emb_out_proj == False:
             W = self.W
         else:
             W = self.trg_embedding.get_embedding()
         
-        logits = F.linear(dec_output, W) + self.b
+        logits = F.linear(dec_output, W) 
+        if self.use_proj_bias:
+            logits = logits + self.b
         
         logits = logits.view(-1, self.trg_vocab_size)
         

@@ -101,7 +101,27 @@ def predict_lm(config):
             search_res = lm_gen.sample(batch_size=test_batch_size)
             for y,score in search_res[0]:
                 outstream.write(y + "\n")
+    else:
+        instream = open(real_path(config["test_in"]), 
+                        "r", encoding="utf-8", errors="ignore")
+        test_batch_size = 1
+        prefix_list = []
+        for line in instream:
+            line = line.strip()
+            prefix_list.append(line)
+            if len(prefix_list) >= test_batch_size:
+                search_res = lm_gen.sample(prefix_list)
+                for li in search_res:
+                    for y,score in li:
+                        outstream.write(y + "\n")
+                prefix_list = []
 
+    if len(prefix_list) > 0:
+        search_res = lm_gen.sample(prefix_list)
+        for li in search_res:
+            for y,score in li:
+                outstream.write(y + "\n")
+                
     outstream.close()
     
 

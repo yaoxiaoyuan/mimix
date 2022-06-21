@@ -6,6 +6,7 @@ Created on Thu Aug 29 10:34:48 2019
 """
 import random
 import torch
+import torch.nn.functional as F
 from tokenization import build_tokenizer
 from decoding import beam_search, sample
 from decoding import beam_search_with_constraints, sample_with_constraints
@@ -48,6 +49,7 @@ class EncDecGenerator():
         self.src_word2id = vocab
         self.src_id2word = {vocab[word]:word for word in vocab}
         
+        self.add_cls = config.get("add_cls", False)
         self.eos_tok = config["symbols"]["EOS_TOK"]
         self.pad_tok = config["symbols"]["PAD_TOK"]
         
@@ -103,7 +105,9 @@ class EncDecGenerator():
                                  self.src_max_len, 
                                  self.model.PAD,
                                  True)
-        
+        if self.add_cls == True:
+            x = [[self.model.CLS] + xx[:self.src_max_len-1] for xx in x]
+            
         y = None
         if trg_list is not None:
             prefix_ids = list(map(self.trg_tokenizer.tokenize_to_ids, trg_list))
@@ -448,8 +452,9 @@ class BiLMGenerator():
                 vocab_file=config["trg_vocab"], 
                 pre_tokenized=config.get("pre_tokenized", False),  
                 pre_vectorized=config.get("pre_vectorized", False))
+        self.add_cls = config.get("add_cls", False)
         
-        self.mask_tok = config["symbols"]["MASK_TOK"]
+        self.mask_id = config["symbol2id"][config["symbols"]["MASK_TOK"]]
         
         self.trg_vocab_size = config["trg_vocab_size"]
         self.use_cuda = config["use_cuda"]
@@ -460,10 +465,13 @@ class BiLMGenerator():
         """
         """        
         trg_ids = list(map(self.trg_tokenizer.tokenize_to_ids, trg_list))
+
         y = cut_and_pad_seq_list(trg_ids,
                                  self.trg_max_len, 
                                  self.model.PAD,
                                  True)
+        if self.add_cls == True:
+            trg_ids = [[self.model.CLS] + yy[:self.trg_max_len-1] for yy in y]
             
         if y is not None:
             y = torch.tensor(y, dtype=torch.long)
@@ -475,7 +483,7 @@ class BiLMGenerator():
         return y
 
 
-    def predict(self, trg_list, top_k, top_p):
+    def predict(self, trg_list, top_k=-1, top_p=-1, return_k=10):
         """
         """
         y = self.encode_inputs(trg_list)
@@ -484,32 +492,95 @@ class BiLMGenerator():
         with torch.no_grad():
             outputs = self.model([y])
             logits = outputs[0]
-            log_probs = torch.log_softmax(logits, -1)
+            probs = torch.softmax(logits, -1)
             if top_k > 0 or top_p > 0:
+                return_k = 1
                 indice = top_k_top_p_sampling(logits, top_k, top_p)
             else:
-                indice = logits.argmax(-1)
-            
-        indice = indice.cpu().numpy()
-        log_probs = log_probs.cpu().numpy()
-        
-        idx = 0
-        res = []
-        for i,trg in enumerate(trg_list):
-            _trg = []
-            for j,ww in enumerate(trg):
-                if ww == self.mask_tok:
-                    _ww = self.trg_id2word[indice[idx]]
-                    _trg.append(_ww)
-                    idx += 1
-                else:
-                    _trg.append(ww)
-            trg = self.trg_tokenizer.detokenize_ids(_trg)
+                score,indice = probs.topk(return_k, -1)
 
-            res.append([trg, _trg])
+        indice = indice.cpu().numpy()
+        score = score.cpu().numpy()
+        
+        res = []
+        for i,trg in enumerate(y):
+            res.append([trg_list[i], []])
+            for j,ww in enumerate(trg):
+                if ww == self.mask_id:
+                    pred = []
+                    for k in range(return_k):
+                        pred.append([self.trg_id2word[indice[i][j][k]], score[i][j][k]])
+
+                    res[-1][1].append(pred)
         
         return res
         
+
+class TextMatcher():
+    """
+    """
+    def __init__(self, config):
+        """
+        """
+        self.model = load_model(config)
+        
+        self.use_cuda = config.get("use_cuda", False)
+        self.device = torch.device('cpu')
+        if self.use_cuda == True:
+            device_id = config.get("device_id", "0")
+            self.device = torch.device('cuda:%s' % device_id)
+        
+        self.trg_word2id = load_vocab(real_path(config["trg_vocab"]))
+        self.trg_id2word = invert_dict(self.trg_word2id)
+        
+        self.trg_tokenizer = build_tokenizer(
+                tokenizer=config["trg_tokenizer"],
+                vocab_file=config["trg_vocab"], 
+                pre_tokenized=config.get("pre_tokenized", False),  
+                pre_vectorized=config.get("pre_vectorized", False))
+        
+        self.add_cls = config.get("add_cls", False)
+        self.cls_id = config["symbol2id"][config["symbols"]["CLS_TOK"]]
+        
+        self.trg_vocab_size = config["trg_vocab_size"]
+        self.use_cuda = config["use_cuda"]
+        self.trg_max_len = config["trg_max_len"]
+    
+    
+    def encode_inputs(self, trg_list):
+        """
+        """        
+        trg_ids = list(map(self.trg_tokenizer.tokenize_to_ids, trg_list))
+        y = cut_and_pad_seq_list(trg_ids,
+                                 self.trg_max_len-1, 
+                                 self.model.PAD,
+                                 True)
+        if self.add_cls == True:
+            y = [[self.cls_id] + yy[:self.trg_max_len-1] for yy in y]
+
+        if y is not None:
+            y = torch.tensor(y, dtype=torch.long)
+
+        if self.use_cuda == True:
+            if y is not None:
+                y = y.to(self.device)
+        
+        return y
+
+
+    def predict(self, trg_list):
+        """
+        """
+        y = self.encode_inputs(trg_list)
+        
+        self.model.eval()
+        with torch.no_grad():
+            outputs = self.model([y])
+            vec = F.normalize(outputs[0], p=2, dim=1)
+            sim = torch.mm(vec, vec.T)
+        
+        return sim
+
 
 class TextClassifier():
     """
@@ -551,7 +622,7 @@ class TextClassifier():
                                  self.src_max_len-1, 
                                  self.model.PAD,
                                  True)        
-        x = [[self.model.CLS] + seq for seq in x]
+        x = [[self.model.CLS] + xx[:self.src_max_len-1] for xx in x]
 
         x = torch.tensor(x, dtype=torch.long)
         if self.use_cuda == True:

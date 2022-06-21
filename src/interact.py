@@ -12,6 +12,7 @@ from warppers import LMGenerator
 from warppers import BiLMGenerator
 from warppers import TextClassifier
 from warppers import SequenceLabeler
+from warppers import TextMatcher
 from utils import pretty_print, parse_args, real_path, load_config
 
 def enc_dec_demo(config):
@@ -87,10 +88,38 @@ def bi_lm_demo(config):
         
         start = time.time()
         
-        res = lm_gen.fill([line]) 
-        trg,_trg,score = res[0]
-        print(trg)
-        print(_trg,score)
+        res = lm_gen.predict([line])
+        for src,pred in res:
+            print("src:", src)
+            for li in pred:
+                print(" ".join(["%s:%s" % (w,s) for w,s in li]))
+        end = time.time()
+        cost = end - start
+        print("-----cost time: %s s-----" % cost)
+
+
+def match_text_demo(config):
+    """
+    """
+    text_matcher = TextMatcher(config)
+    
+    print("INPUT TEXT:")
+    
+    for line in sys.stdin:
+        line = line.strip()
+
+        if len(line) == 0:
+            continue
+        
+        start = time.time()
+        
+        texts = line.split("\t")
+        res = text_matcher.predict(texts)
+        for i,text_1 in enumerate(texts):
+            for j, text_2 in enumerate(texts):
+                if j < i:
+                    continue
+                print(text_1, text_2, res[i][j])
         end = time.time()
         cost = end - start
         print("-----cost time: %s s-----" % cost)
@@ -167,10 +196,12 @@ def run_interactive():
         classify_demo(config)
     elif config["task"] == "lm":
         lm_demo(config)
-    elif config["task"] == "bi-lm":
+    elif config["task"] == "bi_lm":
         bi_lm_demo(config)
     elif config["task"] == "sequence_labeling":
         sequene_labeling_demo(config)
+    elif config["task"] == "match_text":
+        match_text_demo(config)
         
 if __name__ == "__main__":
     run_interactive()

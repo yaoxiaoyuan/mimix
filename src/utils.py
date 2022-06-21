@@ -75,14 +75,19 @@ def load_config(config_file):
         if symbol + "2tok" in train_config:
             train_config["symbols"][symbol] = train_config[symbol + "2tok"]
     
-    for symbol in symbols:
+    for symbol in symbol2id:
         if symbol + "2id" in train_config:
             train_config["symbol2id"][symbol] = train_config[symbol + "2id"]   
-    
+
     return train_config
 
 
-def shuffle_data(data_dir, dest_dir, fast_shuffle=False, num_shards=20):
+def shuffle_data(data_dir, 
+                 dest_dir, 
+                 fast_shuffle=False, 
+                 num_shards=20, 
+                 data_preprocessor=None,
+                 sort_key_fn=None):
     """
     Shuffle data
     """
@@ -91,20 +96,27 @@ def shuffle_data(data_dir, dest_dir, fast_shuffle=False, num_shards=20):
 
         fo_list = []
         for f in range(num_shards):
-            fo_list.append(open(os.path.join(dest_dir, str(f)), "wb"))
+            fo_list.append(open(os.path.join(dest_dir, str(f)), "w", encoding="utf-8"))
     
         for fi in data_files:
-            for line in open(os.path.join(data_dir, fi), "rb"):
+            for line in open(os.path.join(data_dir, fi), "r", encoding="utf-8"):
                 fo = random.choice(fo_list)
+                if data_preprocessor is not None:
+                    data = data_preprocessor(line)
+                    line = json.dumps(data, ensure_ascii=False) + "\n"
                 fo.write(line)
 
         for fo in fo_list:
             fo.close()
 
     for f in range(num_shards):
-        lines = [line for line in open(os.path.join(dest_dir, str(f)), "rb")]
+        lines = [line for line in open(os.path.join(dest_dir, str(f)), "r", encoding="utf-8")]
         random.shuffle(lines)
-        fo = open(os.path.join(dest_dir, str(f)), "wb")
+        if sort_key_fn is not None:
+            lines = [[line, sort_key_fn(json.loads(line))] for line in lines]
+            lines.sort(key=lambda x:x[1])
+            lines = [x[0] for x in lines]
+        fo = open(os.path.join(dest_dir, str(f)), "w", encoding="utf-8")
         for line in lines:
             fo.write(line)
         fo.close()
@@ -125,6 +137,23 @@ def pretty_print(res):
                 for a in dic[k]:
                     info = " ".join([str(x) for x in a])
                     print(info)
+
+
+def word_dropout(word_list, rate, replace_token):
+    """
+    """
+    if rate > 0:
+        tmp = []
+        
+        for word in word_list:
+            if random.random() < rate:
+                tmp.append(replace_token)
+            else:
+                tmp.append(word)
+        
+        word_list = tmp
+        
+    return word_list
 
 
 def load_vocab(vocab_path):

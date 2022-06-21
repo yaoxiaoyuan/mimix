@@ -383,7 +383,13 @@ class BertTokenizer(Tokenizer):
         """
         """
         return self.tokenizer.tokenize(text)
-        
+    
+    
+    def detokenize(self, tokens):
+        """
+        """
+        return " ".join(tokens)
+    
 
 def build_tokenizer(**args):
     """

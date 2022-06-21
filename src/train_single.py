@@ -10,7 +10,8 @@ from datetime import datetime
 import logging
 import torch
 from utils import shuffle_data, real_path, parse_args, load_config
-from dataset import build_train_dataset, build_val_dataset, build_test_dataset
+from process_data import build_data_processor
+from dataset_single import build_train_dataset, build_val_dataset, build_test_dataset
 from models import build_model
 from scheduler import build_lr_scheduler
 from loss import build_loss_fn
@@ -36,6 +37,7 @@ class Trainer():
                  test_dataset=None,
                  loss_fn=None,
                  eval_fn=None,
+                 custom_parse_fn=None,
                  step_callback_fn_list=[]):
         """
         """
@@ -69,7 +71,8 @@ class Trainer():
         self.reload = train_config.get("reload", False)
         self.reload_model = real_path(train_config.get("reload_model", ""))
         self.recover_checkpoint = train_config.get("recover_checkpoint", False)
-        self.pre_shuffle = train_config.get("pre_shuffle", False)
+        self.need_preprocess= train_config.get("need_preprocess", True)
+        self.pre_shuffle = train_config.get("pre_shuffle", True)
         
         self.eval_model = train_config.get("eval_model", False)
         
@@ -95,6 +98,7 @@ class Trainer():
                 loss_fn=loss_fn,
                 eval_fn=eval_fn)
         
+        self.custom_parse_fn = custom_parse_fn
         self.step_callback_fn_list = step_callback_fn_list
         
 
@@ -160,9 +164,9 @@ class Trainer():
             self.test_dataset = build_test_dataset(self.train_config,
                                                    self.model_config)
        
-        self.loss_fn = loss_fn
+        self.model.loss_fn = loss_fn
         if loss_fn is None:
-            self.loss_fn = build_loss_fn(self.model_config, 
+            self.model.loss_fn = build_loss_fn(self.model_config, 
                                          self.train_config)
         
         self.eval_fn = eval_fn
@@ -215,14 +219,34 @@ class Trainer():
         self.logger.info("Save model complete")
 
     
+    def get_sort_key_fn(self):
+        """
+        """
+        sort_key_fn = None
+        if self.model_config["task"] == "enc_dec":
+            sort_key_fn = lambda x:len(x["trg"])
+        elif self.model_config["task"] == "lm":
+            sort_key_fn = lambda x:len(x["trg"])
+        elif self.model_config["task"] == "classify":
+            sort_key_fn = lambda x:len(x["src"])
+        elif self.model_config["task"] == "bi_lm":
+            sort_key_fn = lambda x:len(x["trg"])
+        elif self.model_config["task"] == "sequence_labeling":
+            sort_key_fn = lambda x:len(x["src"])
+        
+        return sort_key_fn
+    
+    
     def shuffle_data(self, fast_shuffle=False):
         """
         """
         self.logger.info("Shuffle train data...")
+        sort_key_fn = self.get_sort_key_fn()
         shuffle_data(self.data_dir, 
                      self.train_dir,
-                     fast_shuffle,
-                     self.num_shards)
+                     fast_shuffle=fast_shuffle,
+                     num_shards=self.num_shards,
+                     sort_key_fn=sort_key_fn)
         self.logger.info("Shuffle train data completed!")
     
 
@@ -230,7 +254,21 @@ class Trainer():
         """
         """
         if self.pre_shuffle == True and self.epoch == 1 and self.steps == 1:
-            self.shuffle_data()
+            self.logger.info("Pre Shuffle train data...")
+            data_preprocessor = None
+            if self.need_preprocess == True:
+                data_preprocessor = build_data_processor(self.train_config, self.model_config)
+                data_preprocessor.custom_parse_fn = self.custom_parse_fn
+            sort_key_fn = self.get_sort_key_fn()
+            
+            shuffle_data(self.data_dir, 
+                         self.train_dir,
+                         fast_shuffle=False,
+                         num_shards=self.num_shards,
+                         data_preprocessor=data_preprocessor,
+                         sort_key_fn=sort_key_fn)
+            
+            self.logger.info("Pre Shuffle train data completed!")
 
 
     def print_model_info(self):
@@ -284,32 +322,6 @@ class Trainer():
         if self.reload == True:
             self.reload_model_weights()
             self.reload_optimizer_weights()
-    
-
-    def get_accmulate_weights(self, accum_xy):
-        """
-        """
-        weight_by_non_pad = False
-        if self.model_config["task"] in ["enc_dec", "lm", "bi-lm"]:
-            weight_by_non_pad = True
-        elif self.model_config["task"] == "sequence_labeling":
-            if "crf" not in self.model_config["model"]:
-                weight_by_non_pad = True
-        
-        if weight_by_non_pad == True:
-            weights = []
-            
-            total = 0
-            for _inputs,_targets in accum_xy:
-                nonpad = torch.sum(_targets[0].ne(self.model.PAD))
-                weights.append(nonpad.item())
-                total += nonpad.item()
-            
-            weights = [nonpad / total for nonpad in weights]
-        else:
-            weights = [1 / len(accum_xy)] * len(accum_xy)
-
-        return weights
 
 
     def train(self):
@@ -324,7 +336,6 @@ class Trainer():
         self.logger.info("Train Start!")
 
         history_loss = []
-        accum_xy = []
         
         while self.epoch < self.max_epoch: 
             self.model.train()
@@ -334,54 +345,44 @@ class Trainer():
                 inputs = nested_to_cuda(inputs, self.device)
                 targets = nested_to_cuda(targets, self.device)
                 
-                accum_xy.append([inputs, targets])
+                outputs = self.model(inputs, targets=targets, compute_loss=True)
+        
+                loss = outputs[0]
+        
+                history_loss = history_loss[-999:] + [loss.item()]
+                ma_loss = sum(history_loss) / len(history_loss)
+        
+                self.logger.info(
+                        "%d epoch %d step total %d steps loss: %.3f" % 
+                        (self.epoch, 
+                         self.steps, 
+                         self.total_steps,
+                         ma_loss)
+                        )
                 
-                if len(accum_xy) == self.accumulate_steps:
-                    
-                    weights = self.get_accmulate_weights(accum_xy)
-                    
-                    for (inputs,targets), weight in zip(accum_xy, weights):
-                        outputs = self.model(inputs)
-                
-                        loss = self.loss_fn(outputs, targets)
-                
-                        history_loss = history_loss[-999:] + [loss.item()]
-                        ma_loss = sum(history_loss) / len(history_loss)
-                
-                        self.logger.info(
-                                "%d epoch %d step total %d steps loss: %.3f" % 
-                                (self.epoch, 
-                                 self.steps, 
-                                 self.total_steps,
-                                 ma_loss)
-                                )
-                        
-                        loss = loss * weight
-                        loss.backward()
-                    
-                        self.lr_scheduler.step()
+                loss.backward()
+            
+                self.lr_scheduler.step()
 
-                        self.total_steps += 1
-                        self.steps += 1
+                self.total_steps += 1
+                self.steps += 1
+        
+                if self.total_steps % self.save_steps == 0:
+                    self.save_model()
+        
+                if self.total_steps % self.tmp_save_steps == 0:
+                    self.save_model("tmp." + self.model_name)
                 
-                        if self.total_steps % self.save_steps == 0:
-                            self.save_model()
-                
-                        if self.total_steps % self.tmp_save_steps == 0:
-                            self.save_model("tmp." + self.model_name)
+                for callback_fn in self.step_callback_fn_list:
+                    callback_fn(trainer=self)
                         
-                        for callback_fn in self.step_callback_fn_list:
-                            callback_fn(trainer=self)
-                        
-                    if self.grad_clip is not None:
-                        torch.nn.utils.clip_grad_norm_(
-                                self.model.parameters(), 
-                                self.grad_clip
-                                )
-                    self.optimizer.step()
-                    self.optimizer.zero_grad()
-                    
-                    accum_xy = []
+                if self.grad_clip is not None:
+                    torch.nn.utils.clip_grad_norm_(
+                            self.model.parameters(), 
+                            self.grad_clip
+                            )
+                self.optimizer.step()
+                self.optimizer.zero_grad()
             
             self.shuffle_data(fast_shuffle=True)
             
