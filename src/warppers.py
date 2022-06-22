@@ -578,7 +578,7 @@ class TextMatcher():
             outputs = self.model([y])
             vec = F.normalize(outputs[0], p=2, dim=1)
             sim = torch.mm(vec, vec.T)
-        
+        sim = sim.cpu().numpy()
         return sim
 
 
