@@ -35,9 +35,9 @@ Several pretrained models are listed below. You can use it follow the  instructi
 | model                                | architecture                    | n_params  | n_layers | d_model | n_heads |
 | ------------------------------------ | ---- | ---- | :--- | ---- | ---- |
 | Chinese chitchat generator           | transformer enc-dec | 100m | 12 | 512 | 8 |
-| Chinese shi,ci,duilian generator     | transformer uni-lm | 49m | 12 | 512 | 8 |
+| Chinese shi,ci,duilian generator     | transformer dec-only lm | 49m | 12 | 512 | 8 |
 | Chinese news summarization generator | transformer enc-dec | 100m | 12 | 512 | 8 |
-| Chinese shi,ci,duilian generator v2 | transformer uni-lm  | 102m     | 12       | 768     | 12      |
+| Chinese shi,ci,duilian generator v2 | transformer dec-only lm  | 102m     | 12       | 768     | 12      |
 | Chinese news summarization generator v2 | transformer enc-dec | 216m     | 12       | 768     | 12 |
 | Chinese question paraphrase tool | transformer enc-dec | 216m | 12 | 768 | 12 |
 | Chinese question similarity tool | transformer enc | 103m | 12 | 768 | 12 |
