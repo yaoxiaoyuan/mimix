@@ -22,7 +22,7 @@ python >= 3.5
 
 ## Usage
 
-train: python train.py --conf conf_file
+train: python train_single.py --conf conf_file
 
 interact: python interact.py --conf conf_file
 
