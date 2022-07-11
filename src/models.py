@@ -152,7 +152,6 @@ class TransformerEncoder(nn.Module):
                  d_qk,
                  d_v, 
                  n_enc_layers,    
-                 n_class,
                  dropout=0, 
                  attn_dropout=0,
                  emb_dropout=0,
@@ -184,7 +183,6 @@ class TransformerEncoder(nn.Module):
         self.d_ff = d_ff
         self.n_enc_layers = n_enc_layers
         self.dropout = dropout
-        self.n_class = n_class
         self.encoder = Encoder(src_vocab_size,
                                src_max_len, 
                                n_heads,
@@ -1792,7 +1790,6 @@ def build_transformer_encoder_model(config):
                                      attn_dropout,
                                      emb_dropout,
                                      ln_eps,
-                                     share_emb_out_proj,
                                      embedding_size,
                                      share_layer_params,
                                      n_share_across_layers,
