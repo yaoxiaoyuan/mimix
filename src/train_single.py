@@ -73,6 +73,7 @@ class Trainer():
         self.recover_checkpoint = train_config.get("recover_checkpoint", False)
         self.need_preprocess= train_config.get("need_preprocess", True)
         self.pre_shuffle = train_config.get("pre_shuffle", True)
+        self.sort_data = train_config.get("sort_data", False)
         
         self.eval_model = train_config.get("eval_model", False)
         
@@ -241,7 +242,9 @@ class Trainer():
         """
         """
         self.logger.info("Shuffle train data...")
-        sort_key_fn = self.get_sort_key_fn()
+        sort_key_fn = None
+        if self.sort_data == True:
+            sort_key_fn = self.get_sort_key_fn()
         shuffle_data(self.data_dir, 
                      self.train_dir,
                      fast_shuffle=fast_shuffle,
@@ -259,7 +262,9 @@ class Trainer():
             if self.need_preprocess == True:
                 data_preprocessor = build_data_processor(self.train_config, self.model_config)
                 data_preprocessor.custom_parse_fn = self.custom_parse_fn
-            sort_key_fn = self.get_sort_key_fn()
+            sort_key_fn = None
+            if self.sort_data == True:
+                sort_key_fn = self.get_sort_key_fn()
             
             shuffle_data(self.data_dir, 
                          self.train_dir,
