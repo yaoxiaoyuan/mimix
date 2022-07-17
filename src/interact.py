@@ -117,7 +117,7 @@ def match_text_demo(config):
         res = text_matcher.predict(texts)
         for i,text_1 in enumerate(texts):
             for j, text_2 in enumerate(texts):
-                if j < i:
+                if j <= i:
                     continue
                 print(text_1, text_2, res[i][j])
         end = time.time()
