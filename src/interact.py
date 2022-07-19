@@ -200,7 +200,7 @@ def run_interactive():
         bi_lm_demo(config)
     elif config["task"] == "sequence_labeling":
         sequene_labeling_demo(config)
-    elif config["task"] == "match_text":
+    elif config["task"] == "match":
         match_text_demo(config)
         
 if __name__ == "__main__":

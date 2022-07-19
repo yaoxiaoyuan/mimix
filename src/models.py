@@ -176,6 +176,8 @@ class TransformerEncoder(nn.Module):
         self.CLS = symbol2id["_cls_"]
         self.MASK = symbol2id["_mask_"]
         
+        self.MIN_LOGITS = -10000.
+        
         self.src_vocab_size = src_vocab_size
         self.src_max_len = src_max_len
         self.n_heads = n_heads
@@ -245,7 +247,11 @@ class TransformerEncoder(nn.Module):
 
         enc_output = torch.matmul(torch.tanh(torch.matmul(enc_output, self.W2) + self.b2), self.W3) + self.b3
         
-        outputs = [enc_output]
+        norm_vec = F.normalize(enc_output, p=2, dim=1)
+        sim = torch.mm(norm_vec, norm_vec.T)
+        sim = sim + self.MIN_LOGITS * torch.eye(sim.shape[0], device=sim.device)
+
+        outputs = [sim, enc_output]
         
         if return_states == True:
             outputs = outputs + enc_outputs 
@@ -2027,7 +2033,7 @@ def build_model(config):
         model = build_bi_lm_model(config)
     elif config["task"] == "sequence_labeling":
         model = build_sequence_labeling_model(config)
-    elif config["task"] == "match_text":
+    elif config["task"] == "match":
         model = build_match_text_model(config)
     else:
         raise ValueError("model not correct!")  

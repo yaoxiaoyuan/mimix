@@ -285,6 +285,49 @@ class BiLMDataProcessor(DataProcessor):
         return {"trg":y}
 
 
+class MatchDataProcessor(DataProcessor):
+    """
+    """
+    def __init__(self,
+                 src_max_len,
+                 src_tokenizer,
+                 symbol2id):
+        """
+        """
+        self.src_max_len = src_max_len
+        self.PAD = symbol2id["_pad_"]
+        self.BOS = symbol2id["_bos_"]
+        self.EOS = symbol2id["_eos_"]
+        self.UNK = symbol2id["_unk_"]
+        self.SEP = symbol2id["_sep_"]
+        self.CLS = symbol2id["_cls_"]
+        self.MASK = symbol2id["_mask_"]
+
+        self.src_tokenizer = src_tokenizer
+        self.custom_parse_fn = None
+
+
+    def parse(self, line):
+        """
+        """
+        return line.strip().split("\t")
+
+
+    def preprocess(self, data):
+        """
+        """
+        src_list = []
+        for src in data:
+            x = self.src_tokenizer.tokenize_to_ids(src)
+
+            x = x[:self.src_max_len - 1]
+            x = [self.CLS] + x
+
+            src_list.append(x)
+
+        return {"src_list":src_list}
+
+
 def build_data_processor(train_config, model_config):
     """
     """
@@ -366,4 +409,15 @@ def build_data_processor(train_config, model_config):
                 model_config["n_labels"],
                 model_config["symbol2id"], 
                 src_tokenizer)
+        
+    elif model_config["task"] == "match":
+        src_tokenizer = build_tokenizer(
+                tokenizer=model_config["src_tokenizer"],
+                vocab_file=model_config["src_vocab"],
+                pre_tokenized=train_config.get("pre_tokenized",False),
+                pre_vectorized=train_config.get("pre_vectorized",False))
 
+        return MatchDataProcessor(
+                model_config["src_max_len"],
+                src_tokenizer,
+                model_config["symbol2id"])

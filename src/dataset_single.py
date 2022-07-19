@@ -266,6 +266,45 @@ class BiLMDataset(Dataset):
         return [y], [y_target]
 
 
+class MatchDataset(Dataset):
+    """
+    """
+    def __init__(self,
+                 data_dir,
+                 batch_size,
+                 symbol2id):
+        """
+        """
+        self.data_dir = data_dir
+        self.batch_size = batch_size
+        self.PAD = symbol2id["_pad_"]
+        self.BOS = symbol2id["_bos_"]
+        self.EOS = symbol2id["_eos_"]
+        self.UNK = symbol2id["_unk_"]
+        self.SEP = symbol2id["_sep_"]
+        self.CLS = symbol2id["_cls_"]
+        self.MASK = symbol2id["_mask_"]
+
+
+    def vectorize(self, batch_data):
+        """
+        """
+        batch_size = len(batch_data)
+        src_max_len = max(max(len(xx) for xx in x["src_list"]) for x in batch_data)
+        y = self.PAD + np.zeros((2 * batch_size, src_max_len), dtype=np.long)
+        y_target = np.zeros((2 * batch_size), dtype=np.long)
+        for i, d in enumerate(batch_data):
+            y1,y2 = random.sample(d["src_list"], 2)
+            y[2*i, :len(y1)] = y1
+            y[2*i+1, :len(y2)] = y2
+            y_target[2*i] = 2*i+1
+            y_target[2*i+1] = 2*i
+        y = torch.tensor(y, dtype=torch.long)
+        y_target = torch.tensor(y_target, dtype=torch.long)
+
+        return [y], [y_target]
+
+
 def build_dataset(train_config, model_config, dataset="train"):
     """
     """
@@ -314,7 +353,12 @@ def build_dataset(train_config, model_config, dataset="train"):
                 data_dir,
                 batch_size,
                 model_config["symbol2id"])
+    elif model_config["task"] == "match":
 
+        return MatchDataset(
+                data_dir,
+                batch_size,
+                model_config["symbol2id"])
 
 def build_train_dataset(train_config, model_config):
     """

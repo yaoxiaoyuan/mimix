@@ -94,4 +94,5 @@ def build_loss_fn(model_config, train_config):
             return lambda x,y:x[0]
         else:
             return lambda x,y:seq_cross_entropy(x[0], y[0], eps, pad)
-           
+    elif model_config["task"] in ["match"]:
+        return lambda x,y:seq_cross_entropy(train_config["sim_alpha"] * x[0], y[0], eps, pad)           
