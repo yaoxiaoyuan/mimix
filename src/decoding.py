@@ -361,6 +361,7 @@ def lm_sample(lm_model,
               max_decode_steps, 
               use_cuda,
               device,
+              batch_size=1,
               normalize="none", 
               gamma=1, 
               temp=1, 
@@ -369,7 +370,6 @@ def lm_sample(lm_model,
     """  
     if eos is None:
         eos = lm_model.EOS
-    batch_size = 1  
     
     dec_states = lm_model.init_search()
     search_states = init_search(lm_model, batch_size)    

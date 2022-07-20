@@ -342,6 +342,7 @@ class LMGenerator():
         
         self.need_mask_unk =  config.get("need_mask_unk", False)
         self.strategy = config.get("search_strategy", "sample")
+        self.sample_size = config.get("sample_size", 1)
         
 
     def encode_inputs(self, trg_list):
@@ -378,11 +379,12 @@ class LMGenerator():
                               self.max_dec_steps, 
                               self.use_cuda,
                               self.device,
+                              self.sample_size,
                               normalize=self.normalize,
                               gamma=self.gamma,
                               temp=self.temp)
             else:
-                batch_size = 1
+                batch_size = self.sample_size
                 if prefix is not None and len(prefix_list) > 0:
                     batch_size = len(prefix_list)
                 hypothesis,scores = \
