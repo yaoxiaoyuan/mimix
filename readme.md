@@ -240,3 +240,15 @@ Training data details are listed below.
    
          
 
+### Cite
+
+```
+@misc{mimix,
+  title={mimix},
+  author={Xiaoyuan Yao},
+  year={2021}
+}
+```
+
+
+
