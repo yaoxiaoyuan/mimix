@@ -532,33 +532,33 @@ class TextMatcher():
             device_id = config.get("device_id", "0")
             self.device = torch.device('cuda:%s' % device_id)
         
-        self.trg_word2id = load_vocab(real_path(config["trg_vocab"]))
-        self.trg_id2word = invert_dict(self.trg_word2id)
+        self.src_word2id = load_vocab(real_path(config["src_vocab"]))
+        self.src_id2word = invert_dict(self.src_word2id)
         
-        self.trg_tokenizer = build_tokenizer(
-                tokenizer=config["trg_tokenizer"],
-                vocab_file=config["trg_vocab"], 
+        self.src_tokenizer = build_tokenizer(
+                tokenizer=config["src_tokenizer"],
+                vocab_file=config["src_vocab"], 
                 pre_tokenized=config.get("pre_tokenized", False),  
                 pre_vectorized=config.get("pre_vectorized", False))
         
         self.add_cls = config.get("add_cls", False)
         self.cls_id = config["symbol2id"][config["symbols"]["CLS_TOK"]]
         
-        self.trg_vocab_size = config["trg_vocab_size"]
+        self.src_vocab_size = config["src_vocab_size"]
         self.use_cuda = config["use_cuda"]
-        self.trg_max_len = config["trg_max_len"]
+        self.src_max_len = config["src_max_len"]
     
     
-    def encode_inputs(self, trg_list):
+    def encode_inputs(self, src_list):
         """
         """        
-        trg_ids = list(map(self.trg_tokenizer.tokenize_to_ids, trg_list))
-        y = cut_and_pad_seq_list(trg_ids,
-                                 self.trg_max_len-1, 
+        src_ids = list(map(self.src_tokenizer.tokenize_to_ids, src_list))
+        y = cut_and_pad_seq_list(src_ids,
+                                 self.src_max_len-1, 
                                  self.model.PAD,
                                  True)
         if self.add_cls == True:
-            y = [[self.cls_id] + yy[:self.trg_max_len-1] for yy in y]
+            y = [[self.cls_id] + yy[:self.src_max_len-1] for yy in y]
 
         if y is not None:
             y = torch.tensor(y, dtype=torch.long)
@@ -570,10 +570,10 @@ class TextMatcher():
         return y
 
 
-    def predict(self, trg_list):
+    def predict(self, src_list):
         """
         """
-        y = self.encode_inputs(trg_list)
+        y = self.encode_inputs(src_list)
         
         self.model.eval()
         with torch.no_grad():

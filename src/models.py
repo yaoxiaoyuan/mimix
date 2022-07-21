@@ -1760,8 +1760,8 @@ def build_bi_lm_model(config):
 def build_transformer_encoder_model(config):
     """
     """
-    trg_vocab_size = config["trg_vocab_size"]
-    trg_max_len = config["trg_max_len"]
+    src_vocab_size = config["src_vocab_size"]
+    src_max_len = config["src_max_len"]
     n_heads = config["n_heads"]
     d_model = config["d_model"]
     d_ff = config["d_ff"]
@@ -1784,8 +1784,8 @@ def build_transformer_encoder_model(config):
     pos_need_train = config.get("pos_need_train", False)
     
     transformer = TransformerEncoder(config["symbol2id"],
-                                     trg_vocab_size, 
-                                     trg_max_len, 
+                                     src_vocab_size, 
+                                     src_max_len, 
                                      n_heads,
                                      d_model, 
                                      d_ff, 
