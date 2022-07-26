@@ -328,96 +328,130 @@ class MatchDataProcessor(DataProcessor):
         return {"src_list":src_list}
 
 
-def build_data_processor(train_config, model_config):
+def build_enc_dec_processor(train_config, model_config):
     """
     """
-    if model_config["task"] == "enc_dec":
-        
-        src_tokenizer = build_tokenizer(
+    src_tokenizer = build_tokenizer(
                 tokenizer=model_config["src_tokenizer"],
                 vocab_file=model_config["src_vocab"], 
                 pre_tokenized=train_config.get("pre_tokenized",False),  
                 pre_vectorized=train_config.get("pre_vectorized",False))
-        trg_tokenizer = build_tokenizer(
+    trg_tokenizer = build_tokenizer(
                 tokenizer=model_config["trg_tokenizer"],
                 vocab_file=model_config["trg_vocab"], 
                 pre_tokenized=train_config.get("pre_tokenized",False),  
                 pre_vectorized=train_config.get("pre_vectorized",False))
         
-        return S2SDataProcessor(
+    return S2SDataProcessor(
                 model_config["src_max_len"], 
                 model_config["trg_max_len"], 
                 src_tokenizer, 
                 trg_tokenizer,
                 model_config["symbol2id"])
-        
-    elif model_config["task"] == "lm":
-        trg_tokenizer = build_tokenizer(
+
+
+def build_lm_processor(train_config, model_config):
+    """
+    """
+    trg_tokenizer = build_tokenizer(
                 tokenizer=model_config["trg_tokenizer"],
                 vocab_file=model_config["trg_vocab"], 
                 pre_tokenized=train_config.get("pre_tokenized",False),  
                 pre_vectorized=train_config.get("pre_vectorized",False))
         
-        return LMDataProcessor(
+    return LMDataProcessor(
                 model_config["trg_max_len"], 
                 trg_tokenizer,
                 model_config["symbol2id"])
-        
-    elif model_config["task"] == "classify":
-        src_tokenizer = build_tokenizer(
+
+
+def build_classify_processor(train_config, model_config):
+    """
+    """
+    src_tokenizer = build_tokenizer(
                 tokenizer=model_config["src_tokenizer"],
                 vocab_file=model_config["src_vocab"], 
                 pre_tokenized=train_config.get("pre_tokenized",False),  
                 pre_vectorized=train_config.get("pre_vectorized",False))
         
-        label2id = None
-        if "label2id" in model_config:
-            label2id = load_vocab(real_path(model_config["label2id"]))
+    label2id = None
+    if "label2id" in model_config:
+        label2id = load_vocab(real_path(model_config["label2id"]))
         
-        return ClassifyDataProcessor(
+    return ClassifyDataProcessor(
                 model_config["src_max_len"], 
                 label2id, 
                 model_config["n_class"],
                 model_config["symbol2id"], 
                 src_tokenizer)
 
-    elif model_config["task"] == "bi-lm":
-        trg_tokenizer = build_tokenizer(
+
+def build_bi_lm_processor(train_config, model_config):
+    """
+    """
+    trg_tokenizer = build_tokenizer(
                 tokenizer=model_config["trg_tokenizer"],
                 vocab_file=model_config["trg_vocab"], 
                 pre_tokenized=train_config.get("pre_tokenized",False),  
                 pre_vectorized=train_config.get("pre_vectorized",False))
         
-        return BiLMDataProcessor(
+    return BiLMDataProcessor(
                 model_config["trg_max_len"], 
                 trg_tokenizer, 
                 model_config["symbol2id"], 
                 model_config["mask_rate"])
 
-    elif model_config["task"] == "sequence_labeling":
-        src_tokenizer = build_tokenizer(
+
+def build_sequence_labeling_processor(train_config, model_config):
+    """
+    """
+    src_tokenizer = build_tokenizer(
                 tokenizer=model_config["src_tokenizer"],
                 vocab_file=model_config["src_vocab"], 
                 pre_tokenized=train_config.get("pre_tokenized",False),  
                 pre_vectorized=train_config.get("pre_vectorized",False))
 
-        label2id = load_vocab(real_path(model_config["label2id"]))
+    label2id = load_vocab(real_path(model_config["label2id"]))
         
-        return SequenceLabelingDataProcessor(
+    return SequenceLabelingDataProcessor(
                 model_config["src_max_len"], 
                 label2id, 
                 model_config["n_labels"],
                 model_config["symbol2id"], 
                 src_tokenizer)
-        
-    elif model_config["task"] == "match":
-        src_tokenizer = build_tokenizer(
+
+
+def build_match_processor(train_config, model_config):
+    """
+    """
+    src_tokenizer = build_tokenizer(
                 tokenizer=model_config["src_tokenizer"],
                 vocab_file=model_config["src_vocab"],
                 pre_tokenized=train_config.get("pre_tokenized",False),
                 pre_vectorized=train_config.get("pre_vectorized",False))
 
-        return MatchDataProcessor(
+    return MatchDataProcessor(
                 model_config["src_max_len"],
                 src_tokenizer,
                 model_config["symbol2id"])
+
+
+data_processor_builder_config = {
+        "enc_dec": build_enc_dec_processor,
+        "lm": build_lm_processor,
+        "classify": build_classify_processor,
+        "bi_lm": build_bi_lm_processor,
+        "sequence_labeling": build_sequence_labeling_processor,
+        "match": build_match_processor,
+}
+
+def build_data_processor(train_config, model_config):
+    """
+    """
+    if model_config["task"] in data_processor_builder_config:
+        data_processor_builder_fn = data_processor_builder_config[model_config["task"]]
+        return data_processor_builder_fn(train_config, model_config)
+    else:
+        raise ValueError("model not correct!")
+
+

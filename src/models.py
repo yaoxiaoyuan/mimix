@@ -84,9 +84,9 @@ class TransformerClassifer(nn.Module):
                                pos_need_train)
         
         self.W_pool = nn.Parameter(torch.Tensor(d_model, d_model))
-        self.b_pool = nn.Parameter(torch.Tensor(d_model))
+        self.b_pool = nn.Parameter(torch.zeros(d_model))
         self.W = nn.Parameter(torch.Tensor(d_model, n_class))
-        self.b = nn.Parameter(torch.Tensor(n_class))
+        self.b = nn.Parameter(torch.zeros(n_class))
         
         self.reset_parameters()
     
@@ -97,8 +97,6 @@ class TransformerClassifer(nn.Module):
         stdv = 1.0 / np.sqrt(self.d_model)
         for weight in [self.W_pool, self.W]:
             weight.data.uniform_(-stdv, stdv)
-        for weight in [self.b_pool, self.b]:
-            weight.data.zero()
     
     def get_attn_mask(self, seq_query, seq_key):
         """
@@ -1772,7 +1770,6 @@ def build_transformer_encoder_model(config):
     attn_dropout = config.get("attn_dropout", 0)
     emb_dropout = config.get("emb_dropout", 0)
     ln_eps = config.get("ln_eps", 1e-5)
-    share_emb_out_proj = config.get("share_emb_out_proj", False)
     share_layer_params = config.get("share_layer_params", False)
     embedding_size = config.get("embedding_size", None)
     n_share_across_layers = config.get("n_share_across_layers", 1)
@@ -2020,23 +2017,20 @@ def build_sequence_labeling_model(config):
     return model    
 
 
+model_builder_fn = {
+            "enc_dec": build_enc_dec_model,
+            "lm": build_lm_model,
+            "classify": build_classify_model,
+            "bi_lm": build_bi_lm_model,
+            "sequence_labeling": build_sequence_labeling_model,
+            "match": build_match_text_model,
+        }
+
+
 def build_model(config):
     """
     """
-    if config["task"] == "enc_dec":
-        model = build_enc_dec_model(config)
-    elif config["task"] == "lm":
-        model = build_lm_model(config)
-    elif config["task"] == "classify":
-        model = build_classify_model(config)
-    elif config["task"] == "bi_lm":
-        model = build_bi_lm_model(config)
-    elif config["task"] == "sequence_labeling":
-        model = build_sequence_labeling_model(config)
-    elif config["task"] == "match":
-        model = build_match_text_model(config)
+    if config["task"] in model_builder_fn:
+        return model_builder_fn[config["task"]](config)
     else:
-        raise ValueError("model not correct!")  
-    
-    return model
-
+        raise ValueError("model not correct!")

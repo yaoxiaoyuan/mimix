@@ -80,19 +80,54 @@ def gaussian_kld(recog_mu, recog_logvar, prior_mu, prior_logvar):
     return kld
 
 
-def build_loss_fn(model_config, train_config):
+def build_lm_loss(model_config, train_config):
     """
     """
     eps = train_config.get("eps", 0)
     pad = train_config["symbol2id"]["_pad_"]
-    if model_config["task"] in ["enc_dec", "lm"]:
+    return lambda x,y:seq_cross_entropy(x[0], y[0], eps, pad)
+ 
+
+def build_classify_loss(model_config, train_config):
+    """
+    """
+    eps = train_config.get("eps", 0)
+    pad = train_config["symbol2id"]["_pad_"]
+    return lambda x,y:seq_cross_entropy(x[0], y[0], eps, pad)
+
+                
+def build_sequence_labeling_loss(model_config, train_config):
+    """
+    """
+    eps = train_config.get("eps", 0)
+    pad = train_config["symbol2id"]["_pad_"]
+    if "crf" in model_config["model"]:
+        return lambda x,y:x[0]
+    else:
         return lambda x,y:seq_cross_entropy(x[0], y[0], eps, pad)
-    elif model_config["task"] in ["classify"]:
-        return lambda x,y:classify_loss(x[0], y[0], eps)
-    elif model_config["task"] in ["sequence_labeling"]:
-        if "crf" in model_config["model"]:
-            return lambda x,y:x[0]
-        else:
-            return lambda x,y:seq_cross_entropy(x[0], y[0], eps, pad)
-    elif model_config["task"] in ["match"]:
-        return lambda x,y:seq_cross_entropy(train_config["sim_alpha"] * x[0], y[0], eps, pad)           
+
+
+def build_match_loss(model_config, train_config):
+    """
+    """
+    eps = train_config.get("eps", 0)
+    pad = train_config["symbol2id"]["_pad_"]
+    return lambda x,y:seq_cross_entropy(train_config["sim_alpha"] * x[0], y[0], eps, pad)
+
+
+loss_builder_config = {
+     "enc_dec": build_lm_loss,
+     "lm": build_lm_loss,
+     "bi_lm": build_lm_loss,
+     "sequence_labeling": build_sequence_labeling_loss,
+     "classify": build_classify_loss,
+     "match": build_match_loss
+}
+
+def build_loss_fn(model_config, train_config):
+    """
+    """
+    if model_config["task"] in loss_builder_config:
+        return loss_builder_config[model_config["task"]](model_config, train_config)
+    else:
+        raise ValueError("model not correct!")

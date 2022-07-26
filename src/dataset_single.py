@@ -305,6 +305,71 @@ class MatchDataset(Dataset):
         return [y], [y_target]
 
 
+def build_enc_dec_dataset(data_dir, batch_size, symbo2id, train_config):
+    """
+    """
+    return S2SDataset(
+                data_dir, 
+                batch_size, 
+                symbo2id)
+
+
+def build_lm_dataset(data_dir, batch_size, symbol2id, train_config):
+    """
+    """
+    return LMDataset(
+                data_dir,
+                batch_size,
+                symbol2id)
+
+
+def build_classify_dataset(data_dir, batch_size, symbol2id, train_config):
+    """
+    """
+    return ClassifyDataset(
+                data_dir,
+                batch_size,
+                symbol2id)
+
+ 
+def build_bi_lm_dataset(data_dir, batch_size, symbol2id, train_config):
+    """
+    """
+    return BiLMDataset(
+                data_dir,
+                batch_size,
+                symbol2id,
+                train_config["mask_rate"])
+
+
+def build_sequence_labeling_dataset(data_dir, batch_size, symbol2id, train_config):
+    """
+    """
+    return SequenceLabelingDataset(
+                data_dir,
+                batch_size,
+                symbol2id)
+
+
+def build_match_dataset(data_dir, batch_size, symbol2id, train_config):
+    """
+    """
+    return MatchDataset(
+                data_dir,
+                batch_size,
+                symbol2id)
+
+
+dataset_builder_config = {
+        "enc_dec": build_enc_dec_dataset,
+        "lm": build_lm_dataset,
+        "classify": build_classify_dataset,
+        "bi_lm": build_bi_lm_dataset,
+        "sequence_labeling": build_sequence_labeling_dataset,
+        "match": build_match_dataset,
+}
+
+
 def build_dataset(train_config, model_config, dataset="train"):
     """
     """
@@ -317,48 +382,16 @@ def build_dataset(train_config, model_config, dataset="train"):
     elif dataset == "test":
         data_dir = train_config["test_dir"]
         batch_size = train_config["test_batch_size"]
-        
-    if model_config["task"] == "enc_dec":
-        
-        return S2SDataset(
-                data_dir,
-                batch_size,
-                model_config["symbol2id"])
-        
-    elif model_config["task"] == "lm":
-        
-        return LMDataset(
-                data_dir,
-                batch_size,
-                model_config["symbol2id"])
-        
-    elif model_config["task"] == "classify":
-        
-        return ClassifyDataset(
-                data_dir,
-                batch_size,
-                model_config["symbol2id"])
 
-    elif model_config["task"] == "bi-lm":
-        
-        return BiLMDataset(
-                data_dir,
-                batch_size,
-                model_config["symbol2id"],
-                model_config["mask_rate"])
+    if model_config["task"] in dataset_builder_config:
+        dataset_builder_fn = dataset_builder_config[model_config["task"]]
+        return dataset_builder_fn(data_dir, 
+                                  batch_size, 
+                                  model_config["symbol2id"],
+                                  train_config)
+    else:
+        raise ValueError("model not correct!")
 
-    elif model_config["task"] == "sequence_labeling":
-        
-        return SequenceLabelingDataset(
-                data_dir,
-                batch_size,
-                model_config["symbol2id"])
-    elif model_config["task"] == "match":
-
-        return MatchDataset(
-                data_dir,
-                batch_size,
-                model_config["symbol2id"])
 
 def build_train_dataset(train_config, model_config):
     """
@@ -376,3 +409,5 @@ def build_test_dataset(train_config, model_config):
     """
     """
     return build_dataset(train_config, model_config, "test")
+
+
