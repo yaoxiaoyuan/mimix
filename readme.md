@@ -34,27 +34,16 @@ batch predict: python predict.py --conf conf_file
 
 Several pretrained models are listed below. You can use it follow the  instructions.
 
-| model                                | architecture                    | n_params  | n_layers | d_model | n_heads |
-| ------------------------------------ | ---- | ---- | :--- | ---- | ---- |
-| Chinese chitchat generator           | transformer enc-dec | 100m | 12 | 512 | 8 |
-| Chinese shi,ci,duilian generator     | transformer dec-only lm | 49m | 12 | 512 | 8 |
-| Chinese news summarization generator | transformer enc-dec | 100m | 12 | 512 | 8 |
-| Chinese shi,ci,duilian generator v2 | transformer dec-only lm  | 102m     | 12       | 768     | 12      |
-| Chinese news summarization generator v2 | transformer enc-dec | 216m     | 12       | 768     | 12 |
-| Chinese modern poet, lyric generator    | transformer dec-only lm | 103m     | 12       | 768     | 12      |
-| Chinese question paraphrase tool        | transformer enc-dec     | 216m     | 12       | 768     | 12      |
-| Chinese question similarity tool        | transformer enc         | 103m     | 12       | 768     | 12 |
-
-Training data details are listed below.
-
-| model                                    | n_samples | data size |
-| ---------------------------------------- | --------- | --------- |
-| Chinese chitchat generator               | 400m      | 76GB      |
-| Chinese shi,ci,qu,duilian generator      | 6m        | 1GB       |
-| Chinese news summarization generator     | 18m       | 42GB      |
-| Chinese news summarization generator  v2 | 36m       | 113GB     |
-| Chinese similar question pairs           | 32m       | 25GB      |
-| Chinese modern poet, lyric generator     | 2m        | 1GB       |
+| model                                | architecture                    | n_params  | n_layers | d_model | n_heads | n_samples | data size |
+| ------------------------------------ | ---- | ---- | :--- | ---- | ---- | ------------------------------------ | ------------------------------------ |
+| Chinese chitchat generator           | transformer enc-dec | 100m | 12 | 512 | 8 | 400m | 76GB |
+| Chinese shi,ci,duilian generator     | transformer dec-only lm | 49m | 12 | 512 | 8 | 6m | 1GB |
+| Chinese news summarization generator | transformer enc-dec | 100m | 12 | 512 | 8 | 18m | 42GB |
+| Chinese shi,ci,duilian generator v2 | transformer dec-only lm  | 102m     | 12       | 768     | 12      | 6m | 1GB |
+| Chinese news summarization generator v2 | transformer enc-dec | 216m     | 12       | 768     | 12 | 36m | 113GB |
+| Chinese modern poet, lyric generator    | transformer dec-only lm | 103m     | 12       | 768     | 12      | 2m | 1GB |
+| Chinese question paraphrase tool        | transformer enc-dec     | 216m     | 12       | 768     | 12      | 32m | 25GB |
+| Chinese question similarity tool        | transformer enc         | 103m     | 12       | 768     | 12 | 32m | 25GB |
 
 ### HOW TO RUN
 
