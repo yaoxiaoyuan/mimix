@@ -14,7 +14,7 @@ import json
 from constants import symbols, symbol2id
 from models import build_model
 
-home_dir = os.path.split(os.path.realpath(sys.argv[0]))[0]
+home_dir = os.path.dirname(os.path.abspath(__file__))
 
 def real_path(path, base_dir=None):
     """
@@ -29,23 +29,47 @@ def real_path(path, base_dir=None):
     return os.path.join(base_dir, path)
 
 
-def parse_args(usage):
+def parse_train_args(usage):
     """
     parse arguments
     """
     parser = OptionParser(usage)
-    parser.add_option("--conf", action="store", type="string", 
-                      dest="config")
-    
+
+    parser.add_option("--local_rank", action="store", type="int",
+                      dest="local_rank")
+
+    parser.add_option("--train_conf", action="store", type="string",
+                      dest="train_config")
+
+    parser.add_option("--model_conf", action="store", type="string", 
+                      dest="model_config")
+
     (options, args) = parser.parse_args(sys.argv)
 
-    if not options.config:
+    if not options.train_config or not options.model_config:
         print(usage)
         sys.exit(0)
     return options
 
 
-def load_config(config_file):
+def parse_test_args(usage):
+    """
+    parse arguments
+    """
+    parser = OptionParser(usage)
+
+    parser.add_option("--model_conf", action="store", type="string",
+                      dest="model_config")
+
+    (options, args) = parser.parse_args(sys.argv)
+
+    if not options.model_config:
+        print(usage)
+        sys.exit(0)
+    return options
+
+
+def load_config(config_file, add_symbol=False):
     """
     load config
     """
@@ -68,16 +92,17 @@ def load_config(config_file):
             else:
                 train_config[k] = eval(dtype + '("' + v + '")')
     
-    train_config["symbols"] = symbols
-    train_config["symbol2id"] = symbol2id
+    if add_symbol == True:
+        train_config["symbols"] = symbols
+        train_config["symbol2id"] = symbol2id
     
-    for symbol in symbols:
-        if symbol + "2tok" in train_config:
-            train_config["symbols"][symbol] = train_config[symbol + "2tok"]
+        for symbol in symbols:
+            if symbol + "2tok" in train_config:
+                train_config["symbols"][symbol] = train_config[symbol + "2tok"]
     
-    for symbol in symbol2id:
-        if symbol + "2id" in train_config:
-            train_config["symbol2id"][symbol] = train_config[symbol + "2id"]   
+        for symbol in symbol2id:
+            if symbol + "2id" in train_config:
+                train_config["symbol2id"][symbol] = train_config[symbol + "2id"]   
 
     return train_config
 

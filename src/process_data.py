@@ -333,12 +333,12 @@ def build_enc_dec_processor(train_config, model_config):
     """
     src_tokenizer = build_tokenizer(
                 tokenizer=model_config["src_tokenizer"],
-                vocab_file=model_config["src_vocab"], 
+                vocab_file=real_path(model_config["src_vocab"]), 
                 pre_tokenized=train_config.get("pre_tokenized",False),  
                 pre_vectorized=train_config.get("pre_vectorized",False))
     trg_tokenizer = build_tokenizer(
                 tokenizer=model_config["trg_tokenizer"],
-                vocab_file=model_config["trg_vocab"], 
+                vocab_file=real_path(model_config["trg_vocab"]), 
                 pre_tokenized=train_config.get("pre_tokenized",False),  
                 pre_vectorized=train_config.get("pre_vectorized",False))
         
@@ -355,7 +355,7 @@ def build_lm_processor(train_config, model_config):
     """
     trg_tokenizer = build_tokenizer(
                 tokenizer=model_config["trg_tokenizer"],
-                vocab_file=model_config["trg_vocab"], 
+                vocab_file=real_path(model_config["trg_vocab"]), 
                 pre_tokenized=train_config.get("pre_tokenized",False),  
                 pre_vectorized=train_config.get("pre_vectorized",False))
         
@@ -370,7 +370,7 @@ def build_classify_processor(train_config, model_config):
     """
     src_tokenizer = build_tokenizer(
                 tokenizer=model_config["src_tokenizer"],
-                vocab_file=model_config["src_vocab"], 
+                vocab_file=real_path(model_config["src_vocab"]), 
                 pre_tokenized=train_config.get("pre_tokenized",False),  
                 pre_vectorized=train_config.get("pre_vectorized",False))
         
@@ -391,7 +391,7 @@ def build_bi_lm_processor(train_config, model_config):
     """
     trg_tokenizer = build_tokenizer(
                 tokenizer=model_config["trg_tokenizer"],
-                vocab_file=model_config["trg_vocab"], 
+                vocab_file=real_path(model_config["trg_vocab"]), 
                 pre_tokenized=train_config.get("pre_tokenized",False),  
                 pre_vectorized=train_config.get("pre_vectorized",False))
         
@@ -407,7 +407,7 @@ def build_sequence_labeling_processor(train_config, model_config):
     """
     src_tokenizer = build_tokenizer(
                 tokenizer=model_config["src_tokenizer"],
-                vocab_file=model_config["src_vocab"], 
+                vocab_file=real_path(model_config["src_vocab"]), 
                 pre_tokenized=train_config.get("pre_tokenized",False),  
                 pre_vectorized=train_config.get("pre_vectorized",False))
 
@@ -426,7 +426,7 @@ def build_match_processor(train_config, model_config):
     """
     src_tokenizer = build_tokenizer(
                 tokenizer=model_config["src_tokenizer"],
-                vocab_file=model_config["src_vocab"],
+                vocab_file=real_path(model_config["src_vocab"]),
                 pre_tokenized=train_config.get("pre_tokenized",False),
                 pre_vectorized=train_config.get("pre_vectorized",False))
 

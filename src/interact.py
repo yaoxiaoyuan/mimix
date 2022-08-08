@@ -13,7 +13,7 @@ from warppers import BiLMGenerator
 from warppers import TextClassifier
 from warppers import SequenceLabeler
 from warppers import TextMatcher
-from utils import pretty_print, parse_args, real_path, load_config
+from utils import pretty_print, parse_test_args, real_path, load_config
 
 def enc_dec_demo(config):
     """
@@ -182,14 +182,11 @@ def sequene_labeling_demo(config):
 def run_interactive():
     """
     """
-    usage = "usage: interact.py --conf <file>"
-    options = parse_args(usage)
-    conf_file = options.config
-    config = load_config(real_path(conf_file))
+    usage = "usage: interact.py --model_conf <file>"
+    options = parse_test_args(usage)
+    conf_file = options.model_config
+    config = load_config(real_path(conf_file), add_symbol=True)
     
-    if config["use_cuda"] == True:
-        os.environ["CUDA_VISIBLE_DEVICES"] = config.get("device_id", "0")
-        
     if config["task"] == "enc_dec":
         enc_dec_demo(config)
     elif config["task"] == "classify":

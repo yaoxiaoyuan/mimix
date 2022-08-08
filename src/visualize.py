@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from pylab import mpl
 from warppers import EncDecGenerator
-from utils import parse_args,load_config,real_path
+from utils import parse_test_args,load_config,real_path
 
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
@@ -157,10 +157,10 @@ def visualize_enc_dec(config):
 def run_visualize():
     """
     """
-    usage = "usage: visualize.py --conf <file>"
-    options = parse_args(usage)
-    conf_file = options.config
-    config = load_config(real_path(conf_file))
+    usage = "usage: visualize.py --model_conf <file>"
+    options = parse_test_args(usage)
+    conf_file = options.model_config
+    config = load_config(real_path(conf_file), add_symbol=True)
         
     if config["task"] == "enc_dec":
         visualize_enc_dec(config)

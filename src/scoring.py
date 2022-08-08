@@ -171,10 +171,10 @@ def enc_dec_score(config):
 def run_scoring():
     """
     """
-    usage = "usage: scoring.py --conf <file>"
-    options = parse_args(usage)
-    conf_file = options.config
-    config = load_config(real_path(conf_file))
+    usage = "usage: scoring.py --model_conf <file>"
+    options = parse_test_args(usage)
+    conf_file = options.model_config
+    config = load_config(real_path(conf_file), add_symbol=True) 
         
     if config["task"] == "enc_dec":
         enc_dec_score(config)

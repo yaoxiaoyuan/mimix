@@ -10,7 +10,7 @@ import sys
 import numpy as np
 import torch
 import torch.nn.functional as F
-from utils import real_path, parse_args, load_config, nested_to_cuda
+from utils import real_path, load_config, nested_to_cuda
 from decoding import crf_model_decoding
 
 def eval_acc(trainer, dataset="val"):

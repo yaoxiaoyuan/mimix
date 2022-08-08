@@ -177,10 +177,10 @@ def predict_classify(config):
 def run_predict():
     """
     """
-    usage = "usage: predict.py --conf <file>"
-    options = parse_args(usage)
-    conf_file = options.config
-    config = load_config(real_path(conf_file))
+    usage = "usage: predict.py --model_conf <file>"
+    options = parse_test_args(usage)
+    conf_file = options.model_config
+    config = load_config(real_path(conf_file), add_symbol=True) 
         
     if config["task"] == "enc_dec":
         predict_enc_dec(config)

@@ -10,6 +10,8 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 
 20220709 add more models
 
+20220808 add multi-gpu support
+
 ## Requirements
 
 pytorch >= 1.6
@@ -20,11 +22,11 @@ python >= 3.5
 
 ## Usage
 
-train: python train_single.py --conf conf_file
+train: python run_train.py --model_conf conf_file  --train_conf conf_file
 
-interact: python interact.py --conf conf_file
+interact: python interact.py --model_conf conf_file
 
-batch predict: python predict.py --conf conf_file
+batch predict: python predict.py --model_conf conf_file
 
 ## Demo
 

@@ -11,7 +11,7 @@ import torch
 import torch.nn.functional as F
 from torch.distributions import Categorical
 from warppers import EncDecGenerator
-from utils import parse_args,load_config,real_path
+from utils import parse_test_args,load_config,real_path
 
 def debug(enc_dec_gen, src_list, trg_list, topk=20):
     """
@@ -102,10 +102,10 @@ def enc_dec_debug(config):
 def run_debug():
     """
     """
-    usage = "usage: debug.py --conf <file>"
-    options = parse_args(usage)
-    conf_file = options.config
-    config = load_config(real_path(conf_file))
+    usage = "usage: debug.py --model_conf <file>"
+    options = parse_test_args(usage)
+    conf_file = options.model_config
+    config = load_config(real_path(conf_file), add_symbol=True)
         
     if config["task"] == "enc_dec":
         enc_dec_debug(config)

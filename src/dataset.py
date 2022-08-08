@@ -8,22 +8,25 @@ import os
 import json
 import random
 import numpy as np
+from abc import ABC, abstractmethod
 import torch
 from utils import real_path, load_vocab
 
-class Dataset():
+class Dataset(ABC):
     """
     """
-    def __init__(self):
+    def __init__(self, rank=0, world_size=1):
         """
         """
-        pass 
+        self.rank = rank
+        self.world_size = world_size
     
 
+    @abstractmethod
     def vectorize(self, batch_data):
         """
         """
-        return None
+        pass
 
     
     def __call__(self, start_steps=0):
@@ -40,7 +43,8 @@ class Dataset():
                 steps += 1
                 if steps < start_steps * self.batch_size:
                     continue
-                
+                if steps % self.world_size != self.rank:
+                    continue
                 data.append(json.loads(line))
                 if len(data) % (20 * self.batch_size) == 0:
                     batch_data = data[:self.batch_size]
@@ -59,7 +63,9 @@ class S2SDataset(Dataset):
     def __init__(self, 
                  data_dir,
                  batch_size,
-                 symbol2id):
+                 symbol2id,
+                 rank=0,
+                 world_size=1):
         """
         """
         self.data_dir = data_dir
@@ -71,7 +77,9 @@ class S2SDataset(Dataset):
         self.SEP = symbol2id["_sep_"]
         self.CLS = symbol2id["_cls_"]
         self.MASK = symbol2id["_mask_"]
-
+        self.rank = rank
+        self.world_size = world_size        
+        
     
     def vectorize(self, batch_data):
         """
@@ -103,7 +111,9 @@ class LMDataset(Dataset):
     def __init__(self, 
                  data_dir,
                  batch_size, 
-                 symbol2id):
+                 symbol2id,
+                 rank=0,
+                 world_size=1):
         """
         """
         self.data_dir = data_dir
@@ -115,7 +125,9 @@ class LMDataset(Dataset):
         self.SEP = symbol2id["_sep_"]
         self.CLS = symbol2id["_cls_"]
         self.MASK = symbol2id["_mask_"]
-
+        self.rank = rank
+        self.world_size = world_size        
+        
         
     def vectorize(self, batch_data):
         """
@@ -143,7 +155,9 @@ class ClassifyDataset(Dataset):
     def __init__(self, 
                  data_dir,
                  batch_size,
-                 symbol2id):
+                 symbol2id,
+                 rank=0,
+                 world_size=1):
         """
         """
         self.data_dir = data_dir
@@ -155,7 +169,9 @@ class ClassifyDataset(Dataset):
         self.SEP = symbol2id["_sep_"]
         self.CLS = symbol2id["_cls_"]
         self.MASK = symbol2id["_mask_"]
-        
+        self.rank = rank
+        self.world_size = world_size        
+                
         
     def vectorize(self, batch_data):
         """
@@ -183,7 +199,9 @@ class SequenceLabelingDataset(Dataset):
     def __init__(self, 
                  data_dir,
                  batch_size,
-                 symbol2id):
+                 symbol2id,
+                 rank=0,
+                 world_size=1):
         """
         """
         self.data_dir = data_dir
@@ -195,7 +213,9 @@ class SequenceLabelingDataset(Dataset):
         self.SEP = symbol2id["_sep_"]
         self.CLS = symbol2id["_cls_"]
         self.MASK = symbol2id["_mask_"]
-
+        self.rank = rank
+        self.world_size = world_size        
+        
        
     def vectorize(self, batch_data):
         """
@@ -223,7 +243,9 @@ class BiLMDataset(Dataset):
                  data_dir,
                  batch_size,
                  symbol2id, 
-                 mask_rate):
+                 mask_rate,
+                 rank=0,
+                 world_size=1):
         """
         """
         self.data_dir = data_dir
@@ -236,7 +258,9 @@ class BiLMDataset(Dataset):
         self.CLS = symbol2id["_cls_"]
         self.MASK = symbol2id["_mask_"]
         self.mask_rate = mask_rate
-
+        self.rank = rank
+        self.world_size = world_size        
+        
         
     def vectorize(self, batch_data):
         """
@@ -272,7 +296,9 @@ class MatchDataset(Dataset):
     def __init__(self,
                  data_dir,
                  batch_size,
-                 symbol2id):
+                 symbol2id,
+                 rank=0,
+                 world_size=1):
         """
         """
         self.data_dir = data_dir
@@ -284,7 +310,9 @@ class MatchDataset(Dataset):
         self.SEP = symbol2id["_sep_"]
         self.CLS = symbol2id["_cls_"]
         self.MASK = symbol2id["_mask_"]
-
+        self.rank = rank
+        self.world_size = world_size        
+        
 
     def vectorize(self, batch_data):
         """
@@ -305,59 +333,71 @@ class MatchDataset(Dataset):
         return [y], [y_target]
 
 
-def build_enc_dec_dataset(data_dir, batch_size, symbo2id, train_config):
+def build_enc_dec_dataset(data_dir, batch_size, symbo2id, train_config, rank, world_size):
     """
     """
     return S2SDataset(
-                data_dir, 
+                real_path(data_dir), 
                 batch_size, 
-                symbo2id)
+                symbo2id,
+                rank, 
+                world_size)
 
 
-def build_lm_dataset(data_dir, batch_size, symbol2id, train_config):
+def build_lm_dataset(data_dir, batch_size, symbol2id, train_config, rank, world_size):
     """
     """
     return LMDataset(
-                data_dir,
+                real_path(data_dir),
                 batch_size,
-                symbol2id)
+                symbol2id,
+                rank, 
+                world_size)
 
 
-def build_classify_dataset(data_dir, batch_size, symbol2id, train_config):
+def build_classify_dataset(data_dir, batch_size, symbol2id, train_config, rank, world_size):
     """
     """
     return ClassifyDataset(
-                data_dir,
+                real_path(data_dir),
                 batch_size,
-                symbol2id)
+                symbol2id,
+                rank, 
+                world_size)
 
  
-def build_bi_lm_dataset(data_dir, batch_size, symbol2id, train_config):
+def build_bi_lm_dataset(data_dir, batch_size, symbol2id, train_config, rank, world_size):
     """
     """
     return BiLMDataset(
-                data_dir,
+                real_path(data_dir),
                 batch_size,
                 symbol2id,
-                train_config["mask_rate"])
+                train_config["mask_rate"],
+                rank, 
+                world_size)
 
 
-def build_sequence_labeling_dataset(data_dir, batch_size, symbol2id, train_config):
+def build_sequence_labeling_dataset(data_dir, batch_size, symbol2id, train_config, rank, world_size):
     """
     """
     return SequenceLabelingDataset(
-                data_dir,
+                real_path(data_dir),
                 batch_size,
-                symbol2id)
+                symbol2id,
+                rank, 
+                world_size)
 
 
-def build_match_dataset(data_dir, batch_size, symbol2id, train_config):
+def build_match_dataset(data_dir, batch_size, symbol2id, train_config, rank, world_size):
     """
     """
     return MatchDataset(
-                data_dir,
+                real_path(data_dir),
                 batch_size,
-                symbol2id)
+                symbol2id,
+                rank, 
+                world_size)
 
 
 dataset_builder_config = {
@@ -370,7 +410,7 @@ dataset_builder_config = {
 }
 
 
-def build_dataset(train_config, model_config, dataset="train"):
+def build_dataset(train_config, model_config, dataset="train", rank=0, world_size=1):
     """
     """
     if dataset == "train":
@@ -388,26 +428,28 @@ def build_dataset(train_config, model_config, dataset="train"):
         return dataset_builder_fn(data_dir, 
                                   batch_size, 
                                   model_config["symbol2id"],
-                                  train_config)
+                                  train_config,
+                                  rank, 
+                                  world_size)
     else:
         raise ValueError("model not correct!")
 
 
-def build_train_dataset(train_config, model_config):
+def build_train_dataset(train_config, model_config, rank=0, world_size=1):
     """
     """
-    return build_dataset(train_config, model_config, "train")
+    return build_dataset(train_config, model_config, "train", rank, world_size)
 
 
-def build_val_dataset(train_config, model_config):
+def build_val_dataset(train_config, model_config, rank=0, world_size=1):
     """
     """
-    return build_dataset(train_config, model_config, "val")
+    return build_dataset(train_config, model_config, "val", rank, world_size)
 
 
-def build_test_dataset(train_config, model_config):
+def build_test_dataset(train_config, model_config, rank=0, world_size=1):
     """
     """
-    return build_dataset(train_config, model_config, "test")
+    return build_dataset(train_config, model_config, "test", rank, world_size)
 
 
