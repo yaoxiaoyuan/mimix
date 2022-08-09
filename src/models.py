@@ -2017,7 +2017,7 @@ def build_sequence_labeling_model(config):
     return model    
 
 
-model_builder_fn = {
+model_builder_dict = {
             "enc_dec": build_enc_dec_model,
             "lm": build_lm_model,
             "classify": build_classify_model,
@@ -2030,7 +2030,7 @@ model_builder_fn = {
 def build_model(config):
     """
     """
-    if config["task"] in model_builder_fn:
-        return model_builder_fn[config["task"]](config)
+    if config["task"] in model_builder_dict:
+        return model_builder_dict[config["task"]](config)
     else:
         raise ValueError("model not correct!")

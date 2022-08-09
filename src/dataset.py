@@ -400,7 +400,7 @@ def build_match_dataset(data_dir, batch_size, symbol2id, train_config, rank, wor
                 world_size)
 
 
-dataset_builder_config = {
+dataset_builder_dict = {
         "enc_dec": build_enc_dec_dataset,
         "lm": build_lm_dataset,
         "classify": build_classify_dataset,
@@ -423,8 +423,8 @@ def build_dataset(train_config, model_config, dataset="train", rank=0, world_siz
         data_dir = train_config["test_dir"]
         batch_size = train_config["test_batch_size"]
 
-    if model_config["task"] in dataset_builder_config:
-        dataset_builder_fn = dataset_builder_config[model_config["task"]]
+    if model_config["task"] in dataset_builder_dict:
+        dataset_builder_fn = dataset_builder_dict[model_config["task"]]
         return dataset_builder_fn(data_dir, 
                                   batch_size, 
                                   model_config["symbol2id"],

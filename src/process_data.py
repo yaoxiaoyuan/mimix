@@ -436,7 +436,7 @@ def build_match_processor(train_config, model_config):
                 model_config["symbol2id"])
 
 
-data_processor_builder_config = {
+data_processor_builder_dict = {
         "enc_dec": build_enc_dec_processor,
         "lm": build_lm_processor,
         "classify": build_classify_processor,
@@ -448,8 +448,8 @@ data_processor_builder_config = {
 def build_data_processor(train_config, model_config):
     """
     """
-    if model_config["task"] in data_processor_builder_config:
-        data_processor_builder_fn = data_processor_builder_config[model_config["task"]]
+    if model_config["task"] in data_processor_builder_dict:
+        data_processor_builder_fn = data_processor_builder_dict[model_config["task"]]
         return data_processor_builder_fn(train_config, model_config)
     else:
         raise ValueError("model not correct!")
