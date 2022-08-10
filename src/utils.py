@@ -185,7 +185,7 @@ def load_vocab(vocab_path):
     """
     """
     vocab = {}
-    for i,line in enumerate(open(vocab_path, "rb")):
+    for i,line in enumerate(open(real_path(vocab_path), "rb")):
         line = line.decode("utf-8").strip()
         if "\t" in line:
             word, word_id = line.split("\t")
