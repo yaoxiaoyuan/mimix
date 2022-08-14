@@ -7,7 +7,7 @@ Created on Wed Dec 11 11:39:21 2019
 import os
 import sys
 import time
-from warppers import EncDecGenerator, TextClassifier, LMGenerator
+from predictor import EncDecGenerator, TextClassifier, LMGenerator
 from utils import parse_args, real_path, load_config
 
 def predict_enc_dec(config):

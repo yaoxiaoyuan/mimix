@@ -6,11 +6,13 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 
 ## Updates
 
-20220621 add more models
+20210913 release chiense chitchat, poet, summarization generation models
 
-20220709 add more models
+20220621 release poet v2, summarization v2, question paraphrase generation and question similarity models
 
-20220808 add multi-gpu support
+20220709 release modern poet and lyric generation model
+
+20220814 release question generation model
 
 ## Requirements
 
@@ -26,7 +28,7 @@ train: python run_train.py --model_conf conf_file  --train_conf conf_file
 
 interact: python interact.py --model_conf conf_file
 
-batch predict: python predict.py --model_conf conf_file
+batch predict: python run_predict.py --model_conf conf_file
 
 ## Demo
 
@@ -40,8 +42,9 @@ Several pretrained models are listed below. You can use it follow the  instructi
 | Chinese shi,ci,duilian generator v2 | transformer dec-only lm  | 102m     | 12       | 768     | 12      | 6m | 1GB |
 | Chinese news summarization generator v2 | transformer enc-dec | 216m     | 12       | 768     | 12 | 36m | 113GB |
 | Chinese modern poet, lyric generator    | transformer dec-only lm | 103m     | 12       | 768     | 12      | 2m | 1GB |
-| Chinese question paraphrase tool        | transformer enc-dec     | 216m     | 12       | 768     | 12      | 32m | 25GB |
+| Chinese question paraphrase generator | transformer enc-dec     | 216m     | 12       | 768     | 12      | 32m | 25GB |
 | Chinese question similarity tool        | transformer enc         | 103m     | 12       | 768     | 12 | 32m | 25GB |
+| Chinese question generation | transformer enc-dec | 216m | 12 | 768     | 12 | 0.5m | 0.5GB |
 
 ### HOW TO RUN
 
@@ -51,7 +54,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
 
 3. cd src and run: 
 
-   1. Chinese chitchat generator: python interact.py --conf ../conf/chat_base_conf
+   1. Chinese chitchat generator: python interact.py --model_conf ../conf/chat_base_conf
 
       1. input:今天天气好热啊
 
@@ -79,7 +82,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
 
          
 
-   2. Chinese shiciqulian generator: python interact.py --conf ../conf/shi_base_conf
+   2. Chinese shiciqulian generator: python interact.py --model_conf ../conf/shi_base_conf
 
       1. input: \_shi\_ \_xinyun\_ \_7lv\_ \_title\_
    
@@ -87,7 +90,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
    
          
    
-   3. Chinese summarization generator interact.py --conf ../conf/summ_base_conf
+   3. Chinese summarization generator interact.py --model_conf ../conf/summ_base_conf
    
       1. input: 6月21日，河北省公安厅发布唐山打人案情况通报：经查，2022年6月7日，陈某亮（男，43岁）等4人从江苏驾车至河北唐山，与陈某志（男，41岁）等人合谋实施网络赌博洗钱违法犯罪活动。6月10日凌晨，陈某志等5人与陈某亮等4人在唐山市路北区某烧烤店聚餐饮酒。期 间，2时40分，陈某志对下班后在同店就餐的王某某（女，31岁）进行骚扰，遭拒后伙同马某齐（男，25岁）、陈某亮等人，对王某某、 刘某某（女，29岁）等4人进行殴打，2时47分逃离，2时55分4名被害人由120送医。2时41分接群众报警后，唐山市公安局路北分局机场路派出所民警率辅警于3时09分赶到现场开展处置工作。据通报，2时40分陈某志对女孩进行骚扰，2时41分警方接到群众报警，冲突发生1分钟即有人报警。2时47分陈某志及其同伙逃离，从骚扰到逃离，共计7分钟。
    
@@ -111,7 +114,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
    
          
    
-   4. Chinese shiciqulian generator v2: python interact.py --conf ../conf/shi_base_conf_v2
+   4. Chinese shiciqulian generator v2: python interact.py --model_conf ../conf/shi_base_conf_v2
    
       1. input: \_shi\_ \_xinyun\_ \_7lv\_ \_title\_
    
@@ -119,7 +122,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
    
          
    
-   5. Chinese summarization generator v2: interact.py --conf ../conf/summ_base_conf_v2
+   5. Chinese summarization generator v2: python interact.py --model_conf ../conf/summ_base_conf_v2
    
       1. input: 6月21日，河北省公安厅发布唐山打人案情况通报：经查，2022年6月7日，陈某亮（男，43岁）等4人从江苏驾车至河北唐山，与陈某志（男，41岁）等人合谋实施网络赌博洗钱违法犯罪活动。6月10日凌晨，陈某志等5人与陈某亮等4人在唐山市路北区某烧烤店聚餐饮酒。期 间，2时40分，陈某志对下班后在同店就餐的王某某（女，31岁）进行骚扰，遭拒后伙同马某齐（男，25岁）、陈某亮等人，对王某某、 刘某某（女，29岁）等4人进行殴打，2时47分逃离，2时55分4名被害人由120送医。2时41分接群众报警后，唐山市公安局路北分局机场路派出所民警率辅警于3时09分赶到现场开展处置工作。据通报，2时40分陈某志对女孩进行骚扰，2时41分警方接到群众报警，冲突发生1分钟即有人报警。2时47分陈某志及其同伙逃离，从骚扰到逃离，共计7分钟。
    
@@ -157,7 +160,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
       
          
 
-   6. Chinese modern poet, lyric generator : interact.py --conf ../conf/poet_base_conf
+   6. Chinese modern poet, lyric generator : python interact.py --model_conf ../conf/poet_base_conf
 
       1. input: \_poet\_ \_title\_ 寒江雪 \_content\_
 
@@ -165,7 +168,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
 
          
 
-   7. Chinese question paraphrase: interact.py --conf ../conf/aug_base_conf
+   7. Chinese question paraphrase generator: python interact.py --model_conf ../conf/aug_base_conf
 
       1. input: 孕妇吃什么好
    
@@ -193,25 +196,17 @@ Several pretrained models are listed below. You can use it follow the  instructi
 
          
 
-   8. Chinese question similarity tool: interact.py --conf ../conf/sim_base_conf
+   8. Chinese question generation: python interact.py --model_conf ../conf/qg_base_conf
 
-      1. input: 适合小孩听的歌\t推荐几首儿歌\t熬夜有什么坏处\t晚睡对身体的影响
+      1. input: 《玫瑰之战》是由孙皓执导，郑仁湘、张涵编剧，袁泉、黄晓明、俞飞鸿领衔主演，代旭、于谨维、王鹤润主演、芦芳生、张艺上、隋俊波特邀主演，王志飞特约出演，王姬特别主演的都市剧。
 
       2. output:
 
-         适合小孩听的歌 推荐几首儿歌 0.708049
-
-         适合小孩听的歌 熬夜有什么坏处 0.11056142
-
-         适合小孩听的歌 晚睡对身体的影响 0.19936031
-
-         推荐几首儿歌 熬夜有什么坏处 0.015660984
-
-         推荐几首儿歌 晚睡对身体的影响 0.046153657
-
-         熬夜有什么坏处 晚睡对身体的影响 0.6877855
+         孙皓 \_sep\_ 玫瑰之战是谁执导的。 -6.365093231201172
 
          
+
+   9. Chinese question generation:  
 
 ### Cite
 

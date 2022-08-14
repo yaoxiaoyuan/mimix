@@ -10,7 +10,7 @@ import sys
 import torch
 import torch.nn.functional as F
 from torch.distributions import Categorical
-from warppers import EncDecGenerator
+from predictor import EncDecGenerator
 from utils import parse_test_args,load_config,real_path
 
 def debug(enc_dec_gen, src_list, trg_list, topk=20):

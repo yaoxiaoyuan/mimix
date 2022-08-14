@@ -7,12 +7,12 @@ Created on Mon Jul 16 12:20:14 2018
 import os
 import sys
 import time
-from warppers import EncDecGenerator
-from warppers import LMGenerator
-from warppers import BiLMGenerator
-from warppers import TextClassifier
-from warppers import SequenceLabeler
-from warppers import TextMatcher
+from predictor import EncDecGenerator
+from predictor import LMGenerator
+from predictor import BiLMGenerator
+from predictor import TextClassifier
+from predictor import SequenceLabeler
+from predictor import TextMatcher
 from utils import pretty_print, parse_test_args, real_path, load_config
 
 def enc_dec_demo(config):

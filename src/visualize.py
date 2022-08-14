@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from pylab import mpl
-from warppers import EncDecGenerator
+from predictor import EncDecGenerator
 from utils import parse_test_args,load_config,real_path
 
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
