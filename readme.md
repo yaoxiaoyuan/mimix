@@ -206,8 +206,6 @@ Several pretrained models are listed below. You can use it follow the  instructi
 
          
 
-   9. Chinese question generation:  
-
 ### Cite
 
 ```
