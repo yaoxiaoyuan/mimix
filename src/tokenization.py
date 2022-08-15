@@ -184,16 +184,21 @@ class MimixTokenizer(Tokenizer):
                 vocab_file, pre_tokenized, pre_vectorized)
         
         if pre_vectorized == False:
-            self.tri_tree = self.build_tri_tree(self.vocab)
-        
+            zh_words = [ww for ww in self.vocab if all([is_cjk(ch) for ch in ww])]
+            self.tri_tree = self.build_tri_tree(zh_words)
+
+            self.symbols = set()
+            for word in self.vocab:
+                if re.search("^_[a-z]+_$", word):
+                    self.symbols.add(word)
+            self.symbols_tri_tree = self.build_tri_tree(self.symbols)
+
 
     def build_tri_tree(self, keywords):
         """   
         """    
         tri_tree = {}
         for key in keywords:
-            if any(not is_cjk(ch) for ch in key):
-                continue
             root = tri_tree
             for ch in key:
                 if ch not in root:
@@ -203,6 +208,34 @@ class MimixTokenizer(Tokenizer):
             root.setdefault(u"##", {})
         
         return tri_tree
+    
+
+    def prefix_match(self, s):
+        """
+        """
+        start = 0 
+        size = len(s)
+
+        root = self.symbols_tri_tree
+        end = start
+        matched = ""
+        matched_end = start
+        while end < size and s[end] in root:
+            if u"##" in root:
+                matched = s[start:end]
+                matched_end = end
+
+            root = root[s[end]]
+            end += 1
+
+        if u"##" in root:
+            matched = s[start:end]
+            matched_end = end
+
+        if matched_end == start:
+            return ""
+        
+        return matched
     
 
     def maximum_match(self, s):
@@ -249,16 +282,22 @@ class MimixTokenizer(Tokenizer):
         
         text = re.sub("[ ]+", " ", text)
         
+        i = 0
         tokenized = ""
-        is_last_special = False
         is_last_cjk = False
         is_last_num_or_alphabet = False
-        for i,ch in enumerate(text):
-            if is_last_special == True:
-                tokenized += ch
-                if is_special(ch) == True:
-                    tokenized += " "
-                    is_last_special = False
+        while i < len(text):
+            ch = text[i]
+            if is_special(ch):
+                matched = self.prefix_match(text[i:]) 
+                if len(matched) > 0:
+                    tokenized += (" " + matched + " ")
+                    i += len(matched)
+                else:
+                    tokenized += (" " + ch + " ")
+                    i += 1
+                is_last_cjk = False
+                is_last_num_or_alphabet = True
             elif is_cjk(ch):
                 if is_last_cjk == True:
                     tokenized += (ch) 
@@ -266,6 +305,7 @@ class MimixTokenizer(Tokenizer):
                     tokenized += (" " + ch)
                 is_last_cjk = True
                 is_last_num_or_alphabet = False
+                i += 1
             elif is_num(ch) or is_alphabet(ch):                
                 if is_last_num_or_alphabet == True:
                     tokenized += ch
@@ -273,14 +313,11 @@ class MimixTokenizer(Tokenizer):
                     tokenized += (" " + ch)
                 is_last_cjk = False
                 is_last_num_or_alphabet = True
-            elif is_special(ch):
-                tokenized += (" " + ch)
-                is_last_special = True
-                is_last_cjk = False
-                is_last_num_or_alphabet = True
+                i += 1
             elif is_useless(ch):
                 is_last_cjk = False
-                is_last_num_or_alphabet = False                  
+                is_last_num_or_alphabet = False  
+                i += 1
             elif is_space(ch):
                 if is_alphabet(text[i-1]) and is_alphabet(text[i+1]): 
                     tokenized += " "
@@ -289,12 +326,14 @@ class MimixTokenizer(Tokenizer):
                 else:
                     tokenized += " _s_ "
                 is_last_cjk = False
-                is_last_num_or_alphabet = False                      
+                is_last_num_or_alphabet = False   
+                i += 1
             else:
                 tokenized += (" " + ch + " ") 
                 is_last_cjk = False
                 is_last_num_or_alphabet = False
-        
+                i += 1
+
         tokenized = re.sub("[ ]+", " ", tokenized).strip()
 
         tokens = []
