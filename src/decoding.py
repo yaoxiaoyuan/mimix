@@ -452,7 +452,7 @@ def top_k_sampling(logits, n_samples, top_k):
     
     probs = torch.softmax(logits, -1)
     
-    return torch.multinomial(probs, n_samples, replacement=False)
+    return torch.multinomial(probs, n_samples, replacement=True)
 
 
 def top_k_top_p_sampling(logits, 
@@ -460,7 +460,7 @@ def top_k_top_p_sampling(logits,
                          top_p, 
                          temp=1, 
                          n_samples=1, 
-                         replacement=False):
+                         replacement=True):
     """
     """
     fill_value = -10000
@@ -916,7 +916,7 @@ def sample_step_with_constraints(enc_dec_model,
                                       top_p, 
                                       temp, 
                                       sample_size, 
-                                      replacement=False)
+                                      replacement=True)
         
         y = (indice % vocab_size).view(-1, 1)
         
