@@ -2,7 +2,7 @@
 """
 Created on Fri Aug 23 10:59:36 2019
 
-@author: lyn
+@author: Xiaoyuan Yao
 """
 import math
 import torch

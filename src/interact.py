@@ -2,7 +2,7 @@
 """
 Created on Mon Jul 16 12:20:14 2018
 
-@author: lyn
+@author: Xiaoyuan Yao
 """
 import os
 import sys

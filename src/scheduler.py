@@ -2,7 +2,7 @@
 """
 Created on Thu Jan  7 11:53:07 2021
 
-@author: lyn
+@author: Xiaoyuan Yao
 """
 import math
 

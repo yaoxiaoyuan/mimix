@@ -2,7 +2,7 @@
 """
 Created on Sun Jun 28 09:38:03 2020
 
-@author: lyn
+@author: Xiaoyuan Yao
 """
 import torch
 import torch.nn.functional as F

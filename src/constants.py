@@ -2,7 +2,7 @@
 """
 Created on Fri Dec  6 23:51:58 2019
 
-@author: lyn
+@author: Xiaoyuan Yao
 """
 symbols = {"PAD_TOK" : "_pad_",
            "BOS_TOK" : "_bos_",

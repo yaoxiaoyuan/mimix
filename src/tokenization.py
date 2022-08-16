@@ -2,7 +2,7 @@
 """
 Created on Fri Nov 20 17:40:07 2020
 
-@author: lyn
+@author: Xiaoyuan Yao
 """
 import re
 from abc import abstractmethod

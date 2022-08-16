@@ -2,7 +2,7 @@
 """
 Created on Thu Aug 29 10:34:48 2019
 
-@author: lyn
+@author: Xiaoyuan Yao
 """
 import random
 import torch

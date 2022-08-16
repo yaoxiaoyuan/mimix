@@ -2,7 +2,7 @@
 """
 Created on Mon Jan 11 15:54:15 2021
 
-@author: lyn
+@author: Xiaoyuan Yao
 """
 from torch import optim
 
