@@ -16,7 +16,7 @@ from dataset import build_train_dataset, build_val_dataset, build_test_dataset
 from models import build_model
 from scheduler import build_lr_scheduler
 from loss import build_loss_fn
-from evaluate import build_eval_fn
+from evaluator import build_eval_fn
 from optimizer import build_optimizer
 from utils import nested_to_cuda
 

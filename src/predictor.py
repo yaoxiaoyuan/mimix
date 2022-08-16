@@ -419,7 +419,7 @@ class LMGenerator():
         detokenize_res = []
         for hyp,score in zip(hypothesis, scores):
             trg = self.trg_tokenizer.detokenize_ids(hyp)
-            
+
             trg = trg.replace(self.pad_tok, "").strip()
             if trg.endswith(self.eos_tok):
                 trg = trg.replace(self.eos_tok, "").strip()
