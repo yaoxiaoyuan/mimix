@@ -44,17 +44,34 @@ def test_tokenization():
 def test_generation_metric():
     """
     """
-    reference_corpus = ["今 天 天 气 真 好".split()]
-    translation_corpus = ["今 天 天 气 真 不 错".split()]
-    print(generation_metric.compute_bleu(reference_corpus, translation_corpus))
+    ref_corpus = ["今 天 天 气 真 不 错".split(),
+                  "我 好 无 聊 啊".split(),]
+    eval_corpus = ["今 天 天 气 真 的 不 错".split(),
+                   "我 真 的 很 无 聊".split()]
+    print(ref_corpus, eval_corpus)
+    print(generation_metric.compute_bleu(ref_corpus, eval_corpus, 4))
+    print(generation_metric.rouge_n(eval_corpus, ref_corpus, 1))
+    print(generation_metric.rouge_n(eval_corpus, ref_corpus, 2))
+    print(generation_metric.rouge_l_sentence_level(eval_corpus, ref_corpus))
     
-    from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
-    print(sentence_bleu(
-                    references=reference_corpus,
-                    hypothesis=translation_corpus[0],
+    print("------")
+    
+    from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction, corpus_bleu
+    print("bleu-4", corpus_bleu(
+                    list_of_references=[[s] for s in ref_corpus],
+                    hypotheses=eval_corpus,
                     smoothing_function=SmoothingFunction().method1
                 )
         )
+    
+
+    from rouge import Rouge
+    rouge = Rouge()
+    res = rouge.get_scores(hyps=[" ".join(s) for s in eval_corpus], 
+                           refs=[" ".join(s) for s in ref_corpus],
+                           avg=True)
+    for k in res:
+        print(k, res[k]["f"])
 
 if __name__ == "__main__":
     
