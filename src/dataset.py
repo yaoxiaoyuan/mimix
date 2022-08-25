@@ -414,13 +414,13 @@ def build_dataset(train_config, model_config, dataset="train", rank=0, world_siz
     """
     """
     if dataset == "train":
-        data_dir = train_config["train_dir"]
+        data_dir = os.path.join(real_path(train_config.get("tmp_dir")), "train")
         batch_size = train_config["batch_size"]
     elif dataset == "val":
-        data_dir = train_config["val_dir"]
+        data_dir = os.path.join(real_path(train_config.get("tmp_dir")), "val")
         batch_size = train_config["test_batch_size"]
     elif dataset == "test":
-        data_dir = train_config["test_dir"]
+        data_dir = os.path.join(real_path(train_config.get("tmp_dir")), "test")
         batch_size = train_config["test_batch_size"]
 
     if model_config["task"] in dataset_builder_dict:

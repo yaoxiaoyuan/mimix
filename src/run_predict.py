@@ -8,7 +8,7 @@ import os
 import sys
 import time
 from predictor import EncDecGenerator, TextClassifier, LMGenerator
-from utils import parse_args, real_path, load_config
+from utils import parse_test_args, real_path, load_config
 
 def predict_enc_dec(config):
     """
@@ -177,7 +177,7 @@ def predict_classify(config):
 def run_predict():
     """
     """
-    usage = "usage: predict.py --model_conf <file>"
+    usage = "usage: run_predict.py --model_conf <file>"
     options = parse_test_args(usage)
     conf_file = options.model_config
     config = load_config(real_path(conf_file), add_symbol=True) 

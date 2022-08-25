@@ -147,6 +147,23 @@ def shuffle_data(data_dir,
         fo.close()
 
 
+def preprocess_data(data_dir, 
+                    dest_dir, 
+                    data_preprocessor
+        ):
+    """
+    """
+    data_files = [f for f in os.listdir(data_dir)]
+    for fi in data_files:
+        fo = open(os.path.join(dest_dir, str(fi)), "w", encoding="utf-8")
+        for line in open(os.path.join(data_dir, fi), "r", encoding="utf-8"):
+            if data_preprocessor is not None:
+                data = data_preprocessor(line)
+                line = json.dumps(data, ensure_ascii=False) + "\n"
+            fo.write(line)
+        fo.close()
+
+
 def pretty_print(res):
     """
     Assume res = [{k1:v1,k2:v2,...,kn:[[s1, score1], [s2, score2]]}, {}, ... ]

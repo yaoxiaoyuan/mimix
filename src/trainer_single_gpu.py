@@ -17,7 +17,7 @@ from scheduler import build_lr_scheduler
 from loss import build_loss_fn
 from evaluator import build_eval_fn
 from optimizer import build_optimizer
-from utils import nested_to_cuda
+from utils import nested_to_cuda, preprocess_data
 
 LOG_DIR = "../logger"
 
@@ -63,8 +63,6 @@ class Trainer():
         self.steps = 1
         self.total_steps = 1
         
-        self.make_model_dir()
-        
         self.max_epoch = train_config["max_epoch"] + 1
         
         self.save_steps = train_config.get("save_steps", 100000)  
@@ -80,10 +78,19 @@ class Trainer():
         
         self.model_config = model_config 
         
-        self.data_dir = real_path(train_config.get("data_dir"))
-        self.train_dir = real_path(train_config.get("train_dir"))
-        self.val_dir = real_path(train_config.get("val_dir", None))
-        self.test_dir = real_path(train_config.get("test_dir", None))        
+        self.raw_train_dir = real_path(train_config.get("raw_train_dir"))
+        self.raw_val_dir = real_path(train_config.get("raw_val_dir"))
+        self.raw_test_dir = real_path(train_config.get("raw_test_dir"))
+        self.train_dir = os.path.join(real_path(train_config.get("tmp_dir")),
+                                      "train")
+        self.val_dir = None
+        if self.raw_val_dir:
+            self.val_dir = os.path.join(real_path(train_config.get("tmp_dir")),
+                                      "val")
+        self.test_dir = None
+        if self.test_dir:
+            self.test_dir = os.path.join(real_path(train_config.get("tmp_dir")),
+                                      "test")       
         
         self.batch_size = train_config["batch_size"]
         self.test_batch_size = train_config["test_batch_size"]
@@ -103,7 +110,9 @@ class Trainer():
         self.custom_parse_fn = custom_parse_fn
         self.step_callback_fn_list = step_callback_fn_list
         
-
+        self.make_all_dir()
+        
+        
     def build_logger(self):
         """
         """
@@ -176,19 +185,23 @@ class Trainer():
             self.eval_fn = build_eval_fn(self.model_config)
 
 
-    def make_model_dir(self):
+    def make_all_dir(self):
         """
         """
-        if not os.path.exists(self.model_dir):
-            try:
-                os.mkdir(self.model_dir)
-                self.logger.info("Create model dir success!")
-            except:
-                self.model_dir = "./"
-                self.logger.info("Change model dir to current dir.")
-        else:
-            self.logger.info("Model dir already exists!")
-        
+        for _name, _dir in [["Model Dir", self.model_dir],
+                            ["Train Dir", self.train_dir],
+                            ["Val Dir", self.val_dir],
+                            ["Test Dir", self.test_dir]]:
+            if _dir is not None and not os.path.exists(_dir):
+                try:
+                    os.mkdir(_dir)
+                    self.logger.info("Create %s success!" % _name)
+                except:
+                    self.model_dir = "./"
+                    self.logger.info("Change %s to current dir." % _name)
+            else:
+                self.logger.info("%s already exists!" % _name)
+
     
     def save_model(self, model_name=None):
         """
@@ -246,7 +259,7 @@ class Trainer():
         sort_key_fn = None
         if self.sort_data == True:
             sort_key_fn = self.get_sort_key_fn()
-        shuffle_data(self.data_dir, 
+        shuffle_data(self.raw_train_dir, 
                      self.train_dir,
                      fast_shuffle=fast_shuffle,
                      num_shards=self.num_shards,
@@ -267,12 +280,18 @@ class Trainer():
             if self.sort_data == True:
                 sort_key_fn = self.get_sort_key_fn()
             
-            shuffle_data(self.data_dir, 
+            shuffle_data(self.raw_train_dir, 
                          self.train_dir,
                          fast_shuffle=False,
                          num_shards=self.num_shards,
                          data_preprocessor=data_preprocessor,
                          sort_key_fn=sort_key_fn)
+            
+            if self.eval_model == True and self.eval_fn is not None:
+                if self.val_dir is not None:
+                    preprocess_data(self.raw_val_dir, self.val_dir, data_preprocessor)
+                if self.test_dir is not None:
+                    preprocess_data(self.raw_test_dir, self.test_dir, data_preprocessor)
             
             self.logger.info("Pre Shuffle train data completed!")
 

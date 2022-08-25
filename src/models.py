@@ -118,13 +118,13 @@ class TransformerClassifer(nn.Module):
         enc_outputs = self.encoder(x, 
                                    enc_self_attn_mask, 
                                    return_states=return_states)
-
+        
         enc_output = enc_outputs[0][:,0,:]
-
+        
         enc_output = torch.tanh(F.linear(enc_output, self.W_pool) + self.b_pool)
         
         logits = torch.matmul(enc_output, self.W) + self.b
-        
+
         outputs = [logits]
         
         if return_states == True:

@@ -92,8 +92,7 @@ def build_classify_loss(model_config, train_config):
     """
     """
     eps = train_config.get("eps", 0)
-    pad = model_config["symbol2id"]["_pad_"]
-    return lambda x,y:seq_cross_entropy(x[0], y[0], eps, pad)
+    return lambda x,y:classify_loss(x[0], y[0], eps)
 
                 
 def build_sequence_labeling_loss(model_config, train_config):

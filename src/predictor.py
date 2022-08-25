@@ -570,6 +570,18 @@ class TextMatcher():
         return y
 
 
+    def encode_texts(self, src_list):
+        """
+        """
+        y = self.encode_inputs(src_list)
+        
+        self.model.eval()
+        with torch.no_grad():
+            outputs = self.model([y])
+        
+        return outputs[1]
+
+
     def predict(self, src_list):
         """
         """
@@ -636,13 +648,13 @@ class TextClassifier():
         """
         """
         x = self.encode_inputs(src_list)
-        
+
         self.model.eval()
         with torch.no_grad():
             outputs = self.model([x])
         
         logits = outputs[0]
-            
+
         y = torch.softmax(logits, 1)
         prob,label = torch.topk(y, self.num_class)
         prob = prob.cpu().numpy()
