@@ -14,7 +14,7 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 
 20220814 release Chinese question generation model
 
-20220906 release Chinese ancient translation
+20220906 release Chinese ancient translation model
 
 ## Requirements
 
@@ -206,10 +206,15 @@ Several pretrained models are listed below. You can use it follow the  instructi
       2. output:
 
          适合小孩听的歌 推荐几首儿歌 0.708049
+
          适合小孩听的歌 熬夜有什么坏处 0.11056142
+
          适合小孩听的歌 晚睡对身体的影响 0.19936031
+
          推荐几首儿歌 熬夜有什么坏处 0.015660984
+
          推荐几首儿歌 晚睡对身体的影响 0.046153657
+
          熬夜有什么坏处 晚睡对身体的影响 0.6877855
 
          
