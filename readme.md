@@ -6,13 +6,15 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 
 ## Updates
 
-20210913 release chiense chitchat, poet, summarization generation models
+20210913 release Chinese chitchat, poet, summarization generation models
 
-20220621 release poet v2, summarization v2, question paraphrase generation and question similarity models
+20220621 release Chinese poet v2, summarization v2, question paraphrase generation and question similarity models
 
-20220709 release modern poet and lyric generation model
+20220709 release Chinese modern poet and lyric generation model
 
-20220814 release question generation model
+20220814 release Chinese question generation model
+
+20220906 release Chinese ancient translation
 
 ## Requirements
 
@@ -45,6 +47,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
 | Chinese question paraphrase generator | transformer enc-dec     | 216m     | 12       | 768     | 12      | 32m | 25GB |
 | Chinese question similarity tool        | transformer enc         | 103m     | 12       | 768     | 12 | 32m | 25GB |
 | Chinese question generation | transformer enc-dec | 216m | 12 | 768     | 12 | 0.5m | 0.5GB |
+| Chinese ancient translation | transformer enc-dec | 216m | 12 | 768     | 12      | 6m | 1GB |
 
 ### HOW TO RUN
 
@@ -85,17 +88,17 @@ Several pretrained models are listed below. You can use it follow the  instructi
    2. Chinese shiciqulian generator: python interact.py --model_conf ../conf/shi_base_conf
 
       1. input: \_shi\_ \_xinyun\_ \_7lv\_ \_title\_
-   
+
       2. output: \_shi\_ \_xinyun\_ \_7lv\_ \_title\_ 题赠友人 \_content\_ 曾经万里隔寒霜，梦寐三更到谢娘。一朵白云飘故旧，千丝玉絮送清凉。天涯雁影南方去，海角归心北地伤。岁月蹉跎尘念久，年华虚度鬓如霜。
-   
+
          
-   
+
    3. Chinese summarization generator interact.py --model_conf ../conf/summ_base_conf
-   
+
       1. input: 6月21日，河北省公安厅发布唐山打人案情况通报：经查，2022年6月7日，陈某亮（男，43岁）等4人从江苏驾车至河北唐山，与陈某志（男，41岁）等人合谋实施网络赌博洗钱违法犯罪活动。6月10日凌晨，陈某志等5人与陈某亮等4人在唐山市路北区某烧烤店聚餐饮酒。期 间，2时40分，陈某志对下班后在同店就餐的王某某（女，31岁）进行骚扰，遭拒后伙同马某齐（男，25岁）、陈某亮等人，对王某某、 刘某某（女，29岁）等4人进行殴打，2时47分逃离，2时55分4名被害人由120送医。2时41分接群众报警后，唐山市公安局路北分局机场路派出所民警率辅警于3时09分赶到现场开展处置工作。据通报，2时40分陈某志对女孩进行骚扰，2时41分警方接到群众报警，冲突发生1分钟即有人报警。2时47分陈某志及其同伙逃离，从骚扰到逃离，共计7分钟。
-   
+
       2. output:
-   
+
          唐山打人案情况通报 -5.3681640625
    河北省公安厅通报唐山打人案情况 -6.82421875
          河北警方通报唐山打人案情况 -7.1669921875
@@ -111,23 +114,23 @@ Several pretrained models are listed below. You can use it follow the  instructi
          唐山打人案情况通报：4人合谋实施网络赌博洗钱活动 -11.560546875
    河北省公安厅通报唐山打人案情况：4名被害人由120送医 -11.7265625
          唐山打人案情况通报：4名被害人被殴打7分钟 -11.966796875
-   
+
          
-   
+
    4. Chinese shiciqulian generator v2: python interact.py --model_conf ../conf/shi_base_conf_v2
-   
+
       1. input: \_shi\_ \_xinyun\_ \_7lv\_ \_title\_
-   
+
       2. output: \_shi\_ \_xinyun\_ \_7lv\_ \_title\_ 秋菊 \_content\_ 月冷霜寒百草黄，疏篱落木卸浓妆。清姿独傲冰风骨，雅韵闲生玉露香。翠色满园人未识，花容入梦夜初长。无须绿叶来陪衬，此处陶然笑夕阳。
-   
+
          
-   
+
    5. Chinese summarization generator v2: python interact.py --model_conf ../conf/summ_base_conf_v2
-   
+
       1. input: 6月21日，河北省公安厅发布唐山打人案情况通报：经查，2022年6月7日，陈某亮（男，43岁）等4人从江苏驾车至河北唐山，与陈某志（男，41岁）等人合谋实施网络赌博洗钱违法犯罪活动。6月10日凌晨，陈某志等5人与陈某亮等4人在唐山市路北区某烧烤店聚餐饮酒。期 间，2时40分，陈某志对下班后在同店就餐的王某某（女，31岁）进行骚扰，遭拒后伙同马某齐（男，25岁）、陈某亮等人，对王某某、 刘某某（女，29岁）等4人进行殴打，2时47分逃离，2时55分4名被害人由120送医。2时41分接群众报警后，唐山市公安局路北分局机场路派出所民警率辅警于3时09分赶到现场开展处置工作。据通报，2时40分陈某志对女孩进行骚扰，2时41分警方接到群众报警，冲突发生1分钟即有人报警。2时47分陈某志及其同伙逃离，从骚扰到逃离，共计7分钟。
-   
+
       2. output:
-   
+
          河北省公安厅发布唐山打人案情况通报 -4.3955078125
 
          河北省公安厅通报唐山打人案情况 -5.14453125
@@ -171,7 +174,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
    7. Chinese question paraphrase generator: python interact.py --model_conf ../conf/aug_base_conf
 
       1. input: 孕妇吃什么好
-   
+
       2. output:
 
          适合孕妇吃的食物 -4.042654037475586
@@ -196,7 +199,22 @@ Several pretrained models are listed below. You can use it follow the  instructi
 
          
 
-   8. Chinese question generation: python interact.py --model_conf ../conf/qg_base_conf
+   8. Chinese question similarity tool: interact.py --conf ../conf/sim_base_conf
+
+      1. input:  适合小孩听的歌\t推荐几首儿歌\t熬夜有什么坏处\t晚睡对身体的影响
+
+      2. output:
+
+         适合小孩听的歌 推荐几首儿歌 0.708049
+         适合小孩听的歌 熬夜有什么坏处 0.11056142
+         适合小孩听的歌 晚睡对身体的影响 0.19936031
+         推荐几首儿歌 熬夜有什么坏处 0.015660984
+         推荐几首儿歌 晚睡对身体的影响 0.046153657
+         熬夜有什么坏处 晚睡对身体的影响 0.6877855
+
+         
+
+   9. Chinese question generation: python interact.py --model_conf ../conf/qg_base_conf
 
       1. input: 《玫瑰之战》是由孙皓执导，郑仁湘、张涵编剧，袁泉、黄晓明、俞飞鸿领衔主演，代旭、于谨维、王鹤润主演、芦芳生、张艺上、隋俊波特邀主演，王志飞特约出演，王姬特别主演的都市剧。
 
@@ -205,6 +223,18 @@ Several pretrained models are listed below. You can use it follow the  instructi
          孙皓 \_sep\_ 玫瑰之战是谁执导的。 -6.365093231201172
 
          
+
+   10. Chinese ancient translation: python interact.py --model_conf ../conf/a2m_base_conf
+
+      1. input:  白日依山尽,黄河入海流。欲穷千里目,更上一层楼。
+
+      2. output:
+
+         太阳靠近山的尽头,黄河流入大海,想要看尽千里的风光,就再登上一层楼。 -19.2099609375
+         太阳靠近山的尽头,黄河流入大海,想要看尽千里的风光,就再登上更高的一层楼。 -19.5224609375
+         太阳靠近山的尽头,黄河流入大海,想要看尽千里的风光,就再登上更高的一层城楼。 -19.80584144592285
+
+      
 
 ### Cite
 
