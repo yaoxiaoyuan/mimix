@@ -182,18 +182,19 @@ class Trainer():
         if self.eval_fn is None:
             self.eval_fn = build_eval_fn(self.model_config)
 
-
-        self.reload_model_weights()
+        if self.reload == True:
+            self.reload_model_weights()
         
         self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=True)
-
-        self.optimizer = optimizer
+        self.optimizer = optimizer 
+        
         if optimizer is None:
             self.optimizer = build_optimizer(self.model,
                                              self.train_config["optimizer"],
                                              self.train_config["lr"])
 
-        self.reload_optimizer_weights()
+        if self.reload == True:
+            self.reload_optimizer_weights()
 
         self.lr_scheduler = lr_scheduler
         if lr_scheduler is None:
@@ -299,8 +300,8 @@ class Trainer():
                 if self.sort_data == True:
                     sort_key_fn = self.get_sort_key_fn()
             
-                shuffle_data(self.data_dir, 
-                             self.train_dir,
+                shuffle_data(self.raw_train_dir,
+                             self.train_dir, 
                              fast_shuffle=False,
                              num_shards=self.num_shards,
                              data_preprocessor=data_preprocessor,
@@ -447,3 +448,20 @@ class Trainer():
         if rank == 0:    
             self.logger.info("Train Completed!")
 
+
+def run_train():
+    """
+    """
+    usage = "usage: run_train.py --model_conf <file> --train_conf <file>"
+
+    options = parse_train_args(usage)
+
+    train_config = load_config(real_path(options.train_config))
+    model_config = load_config(real_path(options.model_config), add_symbol=True)
+
+    trainer = Trainer(train_config, model_config)
+    trainer.train()
+
+
+if __name__ == "__main__":
+    run_train()
