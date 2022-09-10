@@ -317,7 +317,10 @@ class Trainer():
         param_dict = {}
         for k,v in self.model.named_parameters():
             if k in state_dict:
-                param_dict[k] = state_dict[k]
+                if state_dict[k].shape == v.shape:
+                    param_dict[k] = state_dict[k]
+                else:
+                    self.logger.warn("weight %s shape not same" % k)
             else:
                 self.logger.warn("weight %s not found in model file" % k)
         self.model.load_state_dict(param_dict, False)
