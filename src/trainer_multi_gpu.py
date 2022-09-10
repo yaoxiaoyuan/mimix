@@ -99,6 +99,10 @@ class Trainer():
             self.test_dir = os.path.join(real_path(train_config.get("tmp_dir")),
                                       "test")       
         
+        self.train_config["train_dir"] = self.train_dir
+        self.train_config["val_dir"] = self.val_dir
+        self.train_config["test_dir"] = self.test_dir
+        
         self.batch_size = train_config["batch_size"]
         self.test_batch_size = train_config["test_batch_size"]
         

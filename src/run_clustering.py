@@ -39,17 +39,17 @@ def encode_texts(config, fi_path, fo_path):
     fo.close()
 
 
-def ann_clustering(fi_path, fo_path, d, n, threshold):
+def ann_clustering(fi_path, fo_path, dim, n, threshold, min_size):
     """
     """
-    data = []
-    t = AnnoyIndex(d, 'angular')
+    data = []       
+    t = AnnoyIndex(dim, 'angular')
     for i,line in enumerate(open(fi_path, "r", encoding="utf-8")):
         if i % 10000 == 0:
             print("load data", i)
         d = json.loads(line)
         t.add_item(i, d["vec"])
-        del d["vec"]
+        #del d["vec"]
         data.append(d)
     print("load over")
     t.build(100)
@@ -94,9 +94,12 @@ def ann_clustering(fi_path, fo_path, d, n, threshold):
     clusters.sort(key=lambda x:len(x), reverse=True)
     fo = open(fo_path, "w", encoding="utf-8")
     for i,clu in enumerate(clusters):
-        print("clu %d size: %d\n--------\n" % (i, len(clu)))
-        for d in clu[:5]:
-            print(" "*8, d["text"])
+        if len(clu) < min_size:
+            break
+        if i < 20:
+            print("clu %d size: %d\n--------\n" % (i, len(clu)))
+            for d in clu[:5]:
+                print(" "*8, d["text"])
         fo.write(json.dumps(clu, ensure_ascii=False) + "\n")
     fo.close()
             
@@ -116,9 +119,10 @@ def text_clustering(config):
                    fo_path + ".clu", 
                    config["d_model"],
                    config.get("clu_ann_n", 50), 
-                   config.get("clu_ann_threshold", 0.85)
+                   config.get("clu_ann_threshold", 0.8),
+                   config.get("clu_min_size", 3)
                    )
-   
+ 
 
 def run_clustering():
     """

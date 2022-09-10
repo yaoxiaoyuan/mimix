@@ -132,32 +132,37 @@ def visualize_enc_dec(config):
             continue
         
         src,trg = line.split("\t")[:2]
-            
-        src_list.append(src)
-        trg_list.append(trg)
         
-        res = analysis_search(enc_dec_gen, src_list, trg_list)
+        res = analysis_search(enc_dec_gen, src, trg)
         src, trg, attn_score = res[0]
         print("src: %s, trg: %s" % (" ".join(src), " ".join(trg)))
 
-        for i in range(enc_dec_gen.model.n_enc_layers):
-            for j in range(enc_dec_gen.model.n_heads):
-                draw_heatmap(src, src, attn_score[0][i][j,:,:].T, 
-                             "../logger/enc_%d_%d"%(i, j))
+        #for i in range(enc_dec_gen.model.n_enc_layers):
+        #    for j in range(enc_dec_gen.model.n_heads):
+        #        draw_heatmap(src, src, attn_score[0][i][j,:,:].T, 
+        #                     "../logger/enc_%d_%d"%(i, j))
         
+        #for i in range(enc_dec_gen.model.n_dec_layers):
+        #    for j in range(enc_dec_gen.model.n_heads):
+        #        
+        #        #draw_heatmap(trg, trg, attn_score[1][i][j,:,:].T, 
+        #        #             "../logger/dec_%d_%d"%(i, j))
+        #        draw_heatmap(src, trg, attn_score[2][i][j,:,:].T, 
+        #                     "../logger/dec_enc_%d_%d"%(i, j))
+
+        dec_enc_attn_scores = []
         for i in range(enc_dec_gen.model.n_dec_layers):
             for j in range(enc_dec_gen.model.n_heads):
-                
-                draw_heatmap(trg, trg, attn_score[1][i][j,:,:].T, 
-                             "../logger/dec_%d_%d"%(i, j))
-                draw_heatmap(src, trg, attn_score[2][i][j,:,:].T, 
-                             "../logger/dec_enc_%d_%d"%(i, j))
+                dec_enc_attn_scores.append(attn_score[2][i][j,:,:].T)
+        dec_enc_attn_score = np.mean(dec_enc_attn_scores, 0)
+        print(dec_enc_attn_score.shape)
+        draw_heatmap(src, trg, dec_enc_attn_score, "../logger/dec_enc")
 
 
 def run_visualize():
     """
     """
-    usage = "usage: visualize.py --model_conf <file>"
+    usage = "usage: visualize_attn.py --model_conf <file>"
     options = parse_test_args(usage)
     conf_file = options.model_config
     config = load_config(real_path(conf_file), add_symbol=True)
