@@ -473,8 +473,8 @@ class BiLMGenerator():
                                  self.model.PAD,
                                  True)
         if self.add_cls == True:
-            trg_ids = [[self.model.CLS] + yy[:self.trg_max_len-1] for yy in y]
-            
+            y = [[self.model.CLS] + yy[:self.trg_max_len-1] for yy in y]
+
         if y is not None:
             y = torch.tensor(y, dtype=torch.long)
 
@@ -489,7 +489,7 @@ class BiLMGenerator():
         """
         """
         y = self.encode_inputs(trg_list)
-        
+
         self.model.eval()
         with torch.no_grad():
             outputs = self.model([y])
@@ -508,6 +508,7 @@ class BiLMGenerator():
         for i,trg in enumerate(y):
             res.append([trg_list[i], []])
             for j,ww in enumerate(trg):
+
                 if ww == self.mask_id:
                     pred = []
                     for k in range(return_k):
