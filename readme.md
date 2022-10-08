@@ -51,7 +51,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
 
 ### HOW TO RUN
 
-1. Download conf and model data: https://pan.baidu.com/s/1aQOGLOjNtabA7YyWOdH1Sg code: eegm
+1. Download conf and model data.  Please scan the completed [agreement](Mimix Model Release Agreement.docx). If agree to the agreement, fill in the information and send it to yaoxiaoyuan1990 at gmail dot com. I will send links to your email address once the procedure is approved.
 
 2. Put conf and model under mimix folder
 

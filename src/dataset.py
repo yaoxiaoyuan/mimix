@@ -86,7 +86,7 @@ class S2SDataset(Dataset):
         """
         batch_size = len(batch_data)
         src_max_len = max(len(x["src"]) for x in batch_data)
-        trg_max_len = max(len(x["trg"]) for x in batch_data)
+        trg_max_len = max(len(x["trg"]) - 1 for x in batch_data)
         x = self.PAD + np.zeros((batch_size, src_max_len), dtype=np.long)
         y = self.PAD + np.zeros((batch_size, trg_max_len), dtype=np.long)
         y_target = self.PAD + np.zeros((batch_size, trg_max_len), 
@@ -133,7 +133,7 @@ class LMDataset(Dataset):
         """
         """
         batch_size = len(batch_data)
-        trg_max_len = max(len(x["trg"]) for x in batch_data)
+        trg_max_len = max(len(x["trg"]) - 1 for x in batch_data)
         y = self.PAD + np.zeros((batch_size, trg_max_len), dtype=np.long)
         y_target = self.PAD + np.zeros((batch_size, trg_max_len), 
                                        dtype=np.long)

@@ -281,7 +281,7 @@ class Trainer():
             sort_key_fn = None
             if self.sort_data == True:
                 sort_key_fn = self.get_sort_key_fn()
-            shuffle_data(self.data_dir, 
+            shuffle_data(self.raw_train_dir, 
                          self.train_dir,
                          fast_shuffle=fast_shuffle,
                          num_shards=self.num_shards,
