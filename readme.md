@@ -50,6 +50,8 @@ Several pretrained models are listed below. You can use it follow the  instructi
 | Chinese question similarity tool        | transformer enc         | 103m     | 12       | 768     | 12 | 32m | 25GB |
 | Chinese question generation | transformer enc-dec | 216m | 12 | 768     | 12 | 0.5m | 0.5GB |
 | Chinese ancient translation | transformer enc-dec | 216m | 12 | 768     | 12      | 6m | 1GB |
+| Chinese comment generation v1 | transformer enc-dec | 216m | 12       | 768     | 12 | 18m | 1.8GB |
+| Chinese essay generation v1 | transformer dec-only lm | 135m | 12 | 768     | 12 | 48w | 0.7GB |
 
 ### HOW TO RUN
 
