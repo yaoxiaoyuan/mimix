@@ -16,6 +16,8 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 
 20220906 release Chinese ancient translation model
 
+20221010 release Chinese comment generation model v1, Chinese essay generation v1
+
 ## Requirements
 
 pytorch >= 1.6
@@ -51,7 +53,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
 
 ### HOW TO RUN
 
-1. Download conf and model data.  Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/Mimix%20Model%20Release%20Agreement.docx). If agree to the agreement, fill in the information and send it to yaoxiaoyuan1990 at gmail dot com. I will send links to your email address once the procedure is approved.
+1. Download conf and model data.  **Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/Mimix%20Model%20Release%20Agreement.docx). If agree to the agreement, fill in the information and send it to yaoxiaoyuan1990 at gmail dot com. I will send links to your email address once the procedure is approved.**
 
 2. Put conf and model under mimix folder
 
@@ -258,6 +260,30 @@ Several pretrained models are listed below. You can use it follow the  instructi
          夕阳依傍着山峦慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色看完,就应该再登上更高的一层城楼。 -5.8486328125
 
          夕阳依傍着终南山慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色尽情地观赏,就应该再登上更高的一层城楼。 -7.002392292022705
+       
+       
+       
+   11. Chinese comment generation: python interact.py --model_conf ../conf/comment_base_conf
+   
+       1. input:  今天（9月27日），中国空军新闻发言人申进科大校在第14届中国航展新闻发布会上表示，歼-20已经遍布东南西北中，列装越来越多、飞得越来越远。
+   
+       2.  output: 
+   
+          中国军工加油 -9.763671875
+          中国军工加油！ -9.810546875
+          中国人民解放军万岁！ -10.584172248840332
+   
+          
+   
+   12. Chinese essay generation: python interact.py --model_conf ../conf/essay_base_conf
+   
+       1. input: 春天
+   
+       2. output:
+   
+          春天来了 \_sep\_ “春天在哪里呀，春天在哪？春天在那小朋友的眼睛里。”随着春风和歌声，春姑娘催促我们赶紧出门寻找春天来。一 走进花园，闻见浓浓的花香和泥土的芳香，在向前走几步，就能闻到鲜花的芳香，看到满地的小野花，有红色的、黄色的、蓝色的、紫的，五颜六色，美丽极了！早晨，坐上妈妈送我的自行车去上学，虽然很冷，但是在妈妈的带领下，我真的很开心。回到家，给妈妈说：“妈妈，春天在我家的小院里，我要到院子里去了。”她顺口答应了，去给我买小礼物了。到了院子里，我看见两边的杨树发芽了，枝头也长出了一片小嫩芽。忽然我们的院子里多了一种植物，爸爸说：“那是桃树。”我兴奋地说：“这块地就是桃树的家了！这里的桃树叫桃中四君子呢！”田野里的花真多呀，把山上的树木都覆盖住了；那些紫粉的花，像婴儿睡在妈妈的肚子里、还有那些展开小翅膀的花，像眼睛里放着光；这些花朵很大，很大，像一个个白色的大绒球，在风中翩翩起舞。田野里的油菜花更美了！大地被油菜花染成黄色，风一吹，油菜荚上的金光闪闪，好像在跳一支动人的芭蕾。田野里的春天真美呀！春天真神奇呀！我爱春天！ [-736.4401]
+   
+       
 
 
 
