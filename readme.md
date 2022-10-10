@@ -270,7 +270,9 @@ Several pretrained models are listed below. You can use it follow the  instructi
        2.  output: 
    
           中国军工加油 -9.763671875
+   
           中国军工加油！ -9.810546875
+   
           中国人民解放军万岁！ -10.584172248840332
    
           
