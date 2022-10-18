@@ -38,24 +38,24 @@ batch predict: python run_predict.py --model_conf conf_file
 
 Several pretrained models are listed below. You can use it follow the  instructions.
 
-| model                                | architecture                    | n_params  | n_layers | d_model | n_heads | n_samples | data size |
-| ------------------------------------ | ---- | ---- | :--- | ---- | ---- | ------------------------------------ | ------------------------------------ |
-| Chinese chitchat generator           | transformer enc-dec | 100m | 12 | 512 | 8 | 400m | 76GB |
-| Chinese shi,ci,duilian generator     | transformer dec-only lm | 49m | 12 | 512 | 8 | 6m | 1GB |
-| Chinese news summarization generator | transformer enc-dec | 100m | 12 | 512 | 8 | 18m | 42GB |
-| Chinese shi,ci,duilian generator v2 | transformer dec-only lm  | 102m     | 12       | 768     | 12      | 6m | 1GB |
-| Chinese news summarization generator v2 | transformer enc-dec | 216m     | 12       | 768     | 12 | 36m | 113GB |
-| Chinese modern poet, lyric generator    | transformer dec-only lm | 103m     | 12       | 768     | 12      | 2m | 1GB |
-| Chinese question paraphrase generator | transformer enc-dec     | 216m     | 12       | 768     | 12      | 32m | 25GB |
-| Chinese question similarity tool        | transformer enc         | 103m     | 12       | 768     | 12 | 32m | 25GB |
-| Chinese question generation | transformer enc-dec | 216m | 12 | 768     | 12 | 0.5m | 0.5GB |
-| Chinese ancient translation | transformer enc-dec | 216m | 12 | 768     | 12      | 6m | 1GB |
-| Chinese comment generation v1 | transformer enc-dec | 216m | 12       | 768     | 12 | 18m | 1.8GB |
-| Chinese essay generation v1 | transformer dec-only lm | 135m | 12 | 768     | 12 | 48w | 0.7GB |
+| model                                | architecture                    | n_params  | n_layers | d_model | n_heads | n_samples | data size | open download |
+| ------------------------------------ | ---- | ---- | :--- | ---- | ---- | ------------------------------------ | ------------------------------------ | ------------------------------------ |
+| Chinese chitchat generator           | transformer enc-dec | 100m | 12 | 512 | 8 | 400m | 76GB | True |
+| Chinese shi,ci,duilian generator     | transformer dec-only lm | 49m | 12 | 512 | 8 | 6m | 1GB | True |
+| Chinese news summarization generator | transformer enc-dec | 100m | 12 | 512 | 8 | 18m | 42GB | True |
+| Chinese shi,ci,duilian generator v2 | transformer dec-only lm  | 102m     | 12       | 768     | 12      | 6m | 1GB | False |
+| Chinese news summarization generator v2 | transformer enc-dec | 216m     | 12       | 768     | 12 | 36m | 113GB | False |
+| Chinese modern poet, lyric generator    | transformer dec-only lm | 103m     | 12       | 768     | 12      | 2m | 1GB | True |
+| Chinese question paraphrase generator | transformer enc-dec     | 216m     | 12       | 768     | 12      | 32m | 25GB | True |
+| Chinese question similarity tool        | transformer enc         | 103m     | 12       | 768     | 12 | 32m | 25GB | True |
+| Chinese question generation | transformer enc-dec | 216m | 12 | 768     | 12 | 0.5m | 0.5GB | True |
+| Chinese ancient translation | transformer enc-dec | 216m | 12 | 768     | 12      | 6m | 1GB | False |
+| Chinese comment generation v1 | transformer enc-dec | 216m | 12       | 768     | 12 | 18m | 1.8GB | True |
+| Chinese essay generation v1 | transformer dec-only lm | 135m | 12 | 768     | 12 | 48w | 0.7GB | True |
 
 ### HOW TO RUN
 
-1. Download conf and model data.  **Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/Mimix%20Model%20Release%20Agreement.docx). If agree to the agreement, fill in the information and send it to yaoxiaoyuan1990 at gmail dot com. I will send links to your email address once the procedure is approved.**
+1. Download conf and model data.  **Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/Mimix%20Model%20Release%20Agreement.docx). If agree to the agreement, fill in the information and send it to yaoxiaoyuan1990 at gmail dot com. I will send links to your email address once the procedure is approved.** **The email title must be written as "Application to download the Mimix Models".**  
 
 2. Put conf and model under mimix folder
 
