@@ -369,6 +369,7 @@ class LMGenerator():
         """
         prefix = None
         if "prefix" in self.strategy and prefix_list is not None:
+            prefix_list = [prefix_list[i//self.sample_size] for i in range(len(prefix_list) * self.sample_size)]
             prefix = self.encode_inputs(prefix_list)
 
         self.model.eval()
