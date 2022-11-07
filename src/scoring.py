@@ -11,7 +11,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from predictor import EncDecGenerator
-from utils import parse_args,load_config,real_path
+from utils import parse_test_args,load_config,real_path
 
 def scoring_pairs(enc_dec_gen, src_list, trg_list):
     """
