@@ -55,7 +55,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
 
 ### HOW TO RUN
 
-1. Download conf and model data.  **Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/Mimix%20Model%20Release%20Agreement.docx). If agree to the agreement, fill in the information and send it to yaoxiaoyuan1990 at gmail dot com. I will send links to your email address once the procedure is approved.** **The email title must be written as "Application to download the Mimix Models".**  
+1. Download conf and model data.  **Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/Mimix%20Model%20Release%20Agreement.docx). If agree to the agreement, fill in the information and send the agreement to yaoxiaoyuan1990 at gmail dot com. Without agreement,  I won't reply to you.  I will send links to your email address once the procedure is approved.** **The email title must be written as "Application to download the Mimix Models".**  
 
 2. Put conf and model under mimix folder
 
