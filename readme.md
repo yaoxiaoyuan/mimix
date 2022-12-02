@@ -24,7 +24,7 @@ batch predict: python run_predict.py --model_conf conf_file
 
 Several pretrained models are listed below. You can use it follow the  instructions.
 
-| model                                | architecture                    | n_params  | n_layers | d_model | n_heads | n_samples | data size | open download |
+| model name                           | architecture                    | n_params  | n_layers | d_model | n_heads | n_samples | data size | open download |
 | ------------------------------------ | ---- | ---- | :--- | ---- | ---- | ------------------------------------ | ------------------------------------ | ------------------------------------ |
 | Chinese chitchat generator           | transformer enc-dec | 100m | 12 | 512 | 8 | 400m | 76GB | True |
 | Chinese shi,ci,duilian generator     | transformer dec-only lm | 49m | 12 | 512 | 8 | 6m | 1GB | True |
