@@ -9,7 +9,7 @@ from datetime import datetime
 import logging
 import torch
 import torch.distributed as dist
-from utils import shuffle_data, real_path, parse_train_args, load_config
+from utils import shuffle_data, real_path, parse_train_args, load_config, load_model_config
 from process_data import build_data_processor
 from dataset import build_train_dataset, build_val_dataset, build_test_dataset
 from models import build_model
@@ -464,7 +464,7 @@ def run_train():
     options = parse_train_args(usage)
 
     train_config = load_config(real_path(options.train_config))
-    model_config = load_config(real_path(options.model_config), add_symbol=True)
+    model_config = load_model_config(real_path(options.model_config))
 
     trainer = Trainer(train_config, model_config)
     trainer.train()

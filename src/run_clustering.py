@@ -9,7 +9,7 @@ import json
 from collections import Counter
 from annoy import AnnoyIndex
 from predictor import TextMatcher
-from utils import real_path, parse_test_args, load_config
+from utils import real_path, parse_test_args, load_model_config
 
 def encode_texts(config, fi_path, fo_path):
     """
@@ -130,7 +130,7 @@ def run_clustering():
     usage = "usage: run_clustering.py --model_conf <file>"
     options = parse_test_args(usage)
     conf_file = options.model_config
-    config = load_config(real_path(conf_file), add_symbol=True)
+    config = load_model_config(real_path(conf_file))
     
     text_clustering(config)
 

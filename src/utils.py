@@ -69,7 +69,7 @@ def parse_test_args(usage):
     return options
 
 
-def load_config(config_file, add_symbol=False):
+def load_config(config_file):
     """
     load config
     """
@@ -83,28 +83,37 @@ def load_config(config_file, add_symbol=False):
         
     config.read(config_file, encoding='utf-8')
     
-    train_config = {}
+    loaded_config = {}
     
     for dtype in config.sections():
         for k,v in config.items(dtype):
             if dtype == "bool":
-                train_config[k] = eval(v)
+                loaded_config[k] = eval(v)
             else:
-                train_config[k] = eval(dtype + '("' + v + '")')
-    
-    if add_symbol == True:
-        train_config["symbols"] = symbols
-        train_config["symbol2id"] = symbol2id
-    
-        for symbol in symbols:
-            if symbol + "2tok" in train_config:
-                train_config["symbols"][symbol] = train_config[symbol + "2tok"]
-    
-        for symbol in symbol2id:
-            if symbol + "2id" in train_config:
-                train_config["symbol2id"][symbol] = train_config[symbol + "2id"]   
+                loaded_config[k] = eval(dtype + '("' + v + '")')  
 
-    return train_config
+    return loaded_config
+
+
+def load_model_config(config_file):
+    """
+    load config
+    """
+    loaded_config = load_config(config_file)
+    
+    
+    loaded_config["symbols"] = symbols
+    loaded_config["symbol2id"] = symbol2id
+    
+    for symbol in symbols:
+        if symbol + "2tok" in loaded_config:
+            loaded_config["symbols"][symbol] = loaded_config[symbol + "2tok"]
+    
+    for symbol in symbol2id:
+        if symbol + "2id" in loaded_config:
+            loaded_config["symbol2id"][symbol] = loaded_config[symbol + "2id"]   
+
+    return loaded_config
 
 
 def shuffle_data(data_dir, 

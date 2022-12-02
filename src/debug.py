@@ -11,7 +11,7 @@ import torch
 import torch.nn.functional as F
 from torch.distributions import Categorical
 from predictor import EncDecGenerator
-from utils import parse_test_args,load_config,real_path
+from utils import parse_test_args,load_model_config,real_path
 
 def debug(enc_dec_gen, src_list, trg_list, topk=20):
     """
@@ -105,7 +105,7 @@ def run_debug():
     usage = "usage: debug.py --model_conf <file>"
     options = parse_test_args(usage)
     conf_file = options.model_config
-    config = load_config(real_path(conf_file), add_symbol=True)
+    config = load_model_config(real_path(conf_file))
         
     if config["task"] == "enc_dec":
         enc_dec_debug(config)

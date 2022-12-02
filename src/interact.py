@@ -13,7 +13,7 @@ from predictor import BiLMGenerator
 from predictor import TextClassifier
 from predictor import SequenceLabeler
 from predictor import TextMatcher
-from utils import pretty_print, parse_test_args, real_path, load_config
+from utils import pretty_print, parse_test_args, real_path, load_model_config
 
 def enc_dec_demo(config):
     """
@@ -185,7 +185,7 @@ def run_interactive():
     usage = "usage: interact.py --model_conf <file>"
     options = parse_test_args(usage)
     conf_file = options.model_config
-    config = load_config(real_path(conf_file), add_symbol=True)
+    config = load_model_config(real_path(conf_file))
     
     if config["task"] == "enc_dec":
         enc_dec_demo(config)

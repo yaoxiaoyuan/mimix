@@ -11,7 +11,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from predictor import EncDecGenerator
-from utils import parse_test_args,load_config,real_path
+from utils import parse_test_args,load_model_config,real_path
 
 def scoring_pairs(enc_dec_gen, src_list, trg_list):
     """
@@ -174,7 +174,7 @@ def run_scoring():
     usage = "usage: scoring.py --model_conf <file>"
     options = parse_test_args(usage)
     conf_file = options.model_config
-    config = load_config(real_path(conf_file), add_symbol=True) 
+    config = load_model_config(real_path(conf_file))
         
     if config["task"] == "enc_dec":
         enc_dec_score(config)

@@ -13,7 +13,7 @@ import socket
 import signal
 import logging
 import trainer_single_gpu
-from utils import real_path, parse_train_args, load_config
+from utils import real_path, parse_train_args, load_config, load_model_config
 
 
 def run_train_multi_gpu(nproc_per_node):
@@ -45,7 +45,7 @@ def run_train():
     options = parse_train_args(usage)
 
     train_config = load_config(real_path(options.train_config))
-    model_config = load_config(real_path(options.model_config), add_symbol=True)
+    model_config = load_model_config(real_path(options.model_config))
      
     if train_config["use_cuda"] == False or len(train_config.get("device_id", "0").split(",")) < 2:
         trainer = trainer_single_gpu.Trainer(train_config, model_config)

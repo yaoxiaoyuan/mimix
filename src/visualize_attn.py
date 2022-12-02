@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from pylab import mpl
 from predictor import EncDecGenerator
-from utils import parse_test_args,load_config,real_path
+from utils import parse_test_args,load_model_config,real_path
 
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
@@ -165,7 +165,7 @@ def run_visualize():
     usage = "usage: visualize_attn.py --model_conf <file>"
     options = parse_test_args(usage)
     conf_file = options.model_config
-    config = load_config(real_path(conf_file), add_symbol=True)
+    config = load_model_config(real_path(conf_file))
         
     if config["task"] == "enc_dec":
         visualize_enc_dec(config)
