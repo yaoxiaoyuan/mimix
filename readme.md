@@ -2,21 +2,7 @@
 
 Mimix is a tool for Seq2seq learning framework based on Pytorch. Basically, I implement several generative models, including rnn-seq2seq and transformer. Some other models, such as Text CNN, Transformer-based classifier and Transformer-based Language model, are also provided. To facilitate the use of pretrained models, Mimix can also load bert model weights. Other pretrained models may be supported in the future.
 
-I have trained some Chinese Generative Models which are listed in Demo section. You can follow the instructions and run the demo.
-
-## Updates
-
-20210913 release Chinese chitchat, poet, summarization generation models
-
-20220621 release Chinese poet v2, summarization v2, question paraphrase generation and question similarity models
-
-20220709 release Chinese modern poet and lyric generation model
-
-20220814 release Chinese question generation model
-
-20220906 release Chinese ancient translation model
-
-20221010 release Chinese comment generation model v1, Chinese essay generation v1
+I have trained some Chinese Generative Models which are listed in Demo section. You can follow the instructions and run the demo.  **An application is required for model download.**
 
 ## Requirements
 
