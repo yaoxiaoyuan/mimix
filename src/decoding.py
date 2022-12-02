@@ -296,7 +296,8 @@ def sample(enc_dec_model,
            sample_temp=1, 
            normalize="none", 
            gamma=1, 
-           eos=None):
+           eos=None,
+           sort=True):
     """
     """  
     if eos is None:
@@ -351,6 +352,13 @@ def sample(enc_dec_model,
     hyp_len = torch.sum(hypothesis.ne(enc_dec_model.PAD).float(), 1)
     normalized_score = \
         normalize_log_probs(log_probs, hyp_len, gamma, normalize)
+
+    if sort == True:
+        sort_idx = get_sort_idx(normalized_score.view(batch_size, sample_size))
+        
+        hypothesis = hypothesis[sort_idx, :]
+        normalized_score = normalized_score[sort_idx, :]
+        history_log_probs = history_log_probs[sort_idx, :]
     
     outputs = [hypothesis, normalized_score]
     

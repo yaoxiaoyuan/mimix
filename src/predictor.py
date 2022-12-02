@@ -250,7 +250,7 @@ class EncDecGenerator():
                             history_penalty_beta=self.history_penalty_beta,
                             penalty_vocab_start=self.penalty_vocab_start,
                             penalty_vocab_end=self.penalty_vocab_end,
-                            need_mask_unk=False,
+                            need_mask_unk=self.need_mask_unk,
                             sample_alpha_0=self.sample_alpha_0,
                             sample_alpha=self.sample_alpha,
                             sample_beta=self.sample_beta,
