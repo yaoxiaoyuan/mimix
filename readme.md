@@ -4,21 +4,15 @@ Mimix is a tool for Seq2seq learning framework based on Pytorch. Basically, I im
 
 I have trained some Chinese Generative Models which are listed in Demo section. You can follow the instructions and run the demo.  **An application is required for model download.**
 
-## Requirements
+### Cite
 
-pytorch >= 1.6
-
-numpy >= 1.15
-
-python >= 3.5
-
-## Usage
-
-train: python run_train.py --model_conf conf_file  --train_conf conf_file
-
-interact: python interact.py --model_conf conf_file
-
-batch predict: python run_predict.py --model_conf conf_file
+```
+@misc{mimix,
+  title={mimix},
+  author={Xiaoyuan Yao},
+  year={2021}
+}
+```
 
 ## Demo
 
@@ -278,16 +272,4 @@ Several pretrained models are listed below. You can use it follow the  instructi
 
 
 ​      
-
-### Cite
-
-```
-@misc{mimix,
-  title={mimix},
-  author={Xiaoyuan Yao},
-  year={2021}
-}
-```
-
-
 
