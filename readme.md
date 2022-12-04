@@ -14,7 +14,7 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 }
 ```
 
-## Demo
+## Models
 
 Several pretrained models are listed below. You can use it follow the  instructions.
 
@@ -33,7 +33,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
 | Chinese comment generation v1 | transformer enc-dec | 216m | 12       | 768     | 12 | 18m | 1.8GB | True |
 | Chinese essay generation v1 | transformer dec-only lm | 135m | 12 | 768     | 12 | 48w | 0.7GB | True |
 
-### HOW TO RUN
+### HOW TO RUN MODEL
 
 1. Download conf and model data.  **Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/Mimix%20Model%20Release%20Agreement.docx). If agree to the agreement, fill in the information and send the agreement to yaoxiaoyuan1990 at gmail dot com. Without agreement,  I won't reply to you.  I will send links to your email address once the procedure is approved.** **The email title must be written as "Application to download the Mimix Models".**  
 
