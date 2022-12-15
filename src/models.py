@@ -149,7 +149,8 @@ class TransformerEncoder(nn.Module):
                  d_ff, 
                  d_qk,
                  d_v, 
-                 n_enc_layers,    
+                 n_enc_layers,
+                 out_dim=None,                 
                  dropout=0, 
                  attn_dropout=0,
                  emb_dropout=0,
@@ -210,6 +211,10 @@ class TransformerEncoder(nn.Module):
         self.W3 = nn.Parameter(torch.Tensor(d_model, d_model))
         self.b3 = nn.Parameter(torch.zeros(d_model))
         
+        self.out_dim = out_dim
+        if out_dim is not None:
+            self.W4 = nn.Parameter(torch.Tensor(d_model, out_dim))
+            
         self.reset_parameters()
     
     
@@ -219,6 +224,8 @@ class TransformerEncoder(nn.Module):
         stdv = 1.0 / np.sqrt(self.d_model)
         for weight in [self.W2, self.W3]:
             weight.data.uniform_(-stdv, stdv)
+        if self.out_dim is not None:
+            self.W4.data.uniform_(-stdv, stdv)
     
     def get_attn_mask(self, seq_query, seq_key):
         """
@@ -244,6 +251,9 @@ class TransformerEncoder(nn.Module):
         enc_output = enc_outputs[0][:,0,:]
 
         enc_output = torch.matmul(torch.tanh(torch.matmul(enc_output, self.W2) + self.b2), self.W3) + self.b3
+        
+        if self.out_dim is not None:
+            enc_output = torch.matmul(enc_output, self.W4)
         
         norm_vec = F.normalize(enc_output, p=2, dim=1)
         sim = torch.mm(norm_vec, norm_vec.T)
@@ -1766,6 +1776,7 @@ def build_transformer_encoder_model(config):
     d_qk = config.get("d_qk", d_model//n_heads) 
     d_v = config.get("d_v", d_model//n_heads) 
     n_enc_layers = config["n_enc_layers"]
+    out_dim = config.get("out_dim", None)
     dropout = config.get("dropout", 0)
     attn_dropout = config.get("attn_dropout", 0)
     emb_dropout = config.get("emb_dropout", 0)
@@ -1788,7 +1799,8 @@ def build_transformer_encoder_model(config):
                                      d_ff, 
                                      d_qk, 
                                      d_v,
-                                     n_enc_layers, 
+                                     n_enc_layers,
+                                     out_dim,
                                      dropout,
                                      attn_dropout,
                                      emb_dropout,
