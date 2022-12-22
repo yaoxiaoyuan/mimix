@@ -259,7 +259,7 @@ class TransformerEncoder(nn.Module):
         sim = torch.mm(norm_vec, norm_vec.T)
         sim = sim + self.MIN_LOGITS * torch.eye(sim.shape[0], device=sim.device)
 
-        outputs = [sim, enc_output]
+        outputs = [sim, norm_vec, enc_output]
         
         if return_states == True:
             outputs = outputs + enc_outputs 
