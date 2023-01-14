@@ -20,11 +20,11 @@ Several pretrained models are listed below. You can use it follow the  instructi
 
 | model name                           | architecture                    | n_params  | n_layers | d_model | n_heads | n_samples | data size | open download |
 | ------------------------------------ | ---- | ---- | :--- | ---- | ---- | ------------------------------------ | ------------------------------------ | ------------------------------------ |
-| Chinese chitchat generator           | transformer enc-dec | 100m | 12 | 512 | 8 | 400m | 76GB | True |
-| Chinese shi,ci,duilian generator     | transformer dec-only lm | 49m | 12 | 512 | 8 | 6m | 1GB | True |
-| Chinese news summarization generator | transformer enc-dec | 100m | 12 | 512 | 8 | 18m | 42GB | True |
-| Chinese modern poet, lyric generator    | transformer dec-only lm | 103m     | 12       | 768     | 12      | 2m        | 1GB       | True          |
-| Chinese question paraphrase generator   | transformer enc-dec     | 216m     | 12       | 768     | 12      | 32m       | 25GB      | True          |
+| Chinese chitchat generation           | transformer enc-dec | 100m | 12 | 512 | 8 | 400m | 76GB | True |
+| Chinese shi,ci,duilian generation     | transformer dec-only lm | 49m | 12 | 512 | 8 | 6m | 1GB | True |
+| Chinese news summarization generation | transformer enc-dec | 100m | 12 | 512 | 8 | 18m | 42GB | True |
+| Chinese modern poet, lyric generation    | transformer dec-only lm | 103m     | 12       | 768     | 12      | 2m        | 1GB       | True          |
+| Chinese question paraphrase generation   | transformer enc-dec     | 216m     | 12       | 768     | 12      | 32m       | 25GB      | True          |
 | Chinese question similarity tool        | transformer enc         | 103m     | 12       | 768     | 12      | 32m       | 25GB      | True          |
 | Chinese question generation             | transformer enc-dec     | 216m     | 12       | 768     | 12      | 0.5m      | 0.5GB     | True          |
 | Chinese comment generation              | transformer enc-dec     | 216m     | 12       | 768     | 12      | 18m       | 1.8GB     | True          |
@@ -34,8 +34,8 @@ Several pretrained models are listed below. You can use it follow the  instructi
 | Chinese product review generation       | transformer enc-dec     | 216m     | 12       | 768     | 12      | 10m       | 2.4GB     | True          |
 | Chinese wuxia novel generation | transformer dec-only lm | 369m | 24 | 1024 | 16 | 830k | 1.2G | True |
 | Chinese ancient translation | transformer enc-dec | 216m | 12 | 768 | 12 | 6m | 1GB | False |
-| Chinese shi,ci,duilian generator v2 | transformer dec-only lm | 102m | 12 | 768 | 12 | 6m | 1GB | False |
-| Chinese news summarization generator v2 | transformer enc-dec | 216m | 12 | 768 | 12 | 36m | 113GB | False |
+| Chinese shi,ci,duilian generation v2 | transformer dec-only lm | 102m | 12 | 768 | 12 | 6m | 1GB | False |
+| Chinese news summarization generation v2 | transformer enc-dec | 216m | 12 | 768 | 12 | 36m | 113GB | False |
 
 ### HOW TO RUN MODEL
 
@@ -45,7 +45,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
 
 3. cd src and run: 
 
-   1. Chinese chitchat generator: python interact.py --model_conf ../conf/chat_base_conf
+   1. Chinese chitchat generation: python interact.py --model_conf ../conf/chat_base_conf
 
       1. input:今天天气好热啊
 
@@ -73,7 +73,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
 
          
 
-   2. Chinese shiciqulian generator: python interact.py --model_conf ../conf/shi_base_conf
+   2. Chinese shiciqulian generation: python interact.py --model_conf ../conf/shi_base_conf
 
       1. input: \_shi\_ \_xinyun\_ \_7lv\_ \_title\_
 
@@ -81,7 +81,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
 
          
 
-   3. Chinese summarization generator interact.py --model_conf ../conf/summ_base_conf
+   3. Chinese summarization generation interact.py --model_conf ../conf/summ_base_conf
 
       1. input: 6月21日，河北省公安厅发布唐山打人案情况通报：经查，2022年6月7日，陈某亮（男，43岁）等4人从江苏驾车至河北唐山，与陈某志（男，41岁）等人合谋实施网络赌博洗钱违法犯罪活动。6月10日凌晨，陈某志等5人与陈某亮等4人在唐山市路北区某烧烤店聚餐饮酒。期 间，2时40分，陈某志对下班后在同店就餐的王某某（女，31岁）进行骚扰，遭拒后伙同马某齐（男，25岁）、陈某亮等人，对王某某、 刘某某（女，29岁）等4人进行殴打，2时47分逃离，2时55分4名被害人由120送医。2时41分接群众报警后，唐山市公安局路北分局机场路派出所民警率辅警于3时09分赶到现场开展处置工作。据通报，2时40分陈某志对女孩进行骚扰，2时41分警方接到群众报警，冲突发生1分钟即有人报警。2时47分陈某志及其同伙逃离，从骚扰到逃离，共计7分钟。
 
@@ -119,7 +119,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
 
          
 
-   4. Chinese shiciqulian generator v2: python interact.py --model_conf ../conf/shi_base_conf_v2
+   4. Chinese shiciqulian generation v2: python interact.py --model_conf ../conf/shi_base_conf_v2
 
       1. input: \_shi\_ \_xinyun\_ \_7lv\_ \_title\_
 
@@ -127,7 +127,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
 
          
 
-   5. Chinese summarization generator v2: python interact.py --model_conf ../conf/summ_base_conf_v2
+   5. Chinese summarization generation v2: python interact.py --model_conf ../conf/summ_base_conf_v2
 
       1. input: 6月21日，河北省公安厅发布唐山打人案情况通报：经查，2022年6月7日，陈某亮（男，43岁）等4人从江苏驾车至河北唐山，与陈某志（男，41岁）等人合谋实施网络赌博洗钱违法犯罪活动。6月10日凌晨，陈某志等5人与陈某亮等4人在唐山市路北区某烧烤店聚餐饮酒。期 间，2时40分，陈某志对下班后在同店就餐的王某某（女，31岁）进行骚扰，遭拒后伙同马某齐（男，25岁）、陈某亮等人，对王某某、 刘某某（女，29岁）等4人进行殴打，2时47分逃离，2时55分4名被害人由120送医。2时41分接群众报警后，唐山市公安局路北分局机场路派出所民警率辅警于3时09分赶到现场开展处置工作。据通报，2时40分陈某志对女孩进行骚扰，2时41分警方接到群众报警，冲突发生1分钟即有人报警。2时47分陈某志及其同伙逃离，从骚扰到逃离，共计7分钟。
 
@@ -165,7 +165,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
       
          
 
-   6. Chinese modern poet, lyric generator : python interact.py --model_conf ../conf/poet_base_conf
+   6. Chinese modern poet, lyric generation : python interact.py --model_conf ../conf/poet_base_conf
 
       1. input: \_poet\_ \_title\_ 寒江雪 \_content\_
 
@@ -173,7 +173,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
 
          
 
-   7. Chinese question paraphrase generator: python interact.py --model_conf ../conf/aug_base_conf
+   7. Chinese question paraphrase generation: python interact.py --model_conf ../conf/aug_base_conf
 
       1. input: 孕妇吃什么好
 
