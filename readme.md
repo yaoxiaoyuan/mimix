@@ -30,7 +30,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
 | Chinese comment generation              | transformer enc-dec     | 216m     | 12       | 768     | 12      | 18m       | 1.8GB     | True          |
 | Chinese essay generation                | transformer dec-only lm | 135m     | 12       | 768     | 12      | 480k      | 0.7GB     | True          |
 | Chinese qa generation                   | transformer enc-dec     | 100m     | 12       | 768     | 12      | 66m       | 12.8GB    | True          |
-| Chinese product description generation  | transformer enc-dec     | 216m     | 12       | 768     | 12      | 2m        | 700m      | True          |
+| Chinese product description generation  | transformer enc-dec     | 216m     | 12       | 768     | 12      | 2m        | 0.7GB      | True          |
 | Chinese product review generation       | transformer enc-dec     | 216m     | 12       | 768     | 12      | 10m       | 2.4GB     | True          |
 | Chinese wuxia novel generation | transformer dec-only lm | 369m | 24 | 1024 | 16 | 830k | 1.2G | True |
 | Chinese ancient translation | transformer enc-dec | 216m | 12 | 768 | 12 | 6m | 1GB | False |
