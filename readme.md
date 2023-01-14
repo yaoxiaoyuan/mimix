@@ -23,15 +23,19 @@ Several pretrained models are listed below. You can use it follow the  instructi
 | Chinese chitchat generator           | transformer enc-dec | 100m | 12 | 512 | 8 | 400m | 76GB | True |
 | Chinese shi,ci,duilian generator     | transformer dec-only lm | 49m | 12 | 512 | 8 | 6m | 1GB | True |
 | Chinese news summarization generator | transformer enc-dec | 100m | 12 | 512 | 8 | 18m | 42GB | True |
-| Chinese shi,ci,duilian generator v2 | transformer dec-only lm  | 102m     | 12       | 768     | 12      | 6m | 1GB | False |
-| Chinese news summarization generator v2 | transformer enc-dec | 216m     | 12       | 768     | 12 | 36m | 113GB | False |
-| Chinese modern poet, lyric generator    | transformer dec-only lm | 103m     | 12       | 768     | 12      | 2m | 1GB | True |
-| Chinese question paraphrase generator | transformer enc-dec     | 216m     | 12       | 768     | 12      | 32m | 25GB | True |
-| Chinese question similarity tool        | transformer enc         | 103m     | 12       | 768     | 12 | 32m | 25GB | True |
-| Chinese question generation | transformer enc-dec | 216m | 12 | 768     | 12 | 0.5m | 0.5GB | True |
-| Chinese ancient translation | transformer enc-dec | 216m | 12 | 768     | 12      | 6m | 1GB | False |
-| Chinese comment generation v1 | transformer enc-dec | 216m | 12       | 768     | 12 | 18m | 1.8GB | True |
-| Chinese essay generation v1 | transformer dec-only lm | 135m | 12 | 768     | 12 | 48w | 0.7GB | True |
+| Chinese modern poet, lyric generator    | transformer dec-only lm | 103m     | 12       | 768     | 12      | 2m        | 1GB       | True          |
+| Chinese question paraphrase generator   | transformer enc-dec     | 216m     | 12       | 768     | 12      | 32m       | 25GB      | True          |
+| Chinese question similarity tool        | transformer enc         | 103m     | 12       | 768     | 12      | 32m       | 25GB      | True          |
+| Chinese question generation             | transformer enc-dec     | 216m     | 12       | 768     | 12      | 0.5m      | 0.5GB     | True          |
+| Chinese comment generation              | transformer enc-dec     | 216m     | 12       | 768     | 12      | 18m       | 1.8GB     | True          |
+| Chinese essay generation                | transformer dec-only lm | 135m     | 12       | 768     | 12      | 480k      | 0.7GB     | True          |
+| Chinese qa generation                   | transformer enc-dec     | 100m     | 12       | 768     | 12      | 66m       | 12.8GB    | True          |
+| Chinese product description generation  | transformer enc-dec     | 216m     | 12       | 768     | 12      | 2m        | 700m      | True          |
+| Chinese product review generation       | transformer enc-dec     | 216m     | 12       | 768     | 12      | 10m       | 2.4GB     | True          |
+| Chinese wuxia novel generation | transformer dec-only lm | 369m | 24 | 1024 | 16 | 830k | 1.2G | True |
+| Chinese ancient translation | transformer enc-dec | 216m | 12 | 768 | 12 | 6m | 1GB | False |
+| Chinese shi,ci,duilian generator v2 | transformer dec-only lm | 102m | 12 | 768 | 12 | 6m | 1GB | False |
+| Chinese news summarization generator v2 | transformer enc-dec | 216m | 12 | 768 | 12 | 36m | 113GB | False |
 
 ### HOW TO RUN MODEL
 
@@ -246,27 +250,101 @@ Several pretrained models are listed below. You can use it follow the  instructi
        
        
    11. Chinese comment generation: python interact.py --model_conf ../conf/comment_base_conf
-   
+
        1. input:  今天（9月27日），中国空军新闻发言人申进科大校在第14届中国航展新闻发布会上表示，歼-20已经遍布东南西北中，列装越来越多、飞得越来越远。
-   
+
        2.  output: 
-   
+
           中国军工加油 -9.763671875
-   
+
           中国军工加油！ -9.810546875
-   
+
           中国人民解放军万岁！ -10.584172248840332
-   
+
           
-   
+
    12. Chinese essay generation: python interact.py --model_conf ../conf/essay_base_conf
-   
+
        1. input: 春天
-   
+
        2. output:
-   
+
           春天来了 \_sep\_ “春天在哪里呀，春天在哪？春天在那小朋友的眼睛里。”随着春风和歌声，春姑娘催促我们赶紧出门寻找春天来。一 走进花园，闻见浓浓的花香和泥土的芳香，在向前走几步，就能闻到鲜花的芳香，看到满地的小野花，有红色的、黄色的、蓝色的、紫的，五颜六色，美丽极了！早晨，坐上妈妈送我的自行车去上学，虽然很冷，但是在妈妈的带领下，我真的很开心。回到家，给妈妈说：“妈妈，春天在我家的小院里，我要到院子里去了。”她顺口答应了，去给我买小礼物了。到了院子里，我看见两边的杨树发芽了，枝头也长出了一片小嫩芽。忽然我们的院子里多了一种植物，爸爸说：“那是桃树。”我兴奋地说：“这块地就是桃树的家了！这里的桃树叫桃中四君子呢！”田野里的花真多呀，把山上的树木都覆盖住了；那些紫粉的花，像婴儿睡在妈妈的肚子里、还有那些展开小翅膀的花，像眼睛里放着光；这些花朵很大，很大，像一个个白色的大绒球，在风中翩翩起舞。田野里的油菜花更美了！大地被油菜花染成黄色，风一吹，油菜荚上的金光闪闪，好像在跳一支动人的芭蕾。田野里的春天真美呀！春天真神奇呀！我爱春天！ [-736.4401]
-   
+
+          
+       
+   13. Chinese qa generation: python interact.py --model_conf ../conf/qa_base_conf
+
+       1. input: 失恋了怎么办
+
+       2. output:
+
+          找个新欢 -6.095271110534668
+
+          失恋了就不要再想对方，这样会让自己很难受。 -6.133023738861084
+
+          我也有过这样的经历，但是不要放弃。 -6.613738536834717
+
+          失恋了，就该找一个懂得珍惜的人。 -6.870847702026367
+
+          失恋了就该哭，这是最好的办法。 当然也要看你自己怎么想 -7.109080791473389
+
+          失恋这个事情，是你的强求不来的。如果他真心爱着你，那么就会想办法让她幸福快乐！ -7.139413356781006
+
+          去找一个人代替他，把这段感情埋在心里 -7.654685974121094
+
+          我的经验：失恋很正常，分手后就好了。你现在可以做些事情转移注意力，或者去旅游散散心什么的，不要让自己再想起她 -7.7700090408325195
+
+          向前看，别让自己再沉浸在悲伤中！ -8.159266471862793
+
+          “失恋”的男人，不是真正爱你的那一个。 只会让自己陷入痛苦中、反思过去！ 如果他心里还有你就好好珍惜吧！ -9.232671737670898
+
+          
+
+   14. Chinese product description generation
+
+       1. input: 维多利亚的摩尔佧 性感连体泳衣女比基尼高级感时尚泡温泉泳装
+
+       2. output:
+
+          这款光滑的泳衣没有任何的剃裁，版型很好，上紧下松，上半身刚刚好，外面不卡脖子，夏天穿周身透气舒适，非常的性感 -137.44415283203125
+
+          泳衣正反面均采用印花设计，色彩绚丽且超显气质，加身后完全就是胸部了，v字领口柔化脖颈曲线，给人更佳的锁骨效果，清爽的短裤，修饰出腰肢，舒适的长裤给人更加高挑的感觉，性感的露背设计岁月静好，时尚个性。 -221.9921417236328
+
+          海边美女们都爱的游泳池，想去清凉一下心情，就带着奥特曼来到泳池边，度假的好伴侣就是它了。这款泳衣是连体的设计，一点也不显肥大，带来满满安 全感。高颜高性感的比基尼，性感不要不要的。腰间还有吊带，可以调整腰线。无论你是哪种身材都一样的好看。 -243.95460510253906
+
+          
+
+   15. Chinese product review generation
+
+       1. input:  Cartier卡地亚LOVE戒指 玫瑰金黄金白金 窄版对戒
+
+       2. output:
+
+          还不错,挺好的 \_sep\_ 还是挺好的,这个价钱值了 -28.99207878112793
+
+          刚买就降价了 \_sep\_ 东西还好,就是买完就降,郁闷 -32.52592468261719
+
+          戒指感觉款式不错 \_sep\_ 其他都还可以,就是太小了 -37.16313934326172
+
+          
+
+   16. Chinese wuxia novel generation
+
+       1. input:
+
+          小船转过一排垂柳，远远看见水边一丛花树映水而红，灿若云霞。段誉"啊"的一声低呼。
+
+       2. output:
+
+          小船转过一排垂柳，远远看见水边一丛花树映水而红，灿若云霞。段誉"啊"的一声低呼。木婉清和全金发对他似乎颇为悦眼,三人跨出小船,游到水边。木婉 清骂道:“死贼,又著了人家的道儿。”那花树旁边系著一只小船,段誉顺著花树,向左一看,只见花丛影里一个少女倚树而坐,正在倚树而歌,正是段仇世的女儿段天德。此时她歌声清脆,唱起了一首小调:南峰山舍忘词,曾经借问少白头。 _nl_ 三更双弦意满楼,征囊终不归。 _nl_ 美冠一行惟顾此,寒啸了一为身。 _nl_ 但愿人头云鬓和曳,何结同心千里随。 _nl_ 此情只在飞鸿迹,生死何必萦怀?只期玉箫一曲牵牛筋。 _nl_ 段誉一听歌声,脸上微微一红。只听吴天德叹 道:“我段天德生平以风流自炫,有时不免大意,却也只图一时快意。那是谁到了姑苏,听这歌词,果然是个一表人才的姑娘,我出来斟酒时,仍是将款,那里想得 到她会暗中加害于我了。侥幸令狐大哥吉人天相,报了大仇,咱们可得快些回来。” _nl_ 原来吴天德的妻子乃是江湖有名的“飞刀娘子”萧飞英,以一柄柳叶飞刀,在打中大名鼎鼎的“姑苏慕容”后,杀死了慕容复,雍和之位,秦晋云南,大享富贵,他夫妻双双归隐大理,直到廿四年之前,他夫妻两人路过姑苏,在姑苏最大的一间酒楼见到了段天德夫妇两个。那时他夫人仍穿着原服,段天德的妻子换上男装,他却略显道貌岸然,以示江湖儿女,不去理会他妻子。可是段天德夫妻 一看在他眼里,却心中暗暗纳罕:“她左颊明明是多刺了一粒小痣的,怎么这时忽然多了一颗大痣?”他虽情知萧飞英并不是什么好人,神态之间,总不免甚是小 心。 [-1582.4723]
+
+          只听得段誉笑著道:“姊姊,快开船走吧,再耽一刻,天就要黑了。”柔声说道:“莫怕,莫怕……”忽听得呜咽之声,听那声音似是啼哭。段誉背向船舷,正好树丛中伸出一只犹似羊脂白玉的手 来。段誉道:“啊,姊姊,吓了你……”王玉燕紧紧搂住了他,斥道:“又瞎起上来!”段誉道:“姊姊……”王玉燕道:“嗯,是谁先开船的?说!”段誉叹道:“说 来话长,待我慢慢的跟你说。你先别走,我慢慢说。”王玉燕道:“些须小事,便说了了不成?”段誉道:“嗯,是……是许多事不便跟你动手。”玉燕突然想起, 他一个大男人跟著自己说话,半边身子情不自禁的移开了些,说道:“嗯,那你小心些不捱。”声音极是温柔。 _nl_ 段誉见她神态豁达,心下对她又增了几分爱慕,突然之间,觉得有一个出色的女子,即使是在镜中画图,在花间听风,也是和她一模一样,于是他心中又想:“王姑娘常说,这次金盆洗手,承玄难大师等各派英雄以为首领,算定那晦明禅师会乘机捣乱丐帮不成,故尔金盆洗手,将门派人物都归降了丐帮。此刻瞧他心情,倒像当教主的人,原是座下游客。倘若他当了帮主,那就……格格格,那可够瞧上老大一阵子啦。”从此他对王玉燕庄敬有加,十分顺从。 _nl_ 王玉燕见他又爱上了自己,不自禁耳根红透,两人虽是男女有别, 他这一句话都说了出来。王玉燕展眉微笑,道:“你瞧着我干么?”段誉道:“嗯,瞧著。 [-1303.9319]
+
+          小船转过一排垂柳，远远看见水边一丛花树映水而红，灿若云霞。段誉"啊"的一声低呼。阿朱看得明白,原来是他在海中栖息,这才不觉奇怪。她笑道:“相公,怎么了?”段誉道:“没什么。” _nl_ 阿朱又道:“你这两日来很累了么?那你想打什么火?”段誉大口吸水,不答真文。阿朱也喝了两口,笑道:“这远处有座山,你可不由得和我拌嘴。”段誉抬头向她瞧了一眼,道:“你说那山。”阿朱道:“可不是么?隔山望见那山上山走来了两人,谁也不相识,原来是几个捉鬼的和尚。两人唠唠叨叨的说了一会儿子,也不知什么,两个和尚就跳到那座山上去。”段誉听到这里,突然手掌在水中一拍,高声叫道:“你瞧上了热闹没有?”阿朱 道:“什么热闹?”段誉道:“我在一张棺村之前撞见两条绿线……;什么绿线?快快给我招来。”他一面大叫,一面将这张形如巨棺的船板向外一推,便向那两艘绿线划去。阿朱伸手拦住了他,笑道:“不是两条,是四个!”她扯过段誉手中的短桨,运稳了桨桨,便催著船向山边驶去,果然越向山上去,那小径越形狭窄,好几次段誉都几乎要从船头跌将下去。阿朱又将船划得渐渐加快,呼呼风响,两岸山峦渐不相闻。 _nl_ 不片刻便到了阿湾,那阿湾只是零落的垂柳,有一条小径自 山坡蜿蜒而下,蜿蜒入丛林之中。阿朱把船划入丛林,驶入了一片石级小径,段誉负手站在钓摊之旁,一瞬不瞬的望著棋盘大声说那一集目两轸的棋局。他内功 虽然已经极有限,却也是个识货的行家,一见棋盘上黑白,便知阿朱兜了个大大的圈。 [-1382.7443]
+
+          
+
        
 
 
