@@ -374,14 +374,12 @@ Several pretrained models are listed below. You can use it follow the  instructi
        
           in january 2023, philippine president marcos made his first foreign visit to china in the new year -4.718146324157715
        
-          
-       
        3. input:
        
           \_enzh\_ New Zealand leader Jacinda Ardern announces shock resignation before upcoming election
        
        4. output:
-   
+       
           新西兰领导人亚历山大宣布在即将举行的选举前辞职 -3.591200113296509
       
           新西兰领导人亚历山大宣布将在即将举行的选举前辞职 -3.7777717113494873
@@ -389,7 +387,7 @@ Several pretrained models are listed below. You can use it follow the  instructi
           新西兰领导人亚尔德宣布在即将举行的选举前辞职 -3.808243751525879
       
           新西兰领导人亚历山大宣布在即将举行的选举之前辞职 -3.9053900241851807
-          
+      
           新西兰领导人亚尔德宣布在即将举行的选举之前辞职 -4.0422043800354
           
        新西兰领导人亚历山大宣布将在即将举行的选举之前辞职 -4.042999267578125
