@@ -355,39 +355,59 @@ Several pretrained models are listed below. You can use it follow the  instructi
        2. output:
    
           in january 2023, philippine president marcos undertook a state visit to china, making him the first foreign leader to visit china in the new year -3.7232120037078857
+       
           in january 2023, philippine president marcos made a state visit to china, making him the first foreign leader to visit china in the new year -3.929159164428711
+       
           on new year's eve in 2023, philippine president marcos undertook a state visit to china, making him the first foreign leader to visit china in the new year -3.979569673538208
+       
           in january 2023, philippine president marcos undertook a state visit to china, making him the first foreign leader to visit china in new year -4.182289123535156
+       
           in january 2023, philippine president marcos undertook a state visit to china, making him the first foreign leader to visit china in the new year. -4.257038116455078
-          in january 2023, philippine president marcos undertook a state visit to china, making him the first foreign leader to come to china in the new year -4.299696922302246
-          in january 2023, philippine president marcos made his first foreign visit to china in the new year -4.489346504211426
-          in january 2023, philippine president marcos made his first foreign visit to china in the new year. -4.679396629333496
-          on new year's eve in 2023, philippine president marcos made his first foreign visit to china. -4.691005229949951
+       
+      in january 2023, philippine president marcos undertook a state visit to china, making him the first foreign leader to come to china in the new year -4.299696922302246
+       
+      in january 2023, philippine president marcos made his first foreign visit to china in the new year -4.489346504211426
+       
+      in january 2023, philippine president marcos made his first foreign visit to china in the new year. -4.679396629333496
+       
+      on new year's eve in 2023, philippine president marcos made his first foreign visit to china. -4.691005229949951
+       
           in january 2023, philippine president marcos made his first foreign visit to china in the new year -4.718146324157715
-   
+       
+          
+       
        3. input:
-   
+       
           \_enzh\_ New Zealand leader Jacinda Ardern announces shock resignation before upcoming election
-   
+       
        4. output:
    
           新西兰领导人亚历山大宣布在即将举行的选举前辞职 -3.591200113296509
+      
           新西兰领导人亚历山大宣布将在即将举行的选举前辞职 -3.7777717113494873
+      
           新西兰领导人亚尔德宣布在即将举行的选举前辞职 -3.808243751525879
+      
           新西兰领导人亚历山大宣布在即将举行的选举之前辞职 -3.9053900241851807
+          
           新西兰领导人亚尔德宣布在即将举行的选举之前辞职 -4.0422043800354
-          新西兰领导人亚历山大宣布将在即将举行的选举之前辞职 -4.042999267578125
-          新西兰领导人亚历山大宣布在即将举行的选举前宣布辞职 -4.168262004852295
-          新西兰领导人亚历山大宣布将在即将举行的选举前辞职。 -4.332480430603027
+          
+       新西兰领导人亚历山大宣布将在即将举行的选举之前辞职 -4.042999267578125
+          
+       新西兰领导人亚历山大宣布在即将举行的选举前宣布辞职 -4.168262004852295
+          
+       新西兰领导人亚历山大宣布将在即将举行的选举前辞职。 -4.332480430603027
+          
           新西兰领导人亚历山大宣布在即将举行的选举之前宣布辞职 -4.3889994621276855
+          
           新西兰领导人亚历山大宣布将在即将举行的选举之前辞职。 -4.503944396972656
-   
           
-   
           
-   
           
-   
+          
+          
+          
+       
        
 
 
