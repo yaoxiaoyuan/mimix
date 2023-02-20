@@ -16,9 +16,9 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 
 ## Models
 
-Several pretrained models are listed below. You can use it follow the  instructions.
+Several pretrained models are listed below.  **Some models are not available for download due to the data privacy. Please check the "open for download" column. You can follow the instructions to use the open-download model.**
 
-| model name                           | architecture                    | n_params  | n_layers | d_model | n_heads | n_samples | data size | open download |
+| model name                           | architecture                    | n_params  | n_layers | d_model | n_heads | n_samples | data size | open for download |
 | ------------------------------------ | ---- | ---- | :--- | ---- | ---- | ------------------------------------ | ------------------------------------ | ------------------------------------ |
 | Chinese chitchat generation           | transformer enc-dec | 100m | 12 | 512 | 8 | 400m | 76GB | True |
 | Chinese shi,ci,duilian generation     | transformer dec-only lm | 49m | 12 | 512 | 8 | 6m | 1GB | True |
