@@ -391,7 +391,7 @@ class MimixTokenizer(Tokenizer):
                 is_last_alphabet = False
             else:
                 is_cur_alphabet = False
-                if all(is_alphabet(ch) for ch in token):
+                if all(is_alphabet(ch) or is_num(ch) for ch in token):
                     is_cur_alphabet = True
                     
                 if is_last_alphabet == True and is_cur_alphabet == True:
