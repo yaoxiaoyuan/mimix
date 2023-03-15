@@ -976,7 +976,7 @@ class Transformer(nn.Module):
                  norm_before_pred=False,
                  norm_after_embedding=False,
                  pos_need_train=False,
-                 use_proj_bias=True):
+                 use_output_bias=True):
         """
         """
         super(Transformer, self).__init__()
@@ -1050,7 +1050,7 @@ class Transformer(nn.Module):
                                norm_before_pred,
                                norm_after_embedding,
                                pos_need_train,
-                               use_proj_bias)
+                               use_output_bias)
         
         
     def get_attn_mask(self, seq_query, seq_key):
@@ -1202,7 +1202,7 @@ class TransformerLM(nn.Module):
                  norm_before_pred=False,
                  norm_after_embedding=False,
                  pos_need_train=False,
-                 use_proj_bias=False):
+                 use_output_bias=False):
         """
         """
         super(TransformerLM, self).__init__()
@@ -1250,7 +1250,7 @@ class TransformerLM(nn.Module):
                                  norm_before_pred,
                                  norm_after_embedding,
                                  pos_need_train,
-                                 use_proj_bias)
+                                 use_output_bias)
     
     
     def get_attn_mask(self, seq_query, seq_key):
@@ -1511,7 +1511,7 @@ def build_transformer_model(config):
     norm_before_pred = config.get("norm_before_pred", False)
     norm_after_embedding = config.get("norm_after_embedding", False)
     pos_need_train = config.get("pos_need_train", False)
-    use_proj_bias = config.get("pos_need_train", True)
+    use_output_bias = config.get("use_output_bias", True)
     
     transformer = Transformer(config["symbol2id"],
                               src_vocab_size, 
@@ -1540,7 +1540,7 @@ def build_transformer_model(config):
                               norm_before_pred,
                               norm_after_embedding,
                               pos_need_train,
-                              use_proj_bias)
+                              use_output_bias)
     
     return transformer
 
@@ -1583,7 +1583,7 @@ def build_transformer_lm_model(config):
     norm_before_pred = config.get("norm_before_pred", False)
     norm_after_embedding = config.get("norm_after_embedding", False)
     pos_need_train = config.get("pos_need_train", False)
-    use_proj_bias = config.get("pos_need_train", True)
+    use_output_bias = config.get("use_output_bias", True)
     
     transformer = TransformerLM(config["symbol2id"],
                                 trg_vocab_size, 
@@ -1608,7 +1608,7 @@ def build_transformer_lm_model(config):
                                 norm_before_pred,
                                 norm_after_embedding,
                                 pos_need_train,
-                                use_proj_bias)
+                                use_output_bias)
     
     return transformer
 
