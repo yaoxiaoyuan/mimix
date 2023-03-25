@@ -100,7 +100,9 @@ class Trainer():
         self.test_batch_size = train_config["test_batch_size"]
         
         self.grad_clip = train_config.get("grad_clip", None)
-
+        
+        self.use_amp = train_config.get("use_amp", False)
+        
         self.build_all(
                 model=model,
                 optimizer=optimizer,
@@ -359,6 +361,9 @@ class Trainer():
     def train(self):
         """
         """
+        if self.use_amp:
+            scaler = torch.cuda.amp.GradScaler()
+            
         self.print_model_info()
     
         self.reload_model_and_optimizer()
@@ -377,8 +382,12 @@ class Trainer():
                 inputs = nested_to_cuda(inputs, self.device)
                 targets = nested_to_cuda(targets, self.device)
                 
-                outputs = self.model(inputs, targets=targets, compute_loss=True)
-        
+                if self.use_amp == True:
+                    with torch.cuda.amp.autocast():
+                        outputs = self.model(inputs, targets=targets, compute_loss=True)
+                else:
+                    outputs = self.model(inputs, targets=targets, compute_loss=True)
+                    
                 loss = outputs[0]
         
                 history_loss = history_loss[-999:] + [loss.item()]
@@ -392,8 +401,12 @@ class Trainer():
                          ma_loss)
                         )
                 
-                loss.backward()
-            
+
+                if self.use_amp == True:
+                    scaler.scale(loss).backward()
+                else:
+                    loss.backward()
+                    
                 self.lr_scheduler.step()
 
                 self.total_steps += 1
@@ -413,8 +426,15 @@ class Trainer():
                             self.model.parameters(), 
                             self.grad_clip
                             )
-                self.optimizer.step()
-                self.optimizer.zero_grad()
+                
+                if self.total_steps % self.accumulate_steps == 0:
+                    if self.use_amp == True:
+                        scaler.step(self.optimizer)
+                        self.optimizer.zero_grad()
+                        scaler.update()
+                    else:
+                        self.optimizer.step()
+                        self.optimizer.zero_grad()
             
             self.shuffle_data(fast_shuffle=True)
             

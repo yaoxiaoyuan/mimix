@@ -1030,7 +1030,7 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout=None
     
     if attn_mask is not None:
         attn_mask = attn_mask.bool()
-        scores = scores.masked_fill(attn_mask, -1e9)
+        scores = scores.masked_fill(attn_mask, -1e4)
     
     attn_scores = F.softmax(scores, dim = -1)
     
