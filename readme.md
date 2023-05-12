@@ -23,13 +23,13 @@ Several pretrained models are listed below.  **Some models are not available for
 | Chinese chitchat generation           | transformer enc-dec | 100m | 12 | 512 | 8 | 400m | 76GB | True |
 | Chinese shi,ci,duilian generation     | transformer dec-only lm | 49m | 12 | 512 | 8 | 6m | 1GB | True |
 | Chinese news summarization generation | transformer enc-dec | 100m | 12 | 512 | 8 | 18m | 42GB | True |
+| Chinese qa generation | transformer enc-dec     | 100m     | 12       | 512     | 8       | 66m       | 12.8GB    | True |
 | Chinese modern poet, lyric generation    | transformer dec-only lm | 103m     | 12       | 768     | 12      | 2m        | 1GB       | True          |
 | Chinese question paraphrase generation   | transformer enc-dec     | 216m     | 12       | 768     | 12      | 32m       | 25GB      | True          |
 | Chinese question similarity tool        | transformer enc         | 103m     | 12       | 768     | 12      | 32m       | 25GB      | True          |
 | Chinese question generation             | transformer enc-dec     | 216m     | 12       | 768     | 12      | 0.5m      | 0.5GB     | True          |
 | Chinese comment generation              | transformer enc-dec     | 216m     | 12       | 768     | 12      | 18m       | 1.8GB     | True          |
 | Chinese essay generation                | transformer dec-only lm | 135m     | 12       | 768     | 12      | 480k      | 0.7GB     | True          |
-| Chinese qa generation                   | transformer enc-dec     | 100m     | 12       | 768     | 12      | 66m       | 12.8GB    | True          |
 | Chinese product description generation  | transformer enc-dec     | 216m     | 12       | 768     | 12      | 2m        | 0.7GB      | True          |
 | Chinese product review generation       | transformer enc-dec     | 216m     | 12       | 768     | 12      | 10m       | 2.4GB     | True          |
 | Chinese wuxia novel generation | transformer dec-only lm | 369m | 24 | 1024 | 16 | 830k | 1.2G | True |
@@ -37,6 +37,8 @@ Several pretrained models are listed below.  **Some models are not available for
 | Chinese ancient translation              | transformer enc-dec     | 216m     | 12       | 768     | 12      | 6m        | 1GB       | False         |
 | Chinese shi,ci,duilian generation v2     | transformer dec-only lm | 102m     | 12       | 768     | 12      | 6m        | 1GB       | False         |
 | Chinese news summarization generation v2 | transformer enc-dec     | 216m     | 12       | 768     | 12      | 36m       | 113GB     | False |
+
+
 
 ### HOW TO RUN MODEL
 

@@ -97,7 +97,7 @@ class Trainer():
         self.train_config["test_dir"] = self.test_dir
         
         self.batch_size = train_config["batch_size"]
-        self.test_batch_size = train_config["test_batch_size"]
+        self.test_batch_size = train_config.get("test_batch_size", 1)
         
         self.grad_clip = train_config.get("grad_clip", None)
         
