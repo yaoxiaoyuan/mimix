@@ -34,9 +34,11 @@ Several pretrained models are listed below.  **Some models are not available for
 | Chinese product review generation       | transformer enc-dec     | 216m     | 12       | 768     | 12      | 10m       | 2.4GB     | True          |
 | Chinese wuxia novel generation | transformer dec-only lm | 369m | 24 | 1024 | 16 | 830k | 1.2G | True |
 | Chinese-English translation | transformer enc-dec | 216m | 12 | 768 | 12 | 60m | 16GB | True |
-| Chinese ancient translation              | transformer enc-dec     | 216m     | 12       | 768     | 12      | 6m        | 1GB       | False         |
-| Chinese shi,ci,duilian generation v2     | transformer dec-only lm | 102m     | 12       | 768     | 12      | 6m        | 1GB       | False         |
-| Chinese news summarization generation v2 | transformer enc-dec     | 216m     | 12       | 768     | 12      | 36m       | 113GB     | False |
+| Chinese paper generation                 | transformer enc-dec     | 216m     | 12       | 768     | 12      | 4m        | 4.8GB     | True              |
+| Chinese tag generation                   | transformer enc-dec     | 216m     | 12       | 768     | 12      | 22m       | 24GB      | True              |
+| Chinese ancient translation              | transformer enc-dec     | 216m     | 12       | 768     | 12      | 6m        | 1GB       | False             |
+| Chinese shi,ci,duilian generation v2     | transformer dec-only lm | 102m     | 12       | 768     | 12      | 6m        | 1GB       | False             |
+| Chinese news summarization generation v2 | transformer enc-dec     | 216m     | 12       | 768     | 12      | 36m       | 113GB     | False             |
 
 
 
@@ -304,7 +306,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
           
 
-   14. Chinese product description generation
+   14. Chinese product description generation: python interact.py --model_conf ../conf/prod_base_conf
 
        1. input: 维多利亚的摩尔佧 性感连体泳衣女比基尼高级感时尚泡温泉泳装
 
@@ -318,7 +320,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
           
 
-   15. Chinese product review generation
+   15. Chinese product review generation: python interact.py --model_conf ../conf/review_base_conf
 
        1. input:  Cartier卡地亚LOVE戒指 玫瑰金黄金白金 窄版对戒
 
@@ -332,7 +334,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
           
 
-   16. Chinese wuxia novel generation
+   16. Chinese wuxia novel generation: python interact.py --model_conf ../conf/wx_base_conf
 
        1. input:
 
@@ -348,7 +350,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
           
 
-   17. Chinese-English translation
+   17. Chinese-English translation: python interact.py --model_conf ../conf/nmt_base_conf
    
        1. input:
    
@@ -384,10 +386,31 @@ Several pretrained models are listed below.  **Some models are not available for
           
           
           
+       
+   18. Chinese paper generation: python interact.py --model_conf ../conf/paper_base_conf
+   
+       1. input:
+   
+          中日韩 \_sep\_ 自贸区
+   
+       2. output:
+   
+          中日韩自贸区发展的制约因素分析 \_sep\_ 发展中日韩自贸区的对策是自贸区的大幅提高。以签订《自由贸易协定》为契机,将各成员国 签订自贸协定作为中日韩自贸区发展的制约因素的内容,本文分析了中日韩自贸区制度的特点,提出了加强中日韩自贸区建设的建议。 -136.17562866210938
+          
+          发展自贸区:中日韩自贸区面临的机遇与挑战 \_sep\_ 金融危机以后,中日韩的自贸区得以提升。自贸区作为自贸区的重要组成部分,将有 力推动中日韩各国的经贸合作与交流。但是,由于自贸区自身存在内外部条件不协调、自贸区机制不完善、自贸区本身存在诸多问题,解 决自贸区发展问题成为全球一体化的关键问题。促进自贸区发展,中日韩自贸区的建设与发展需要充分调研,借鉴其成功经验,提出解决问题的对策。 -233.56361389160156
+          
+          中日韩自贸区与韩国新自贸区若干问题探析 \_sep\_ 自2005年日本政府最近在韩国举行调查示范活动后,由韩国自由贸易区(garthge aurantifiation,api)于2007年启动,正式于2008年建立了中日韩自贸区。在自贸区的建立、保护、协调等方面,中日韩三国及其相关部门在经贸领域取得了宝贵的成果。但是,由于签订协议不够透明,各自制度较为模糊,使中日韩自贸区的发展有今天的困境。 -316.9208068847656
           
        
-
-
-
-​      
+   
+   19. Chinese tag generation: python interact.py --model_conf ../conf/tag_base_conf
+   
+       1. input:
+   
+          近日，由国家感染性疾病临床医学研究中心、中国人民解放军总医院第五医学中心主办的国家感染性疾病临床医学研究中心2023年学术 年会在北京召开。《每日经济新闻》记者在现场注意到，中科院院士高福等专家学者就长新冠、疫苗和药物研发等话题展开交流。后新 冠时期既不能"恐冠"也不能"轻冠"针对新冠病毒，高福表示，在后新冠时期，大家开始讨论人类已经走出了新冠病毒的阴影，但我们不 能只看新冠病毒带来的挑战，也要看到它给我们提供的机遇，以及让人类如何重新思考。后新冠时期既不能"恐冠"也不能"轻冠"。
+   
+       2. output:
+   
+          医学 \_sep\_ 临床医学 \_sep\_ 新型冠状病毒 -7.32832670211792
+          
 
