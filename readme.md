@@ -306,7 +306,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
           
 
-   14. Chinese product description generation: python interact.py --model_conf ../conf/prod_base_conf
+   14. Chinese product description generation: python interact.py --model_conf ../conf/desc_base_conf
 
        1. input: 维多利亚的摩尔佧 性感连体泳衣女比基尼高级感时尚泡温泉泳装
 
