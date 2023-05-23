@@ -212,12 +212,12 @@ Several pretrained models are listed below.  **Some models are not available for
 
        1. input:  今天（9月27日），中国空军新闻发言人申进科大校在第14届中国航展新闻发布会上表示，歼-20已经遍布东南西北中，列装越来越多、飞得越来越远。
 
-       2.  output: 
-
+       2. output: 
+         
           中国军工加油 -9.763671875
-
+         
           中国军工加油！ -9.810546875
-
+          
           中国人民解放军万岁！ -10.584172248840332
 
           
