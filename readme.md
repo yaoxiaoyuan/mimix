@@ -124,53 +124,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
          
 
-   4. Chinese shiciqulian generation v2: python interact.py --model_conf ../conf/shi_base_conf_v2
-
-      1. input: \_shi\_ \_xinyun\_ \_7lv\_ \_title\_
-
-      2. output: \_shi\_ \_xinyun\_ \_7lv\_ \_title\_ 秋菊 \_content\_ 月冷霜寒百草黄，疏篱落木卸浓妆。清姿独傲冰风骨，雅韵闲生玉露香。翠色满园人未识，花容入梦夜初长。无须绿叶来陪衬，此处陶然笑夕阳。
-
-         
-
-   5. Chinese summarization generation v2: python interact.py --model_conf ../conf/summ_base_conf_v2
-
-      1. input: 6月21日，河北省公安厅发布唐山打人案情况通报：经查，2022年6月7日，陈某亮（男，43岁）等4人从江苏驾车至河北唐山，与陈某志（男，41岁）等人合谋实施网络赌博洗钱违法犯罪活动。6月10日凌晨，陈某志等5人与陈某亮等4人在唐山市路北区某烧烤店聚餐饮酒。期 间，2时40分，陈某志对下班后在同店就餐的王某某（女，31岁）进行骚扰，遭拒后伙同马某齐（男，25岁）、陈某亮等人，对王某某、 刘某某（女，29岁）等4人进行殴打，2时47分逃离，2时55分4名被害人由120送医。2时41分接群众报警后，唐山市公安局路北分局机场路派出所民警率辅警于3时09分赶到现场开展处置工作。据通报，2时40分陈某志对女孩进行骚扰，2时41分警方接到群众报警，冲突发生1分钟即有人报警。2时47分陈某志及其同伙逃离，从骚扰到逃离，共计7分钟。
-
-      2. output:
-
-         河北省公安厅发布唐山打人案情况通报 -4.3955078125
-
-         河北省公安厅通报唐山打人案情况 -5.14453125
-
-         河北省公安厅通报唐山打人案 -6.619140625
-
-         河北省公安厅通报唐山打人案情况通报 -6.9287109375
-
-         河北警方通报唐山打人案情况 -6.9638671875
-
-         河北省公安厅发布唐山打人案情况通报！ -7.060546875
-
-         河北省公安厅通报唐山打人案情况！ -7.927734375
-
-         河北省公安厅通报唐山打人案情况：4人合谋实施网络赌博洗钱 -8.693359375
-
-         河北省公安厅发布唐山打人案情况通报：4人合谋实施网络赌博洗钱 -9.5048828125
-
-         河北省公安厅通报唐山打人案情况：4人合谋实施网络赌博洗钱违法犯罪活动 -10.0068359375
-
-         河北省公安厅通报唐山打人案情况：4人合谋实施网络赌博 -10.1826171875
-
-         河北省公安厅发布唐山打人案情况通报：4人被殴打 -10.6962890625
-
-         河北省公安厅发布唐山打人案情况通报：4人合谋实施网络赌博 -10.759765625
-
-         河北省公安厅发布唐山打人案情况通报：4人合谋实施网络赌博洗钱违法犯罪活 -11.46523380279541
-
-         河北省公安厅发布唐山打人案情况通报：4人凌晨聚餐饮酒 -11.826171875
-      
-         
-
-   6. Chinese modern poet, lyric generation : python interact.py --model_conf ../conf/poet_base_conf
+   4. Chinese modern poet, lyric generation : python interact.py --model_conf ../conf/poet_base_conf
 
       1. input: \_poet\_ \_title\_ 寒江雪 \_content\_
 
@@ -178,7 +132,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
          
 
-   7. Chinese question paraphrase generation: python interact.py --model_conf ../conf/aug_base_conf
+   5. Chinese question paraphrase generation: python interact.py --model_conf ../conf/aug_base_conf
 
       1. input: 孕妇吃什么好
 
@@ -206,7 +160,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
          
 
-   8. Chinese question similarity tool: interact.py --conf ../conf/sim_base_conf
+   6. Chinese question similarity tool: interact.py --conf ../conf/sim_base_conf
 
       1. input:  适合小孩听的歌\t推荐几首儿歌\t熬夜有什么坏处\t晚睡对身体的影响
 
@@ -226,7 +180,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
          
 
-   9. Chinese question generation: python interact.py --model_conf ../conf/qg_base_conf
+   7. Chinese question generation: python interact.py --model_conf ../conf/qg_base_conf
 
       1. input: 《玫瑰之战》是由孙皓执导，郑仁湘、张涵编剧，袁泉、黄晓明、俞飞鸿领衔主演，代旭、于谨维、王鹤润主演、芦芳生、张艺上、隋俊波特邀主演，王志飞特约出演，王姬特别主演的都市剧。
 
@@ -236,7 +190,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
          
 
-   10. Chinese ancient translation: python interact.py --model_conf ../conf/a2m_base_conf
+   8. Chinese ancient translation: python interact.py --model_conf ../conf/a2m_base_conf
 
        1. input:  白日依山尽,黄河入海流。欲穷千里目,更上一层楼。
 
@@ -254,7 +208,7 @@ Several pretrained models are listed below.  **Some models are not available for
        
        
        
-   11. Chinese comment generation: python interact.py --model_conf ../conf/comment_base_conf
+   9. Chinese comment generation: python interact.py --model_conf ../conf/comment_base_conf
 
        1. input:  今天（9月27日），中国空军新闻发言人申进科大校在第14届中国航展新闻发布会上表示，歼-20已经遍布东南西北中，列装越来越多、飞得越来越远。
 
@@ -268,7 +222,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
           
 
-   12. Chinese essay generation: python interact.py --model_conf ../conf/essay_base_conf
+   10. Chinese essay generation: python interact.py --model_conf ../conf/essay_base_conf
 
        1. input: 春天
 
@@ -278,7 +232,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
           
        
-   13. Chinese qa generation: python interact.py --model_conf ../conf/qa_base_conf
+   11. Chinese qa generation: python interact.py --model_conf ../conf/qa_base_conf
 
        1. input: 失恋了怎么办
 
@@ -306,7 +260,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
           
 
-   14. Chinese product description generation: python interact.py --model_conf ../conf/desc_base_conf
+   12. Chinese product description generation: python interact.py --model_conf ../conf/desc_base_conf
 
        1. input: 维多利亚的摩尔佧 性感连体泳衣女比基尼高级感时尚泡温泉泳装
 
@@ -320,7 +274,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
           
 
-   15. Chinese product review generation: python interact.py --model_conf ../conf/review_base_conf
+   13. Chinese product review generation: python interact.py --model_conf ../conf/review_base_conf
 
        1. input:  Cartier卡地亚LOVE戒指 玫瑰金黄金白金 窄版对戒
 
@@ -334,7 +288,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
           
 
-   16. Chinese wuxia novel generation: python interact.py --model_conf ../conf/wx_base_conf
+   14. Chinese wuxia novel generation: python interact.py --model_conf ../conf/wx_base_conf
 
        1. input:
 
@@ -350,14 +304,14 @@ Several pretrained models are listed below.  **Some models are not available for
 
           
 
-   17. Chinese-English translation: python interact.py --model_conf ../conf/nmt_base_conf
-   
+   15. Chinese-English translation: python interact.py --model_conf ../conf/nmt_base_conf
+
        1. input:
-   
+
           \_zhen\_ 2023年元旦刚过，菲律宾总统马科斯对中国进行了国事访问，他因此成为新年第一位访华的外国领导人
-   
+
        2. output:
-   
+
           in january 2023, philippine president marcos made a state visit to china, making him the first foreign leader to visit china in the new year -3.929159164428711
        
           in january 2023, philippine president marcos made a state visit to china, making him the first foreign leader to visit china in the new year -4.155511379241943
@@ -387,14 +341,14 @@ Several pretrained models are listed below.  **Some models are not available for
           
           
        
-   18. Chinese paper generation: python interact.py --model_conf ../conf/paper_base_conf
-   
+   16. Chinese paper generation: python interact.py --model_conf ../conf/paper_base_conf
+
        1. input:
-   
+
           中日韩 \_sep\_ 自贸区
-   
+
        2. output:
-   
+
           中日韩自贸区发展的制约因素分析 \_sep\_ 发展中日韩自贸区的对策是自贸区的大幅提高。以签订《自由贸易协定》为契机,将各成员国 签订自贸协定作为中日韩自贸区发展的制约因素的内容,本文分析了中日韩自贸区制度的特点,提出了加强中日韩自贸区建设的建议。 -136.17562866210938
           
           发展自贸区:中日韩自贸区面临的机遇与挑战 \_sep\_ 金融危机以后,中日韩的自贸区得以提升。自贸区作为自贸区的重要组成部分,将有 力推动中日韩各国的经贸合作与交流。但是,由于自贸区自身存在内外部条件不协调、自贸区机制不完善、自贸区本身存在诸多问题,解 决自贸区发展问题成为全球一体化的关键问题。促进自贸区发展,中日韩自贸区的建设与发展需要充分调研,借鉴其成功经验,提出解决问题的对策。 -233.56361389160156
@@ -402,15 +356,43 @@ Several pretrained models are listed below.  **Some models are not available for
           中日韩自贸区与韩国新自贸区若干问题探析 \_sep\_ 自2005年日本政府最近在韩国举行调查示范活动后,由韩国自由贸易区(garthge aurantifiation,api)于2007年启动,正式于2008年建立了中日韩自贸区。在自贸区的建立、保护、协调等方面,中日韩三国及其相关部门在经贸领域取得了宝贵的成果。但是,由于签订协议不够透明,各自制度较为模糊,使中日韩自贸区的发展有今天的困境。 -316.9208068847656
           
        
-   
-   19. Chinese tag generation: python interact.py --model_conf ../conf/tag_base_conf
-   
+   17. Chinese tag generation: python interact.py --model_conf ../conf/tag_base_conf
+
        1. input:
-   
+
           近日，由国家感染性疾病临床医学研究中心、中国人民解放军总医院第五医学中心主办的国家感染性疾病临床医学研究中心2023年学术 年会在北京召开。《每日经济新闻》记者在现场注意到，中科院院士高福等专家学者就长新冠、疫苗和药物研发等话题展开交流。后新 冠时期既不能"恐冠"也不能"轻冠"针对新冠病毒，高福表示，在后新冠时期，大家开始讨论人类已经走出了新冠病毒的阴影，但我们不 能只看新冠病毒带来的挑战，也要看到它给我们提供的机遇，以及让人类如何重新思考。后新冠时期既不能"恐冠"也不能"轻冠"。
-   
+
        2. output:
-   
+
           医学 \_sep\_ 临床医学 \_sep\_ 新型冠状病毒 -7.32832670211792
           
+
+   18. Chinese medical qa generation: python interact.py --model_conf ../conf/med_base_conf
+
+       1. input:
+
+          最近老是犯困全身乏力腰酸背痛
+
+       2. output:
+
+          就您的情况考虑是气血虚弱,植物神经功能紊乱导致的,建议用归脾丸治疗。 -29.775508880615234
+          
+          这种情况可能是由于多种原因引起的,例如疲劳、压力过大、饮食不规律等。建议您注意休息,适当进行体育锻炼,保持良好的心态和饮食习惯,同时也要注意补充足够的营养物质, 如蛋白质、维生素及矿物质等。如果症状持续存在或加重,建议您咨询医生进行检查和治疗。 -50.89771270751953
+          
+          这样的情况要考虑是否有肾虚或者腰椎疾病引起的,建议你去医院做一下检查看看。可以吃点六味地黄丸和金锁固精丸来治疗,注意休息,不要过度劳累 -53.82005310058594
+          
+
+   19. Chinese doc2query generation: python interact.py --model_conf ../conf/doc2query_base_conf
+
+       1. input:
+
+          "五一"假期过后，社交媒体上出现了许多关于二阳的讨论。据北京疾控公布的第19周 （5月8日-14日）的数据，全市共报告法定传染病16种18081例。新冠感染连续3周超越流感，重返法定传染病病种排名第一。
+
+       2. output:
+
+          北京什么时候二阳 -6.940310955047607
+          
+          5月8号北京有多少传染病 -10.51338005065918
+          
+          北京新冠疫情过几天会复发 -20.61032485961914
 
