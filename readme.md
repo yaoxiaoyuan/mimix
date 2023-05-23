@@ -36,9 +36,11 @@ Several pretrained models are listed below.  **Some models are not available for
 | Chinese-English translation | transformer enc-dec | 216m | 12 | 768 | 12 | 60m | 16GB | True |
 | Chinese paper generation                 | transformer enc-dec     | 216m     | 12       | 768     | 12      | 4m        | 4.8GB     | True              |
 | Chinese tag generation                   | transformer enc-dec     | 216m     | 12       | 768     | 12      | 22m       | 24GB      | True              |
+| Chinese medical qa           | transformer enc-dec     | 216m     | 12       | 768     | 12      | 2.7m      | 1.38GB    | True         |
+| Chinese doc2query generation | transformer enc-dec | 216m | 12       | 768     | 12      | 1.3m      | 1.5GB     | True         |
 | Chinese ancient translation              | transformer enc-dec     | 216m     | 12       | 768     | 12      | 6m        | 1GB       | False             |
-| Chinese shi,ci,duilian generation v2     | transformer dec-only lm | 102m     | 12       | 768     | 12      | 6m        | 1GB       | False             |
-| Chinese news summarization generation v2 | transformer enc-dec     | 216m     | 12       | 768     | 12      | 36m       | 113GB     | False             |
+| Chinese shi,ci,duilian generation v2 | transformer dec-only lm | 102m | 12 | 768 | 12 | 6m | 1GB | False |
+| Chinese news summarization generation v2 | transformer enc-dec     | 216m     | 12       | 768     | 12      | 36m | 113GB | False |
 
 
 
@@ -213,15 +215,15 @@ Several pretrained models are listed below.  **Some models are not available for
        1. input:  今天（9月27日），中国空军新闻发言人申进科大校在第14届中国航展新闻发布会上表示，歼-20已经遍布东南西北中，列装越来越多、飞得越来越远。
 
        2. output: 
-         
+
           中国军工加油 -9.763671875
-         
+
           中国军工加油！ -9.810546875
-          
+
           中国人民解放军万岁！ -10.584172248840332
-
-          
-
+       
+       
+       
    10. Chinese essay generation: python interact.py --model_conf ../conf/essay_base_conf
 
        1. input: 春天
