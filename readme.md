@@ -38,9 +38,8 @@ Several pretrained models are listed below.  **Some models are not available for
 | Chinese tag generation                   | transformer enc-dec     | 216m     | 12       | 768     | 12      | 22m       | 24GB      | True              |
 | Chinese medical qa           | transformer enc-dec     | 216m     | 12       | 768     | 12      | 2.7m      | 1.38GB    | True         |
 | Chinese doc2query generation | transformer enc-dec | 216m | 12       | 768     | 12      | 1.3m      | 1.5GB     | True         |
-| Chinese ancient translation              | transformer enc-dec     | 216m     | 12       | 768     | 12      | 6m        | 1GB       | False             |
-| Chinese shi,ci,duilian generation v2 | transformer dec-only lm | 102m | 12 | 768 | 12 | 6m | 1GB | False |
-| Chinese news summarization generation v2 | transformer enc-dec     | 216m     | 12       | 768     | 12      | 36m | 113GB | False |
+| Chinese ancient translation              | transformer enc-dec     | 216m     | 12       | 768     | 12      | 6m        | 1GB       | True             |
+| Chinese spelling correction | transformer enc-dec | 216m | 12 | 768 | 12 | 32m | 6GB | False |
 
 
 
@@ -397,4 +396,15 @@ Several pretrained models are listed below.  **Some models are not available for
           5月8号北京有多少传染病 -10.51338005065918
           
           北京新冠疫情过几天会复发 -20.61032485961914
+
+
+   20. Chinese spelling correction: python interact.py --model_conf ../conf/csc_base_conf
+
+       1. input:
+
+          大家要努力鞋习aigc只是。
+
+       2. output:
+
+          大家要努力学习aigc知识。 -0.03288019448518753
 
