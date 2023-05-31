@@ -39,7 +39,7 @@ Several pretrained models are listed below.  **Some models are not available for
 | Chinese medical qa           | transformer enc-dec     | 216m     | 12       | 768     | 12      | 2.7m      | 1.38GB    | True         |
 | Chinese doc2query generation | transformer enc-dec | 216m | 12       | 768     | 12      | 1.3m      | 1.5GB     | True         |
 | Chinese ancient translation              | transformer enc-dec     | 216m     | 12       | 768     | 12      | 6m        | 1GB       | True             |
-| Chinese spelling correction | transformer enc-dec | 216m | 12 | 768 | 12 | 32m | 6GB | False |
+| Chinese spelling correction | transformer enc-dec | 216m | 12 | 768 | 12 | 32m | 6GB | True |
 
 
 
