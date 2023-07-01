@@ -1388,8 +1388,8 @@ class TransformerLayer(nn.Module):
                 output,  
                 self_attn_mask, 
                 cached_kv=False, 
-                dec_keys=None, 
-                dec_values=None,
+                self_keys=None, 
+                self_values=None,
                 enc_keys=None, 
                 enc_values=None,
                 dec_enc_attn_mask=None):
@@ -1402,22 +1402,22 @@ class TransformerLayer(nn.Module):
         if cached_kv == True:
             kv = self.cache_dec_kv(output)
             
-            if dec_keys is None:
-                dec_keys = kv[0]                
+            if self_keys is None:
+                self_keys = kv[0]                
             else:
-                dec_keys = torch.cat([dec_keys, kv[0]], 2)
-            if dec_values is None:
-                dec_values = kv[1]
+                self_keys = torch.cat([self_keys, kv[0]], 2)
+            if self_values is None:
+                self_values = kv[1]
             else:
-                dec_values = torch.cat([dec_values, kv[1]], 2)
+                self_values = torch.cat([self_values, kv[1]], 2)
                 
         else:
-            dec_keys = output
-            dec_values = output
+            self_keys = output
+            self_values = output
         
         output, self_attn_scores = self.self_attention(output, 
-                                                       dec_keys, 
-                                                       dec_values, 
+                                                       self_keys, 
+                                                       self_values, 
                                                        self_attn_mask,
                                                        cached_kv)
         
@@ -1461,10 +1461,9 @@ class TransformerLayer(nn.Module):
             outputs += [enc_attn_scores]
 
         if cached_kv == True:
-            outputs = outputs + [dec_keys, dec_values]
+            outputs = outputs + [self_keys, self_values]
         
         return outputs
-
 
     def cache_enc_kv(self, enc_output):
         """
