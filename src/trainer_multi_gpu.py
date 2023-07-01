@@ -328,7 +328,8 @@ class Trainer():
             self.logger.info("%s" % self.model)
             total_params = sum(p.numel() for p in self.model.parameters())
             self.logger.info("Total Model Params:%s" % total_params)
-        
+            total_train_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad==True)
+            self.logger.info("Trainable Model Params:%s" % total_train_params)        
     
     def reload_model_weights(self):
         """
@@ -352,6 +353,7 @@ class Trainer():
     def reload_optimizer_weights(self):
         """
         """
+        return 
         self.logger.info("Reload optimizer weights.")
         try:
             train_state_dict = torch.load(

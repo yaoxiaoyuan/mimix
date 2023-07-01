@@ -65,6 +65,7 @@ class Trainer():
         
         self.max_epoch = train_config["max_epoch"] + 1
         
+        self.print_every_n_steps = train_config.get("print_every_n_steps", 100)  
         self.save_steps = train_config.get("save_steps", 100000)  
         self.tmp_save_steps = train_config.get("tmp_save_steps", 10000) 
         self.reload = train_config.get("reload", False)
@@ -308,6 +309,8 @@ class Trainer():
         self.logger.info("%s" % self.model)
         total_params = sum(p.numel() for p in self.model.parameters())
         self.logger.info("Total Model Params:%s" % total_params)
+        total_train_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad==True)
+        self.logger.info("Trainable Model Params:%s" % total_train_params)
         
     
     def reload_model_weights(self):
@@ -385,15 +388,18 @@ class Trainer():
                 if self.use_amp == True:
                     with torch.cuda.amp.autocast():
                         outputs = self.model(inputs, targets=targets, compute_loss=True)
+                        loss = outputs[0]        
+                        history_loss = history_loss[-999:] + [loss.item()]
+                        loss = loss / self.accumulate_steps
                 else:
-                    outputs = self.model(inputs, targets=targets, compute_loss=True)
+                    outputs = self.model(inputs, targets=targets, compute_loss=True)                    
+                    loss = outputs[0]        
+                    history_loss = history_loss[-999:] + [loss.item()]
+                    loss = loss / self.accumulate_steps
                     
-                loss = outputs[0]
-        
-                history_loss = history_loss[-999:] + [loss.item()]
-                ma_loss = sum(history_loss) / len(history_loss)
-        
-                self.logger.info(
+                if self.total_steps % self.print_every_n_steps == 0:
+                    ma_loss = sum(history_loss) / len(history_loss)
+                    self.logger.info(
                         "%d epoch %d step total %d steps loss: %.3f" % 
                         (self.epoch, 
                          self.steps, 

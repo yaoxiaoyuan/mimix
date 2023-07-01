@@ -58,10 +58,10 @@ class EncDecGenerator():
         self.trg_vocab_size = config["trg_vocab_size"]
         self.max_dec_steps = config["max_decode_steps"]
         
-        self.beam_size = config["beam_size"]
+        self.beam_size = config.get("beam_size", 3)
         self.group_size = config.get("group_size", 1)
         self.diverse_rate = config.get("diverse_rate", 0)
-        self.gamma = float(config["gamma"])
+        self.gamma = float(config.get("gamma", 1))
         self.strategy = config.get("search_strategy", "beam_search")
         
         self.sample_size = config.get("sample_size", 1)

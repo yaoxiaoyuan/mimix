@@ -831,6 +831,112 @@ class AttentionDecoder(nn.Module):
         return [logits]
 
 
+
+
+class CRF(nn.Module):
+    """
+    """
+    def __init__(self, n_labels):
+        """
+        """
+        super(CRF, self).__init__()
+        self.n_labels = n_labels
+        self.start_trans = nn.Parameter(torch.Tensor(n_labels))
+        self.trans = nn.Parameter(torch.Tensor(n_labels, n_labels))
+        self.end_trans = nn.Parameter(torch.Tensor(n_labels))
+        self.reset_parameters()
+        
+    
+    def reset_parameters(self):
+        """
+        """
+        for weight in [self.start_trans, self.trans, self.end_trans]:
+            weight.data.uniform_(-0.1, 0.1)
+
+
+    def get_end_mask(self, mask):
+        """
+        """
+        left_shift_mask = torch.cat([mask[:,1:], torch.zeros_like(mask[:,:1])], 1)
+        end_mask = (mask > left_shift_mask).float() 
+        return end_mask
+    
+    
+    def get_normalizer(self, emission, mask=None, end_mask=None):
+        """
+        """
+        #start -> first tag 
+        #BxT
+        scores = self.start_trans + emission[:,0]
+            
+        seq_len = emission.size(1)
+        for i in range(1, seq_len):
+            #BxT -> BxTx1
+            next_scores = scores.unsqueeze(2) 
+            
+            #Bx1xT + TxT -> BxTxT
+            next_scores = next_scores + self.trans
+            
+            #BxTxT -> BxT
+            next_scores = torch.logsumexp(next_scores, 1)
+
+            #BxT + BxT -> BxT
+            next_scores = next_scores + emission[:, i]
+
+            #add mask
+            if mask is not None:
+                _mask = mask[:, i].unsqueeze(1)
+                next_scores = _mask * next_scores + (1 - _mask) * scores
+
+                _mask = end_mask[:, i].unsqueeze(1)
+                next_scores = next_scores + _mask * self.end_trans
+
+            scores = next_scores
+        
+        scores = torch.logsumexp(scores, 1)
+
+        return scores
+
+
+    def get_path_score(self, emission, target, mask=None, end_mask=None):
+        """
+        """
+        batch_size, seq_len = emission.size(0), emission.size(1)
+        
+        scores = self.start_trans[target[:, 0]] 
+        scores += emission[torch.arange(0, batch_size), 0, target[:, 0]]
+        
+        for i in range(1, seq_len):
+            next_scores = scores + self.trans[target[:, i-1], target[:, i]]
+            next_scores = next_scores + emission[torch.arange(0, batch_size), i, target[:, i]]
+
+            if mask is not None:
+                _mask = mask[:,i]
+                next_scores = _mask * next_scores + (1 - _mask) * scores
+            if end_mask is not None:
+                _mask = end_mask[:,i]
+                next_scores = next_scores + _mask * self.end_trans[target[:, i]]
+
+            scores = next_scores
+        
+        return scores
+    
+    
+    def forward(self, emission, target, mask=None):
+        """
+        """
+        if mask is not None:
+            end_mask = self.get_end_mask(mask)
+        
+        path_scores = self.get_path_score(emission, target, mask, end_mask)
+        
+        normalizer = self.get_normalizer(emission, mask, end_mask)
+
+        neg_log_likelihood = torch.mean(normalizer - path_scores)
+        
+        return neg_log_likelihood
+
+
 class Embedding(nn.Module):
     """
     """
@@ -956,7 +1062,7 @@ def gelu_new(x):
 class FeedForward(nn.Module):
     """
     """
-    def __init__(self, d_model, d_ff, activation="relu", dropout=0):
+    def __init__(self, d_model, d_ff, activation="relu", dropout=0, with_bias=True):
         """
         """
         super(FeedForward, self).__init__()
@@ -965,9 +1071,12 @@ class FeedForward(nn.Module):
         self.activation = activation
         self.dropout = Dropout(dropout)
         self.W1 = nn.Parameter(torch.Tensor(self.d_ff, self.d_model))
-        self.b1 = nn.Parameter(torch.Tensor(self.d_ff))
+        self.with_bias = with_bias
+        if self.with_bias == True:
+            self.b1 = nn.Parameter(torch.Tensor(self.d_ff))
         self.W2 = nn.Parameter(torch.Tensor(self.d_model, self.d_ff))
-        self.b2 = nn.Parameter(torch.Tensor(self.d_model))
+        if self.with_bias == True:
+            self.b2 = nn.Parameter(torch.Tensor(self.d_model))
         self.reset_parameters()
     
     
@@ -977,22 +1086,29 @@ class FeedForward(nn.Module):
         stdv = 1.0 / np.sqrt(self.d_model)
         for weight in [self.W1, self.W2]:
             weight.data.uniform_(-stdv, stdv)
-        for weight in [self.b1, self.b2]:
-            weight.data.fill_(0)
+        if self.with_bias == True:
+            for weight in [self.b1, self.b2]:
+                weight.data.fill_(0)
             
 
     def forward(self, x):
         """
         """
         if self.activation == "relu":
-            x = F.linear(F.relu(F.linear(x, self.W1) + self.b1), 
-                         self.W2) + self.b2
+            if self.with_bias == True:
+                x = F.linear(F.relu(F.linear(x, self.W1) + self.b1), self.W2) + self.b2
+            else:
+                x = F.linear(F.relu(F.linear(x, self.W1)), self.W2)
         elif self.activation == "gelu":
-            x = F.linear(F.gelu(F.linear(x, self.W1) + self.b1), 
-                         self.W2) + self.b2
+            if self.with_bias == True:
+                x = F.linear(F.gelu(F.linear(x, self.W1) + self.b1), self.W2) + self.b2
+            else:
+                x = F.linear(F.relu(F.linear(x, self.W1)), self.W2)
         elif self.activation == "gelu_new":
-            x = F.linear(gelu_new(F.linear(x, self.W1) + self.b1), 
-                         self.W2) + self.b2
+            if self.with_bias == True:
+                x = F.linear(gelu_new(F.linear(x, self.W1) + self.b1), self.W2) + self.b2
+            else:
+                x = F.linear(F.relu(F.linear(x, self.W1)), self.W2)
         x = self.dropout(x)
         return x
 
@@ -1000,7 +1116,7 @@ class FeedForward(nn.Module):
 class LayerNorm(nn.Module):
     """
     """
-    def __init__(self, d_model, eps=1e-5):
+    def __init__(self, d_model, eps=1e-5, use_rms_norm=False):
         """
         """
         super(LayerNorm, self).__init__()
@@ -1009,24 +1125,34 @@ class LayerNorm(nn.Module):
         self.d_model = d_model
         self.alpha = nn.Parameter(torch.ones(self.d_model))
         self.bias = nn.Parameter(torch.zeros(self.d_model))
-        
+        self.use_rms_norm = use_rms_norm
         
     def forward(self, x):
         """
         """
-        
-        mean = x.mean(dim=-1, keepdim=True)
-        std = x.std(dim=-1, unbiased=False, keepdim=True)
-        norm = self.alpha * (x - mean) / (std + self.eps) + self.bias
+        if self.use_rms_norm == True:
+            std = x.std(dim=-1, unbiased=False, keepdim=True)
+            norm = self.alpha * x / (std + self.eps) + self.bias        
+        else:
+            mean = x.mean(dim=-1, keepdim=True)
+            std = x.std(dim=-1, unbiased=False, keepdim=True)
+            norm = self.alpha * (x - mean) / (std + self.eps) + self.bias
         return norm
 
 
-def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout=None):
+def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout=None, p_key=None, p_value=None):
     """
     """
     d = query.size(-1)
-    #B x n_heads x L_q x L_k
+    #q:B x n_heads x L_q x d_qk 
+    #k:B x n_heads x L_k x d_v 
+    #scores:B x n_heads x L_q x L_k
     scores = torch.matmul(query, key.transpose(-2, -1)) / np.sqrt(d)
+    
+    if p_key is not None:
+        #p_k:L_q x L_k x d_qk
+        p_key
+        scores += p_key
     
     if attn_mask is not None:
         attn_mask = attn_mask.bool()
@@ -1040,10 +1166,52 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout=None
     return torch.matmul(attn_scores, value), attn_scores
 
 
+class RelativePositionEmbedding(nn.Module):
+    """
+    """
+    def __init__(self, max_relative_len, d_model, need_train=False):
+        """
+        """
+        super(RelativePositionEmbedding, self).__init__()
+        self.embedding_size = d_model
+        self.max_relative_len = max_relative_len
+        self.need_train = need_train
+        if need_train == False:
+            W = torch.zeros(2*max_relative_len+1, d_model)
+            for i in range(2*max_relative_len+1):
+                for j in range(0, d_model, 2):
+                    W[i, j] = np.sin(i / np.power(10000, 2 * j / d_model))
+                    W[i, j + 1] = np.cos(i / np.power(10000, 2 * j / d_model))
+            self.register_buffer('RPW', W)
+        else:
+            self.W = nn.Parameter(torch.Tensor(2*max_relative_len+1, d_model))
+            self.reset_parameters()
+    
+    def reset_parameters(self):
+        """
+        """
+        stdv = 1.0 / np.sqrt(self.embedding_size)
+        for weight in self.parameters():
+            weight.data.uniform_(-stdv, stdv)
+        
+    def forward(self, seq_q, seq_kv):
+        """
+        """
+        relative_dis = torch.arange(seq_q.size(1))[:,None] - torch.arange(seq_kv.size(1))[:,None]
+        relative_dis = torch.clamp(relative_dis, -self.max_relative_len, self.max_relative_len)
+        idx = relative_dis + self.max_relative_len
+        if self.need_train == False:
+            pe = Variable(self.W[idx], 
+                          requires_grad=False)
+            return pe
+        else:
+            return self.W[idx]
+
+
 class MultiHeadAttention(nn.Module):
     """
     """
-    def __init__(self, n_heads, d_model, d_qk, d_v, dropout=0, attn_dropout=0):
+    def __init__(self, n_heads, d_model, d_qk, d_v, dropout=0, attn_dropout=0, with_bias=True, max_relative_position=-1):
         """
         """
         super(MultiHeadAttention, self).__init__()
@@ -1054,14 +1222,22 @@ class MultiHeadAttention(nn.Module):
         self.attn_dropout = Dropout(attn_dropout)
         self.d_qk = d_qk
         self.d_v = d_v
+        self.max_relative_position = max_relative_position
         self.W_q = nn.Parameter(torch.Tensor(n_heads*d_qk, d_model))
         self.W_k = nn.Parameter(torch.Tensor(n_heads*d_qk, d_model))
         self.W_v = nn.Parameter(torch.Tensor(n_heads*d_v, d_model))
         self.W_o = nn.Parameter(torch.Tensor(d_model, n_heads*d_v))
-        self.b_q = nn.Parameter(torch.Tensor(n_heads*d_qk))
-        self.b_k = nn.Parameter(torch.Tensor(n_heads*d_qk))
-        self.b_v = nn.Parameter(torch.Tensor(n_heads*d_v))
-        self.b_o = nn.Parameter(torch.Tensor(d_model))
+        self.with_bias = with_bias
+        if self.with_bias == True:
+            self.b_q = nn.Parameter(torch.Tensor(n_heads*d_qk))
+            self.b_k = nn.Parameter(torch.Tensor(n_heads*d_qk))
+            self.b_v = nn.Parameter(torch.Tensor(n_heads*d_v))
+            self.b_o = nn.Parameter(torch.Tensor(d_model))
+        
+        if max_relative_position > 0:
+            self.rel_pos_k_emb = RelativePositionEmbedding(self.d_qk)
+            self.rel_pos_v_emb = RelativePositionEmbedding(self.d_v)
+        
         self.reset_parameters()
         
     
@@ -1071,18 +1247,24 @@ class MultiHeadAttention(nn.Module):
         stdv = 1.0 / np.sqrt(self.d_model)
         for weight in [self.W_q, self.W_k, self.W_v, self.W_o]:
             weight.data.uniform_(-stdv, stdv)
-        for weight in [self.b_q, self.b_k, self.b_v, self.b_o]:
-            weight.data.zero_()
+        if self.with_bias == True:
+            for weight in [self.b_q, self.b_k, self.b_v, self.b_o]:
+                weight.data.zero_()
     
     
     def forward(self, query, key, value, attn_mask=None, cached_kv=False):
         """
         """
         #B x L x d_model -> B x l x (d*n_heads)
-        query = F.linear(query, self.W_q) + self.b_q
+        query = F.linear(query, self.W_q)
+        if self.with_bias == True:
+            query = query + self.b_q
         if cached_kv == False:
-            key = F.linear(key, self.W_k) + self.b_k
-            value = F.linear(value, self.W_v) + self.b_v
+            key = F.linear(key, self.W_k) 
+            value = F.linear(value, self.W_v) 
+            if self.with_bias == True:
+                key = key + self.b_k
+                value = value + self.b_v
 
         batch_size = query.size(0)
         #B x l x (d*n_heads) -> B x L x n_heads x d_qk
@@ -1099,18 +1281,28 @@ class MultiHeadAttention(nn.Module):
         
         if attn_mask is not None:
             attn_mask = attn_mask.unsqueeze(1).repeat(1, self.n_heads, 1, 1)
+        
+        p_key = None
+        p_value = None
+        if self.max_relative_position > 0:
+            p_key = self.rel_pos_k_emb(query, key)
+            p_value = self.rel_pos_k_emb(query, value)
 
         output, attn_scores = scaled_dot_product_attention(query, 
                                                            key, 
                                                            value, 
                                                            attn_mask,
-                                                           self.attn_dropout)
+                                                           self.attn_dropout,
+                                                           p_key,
+                                                           p_value)
         
         #B x n_heads x L x d -> B x L x n_heads x d -> B x L x d_model
         output = output.transpose(1,2)
         output = output.contiguous().view(batch_size, -1, 
                                   self.n_heads*self.d_v)
-        output = self.dropout(F.linear(output, self.W_o) + self.b_o)
+        output = F.linear(output, self.W_o)
+        if self.with_bias == True:
+            output = self.dropout(output + self.b_o)
         return output, attn_scores
 
 
@@ -1119,8 +1311,11 @@ class MultiHeadAttention(nn.Module):
         """
         batch_size = x.size(0)
         
-        key = F.linear(x, self.W_k) + self.b_k
-        value = F.linear(x, self.W_v) + self.b_v
+        key = F.linear(x, self.W_k)
+        value = F.linear(x, self.W_v) 
+        if self.with_bias == True:
+            key = key + self.b_k
+            value = value + self.b_v
         
         key = key.view(batch_size, -1, self.n_heads, self.d_qk)
         value = value.view(batch_size, -1, self.n_heads, self.d_v)
@@ -1131,168 +1326,156 @@ class MultiHeadAttention(nn.Module):
         return [key, value]
 
 
-class CRF(nn.Module):
-    """
-    """
-    def __init__(self, n_labels):
-        """
-        """
-        super(CRF, self).__init__()
-        self.n_labels = n_labels
-        self.start_trans = nn.Parameter(torch.Tensor(n_labels))
-        self.trans = nn.Parameter(torch.Tensor(n_labels, n_labels))
-        self.end_trans = nn.Parameter(torch.Tensor(n_labels))
-        self.reset_parameters()
-        
-    
-    def reset_parameters(self):
-        """
-        """
-        for weight in [self.start_trans, self.trans, self.end_trans]:
-            weight.data.uniform_(-0.1, 0.1)
-
-
-    def get_end_mask(self, mask):
-        """
-        """
-        left_shift_mask = torch.cat([mask[:,1:], torch.zeros_like(mask[:,:1])], 1)
-        end_mask = (mask > left_shift_mask).float() 
-        return end_mask
-    
-    
-    def get_normalizer(self, emission, mask=None, end_mask=None):
-        """
-        """
-        #start -> first tag 
-        #BxT
-        scores = self.start_trans + emission[:,0]
-            
-        seq_len = emission.size(1)
-        for i in range(1, seq_len):
-            #BxT -> BxTx1
-            next_scores = scores.unsqueeze(2) 
-            
-            #Bx1xT + TxT -> BxTxT
-            next_scores = next_scores + self.trans
-            
-            #BxTxT -> BxT
-            next_scores = torch.logsumexp(next_scores, 1)
-
-            #BxT + BxT -> BxT
-            next_scores = next_scores + emission[:, i]
-
-            #add mask
-            if mask is not None:
-                _mask = mask[:, i].unsqueeze(1)
-                next_scores = _mask * next_scores + (1 - _mask) * scores
-
-                _mask = end_mask[:, i].unsqueeze(1)
-                next_scores = next_scores + _mask * self.end_trans
-
-            scores = next_scores
-        
-        scores = torch.logsumexp(scores, 1)
-
-        return scores
-
-
-    def get_path_score(self, emission, target, mask=None, end_mask=None):
-        """
-        """
-        batch_size, seq_len = emission.size(0), emission.size(1)
-        
-        scores = self.start_trans[target[:, 0]] 
-        scores += emission[torch.arange(0, batch_size), 0, target[:, 0]]
-        
-        for i in range(1, seq_len):
-            next_scores = scores + self.trans[target[:, i-1], target[:, i]]
-            next_scores = next_scores + emission[torch.arange(0, batch_size), i, target[:, i]]
-
-            if mask is not None:
-                _mask = mask[:,i]
-                next_scores = _mask * next_scores + (1 - _mask) * scores
-            if end_mask is not None:
-                _mask = end_mask[:,i]
-                next_scores = next_scores + _mask * self.end_trans[target[:, i]]
-
-            scores = next_scores
-        
-        return scores
-    
-    
-    def forward(self, emission, target, mask=None):
-        """
-        """
-        if mask is not None:
-            end_mask = self.get_end_mask(mask)
-        
-        path_scores = self.get_path_score(emission, target, mask, end_mask)
-        
-        normalizer = self.get_normalizer(emission, mask, end_mask)
-
-        neg_log_likelihood = torch.mean(normalizer - path_scores)
-        
-        return neg_log_likelihood
-    
-
-class EncoderLayer(nn.Module):
+class TransformerLayer(nn.Module):
     """
     """
     def __init__(self, 
-                 n_heads, 
+                 n_heads,
                  d_model, 
                  d_ff, 
                  d_qk, 
-                 d_v,
+                 d_v, 
                  dropout=0,
                  attn_dropout=0,
                  ln_eps=1e-5,
-                 use_pre_norm=True, 
-                 activation="relu"):
+                 use_pre_norm=True,
+                 activation="relu",
+                 use_rms_norm=False,
+                 with_attention_bias=True,
+                 with_ffn_bias=True,
+                 max_relative_len=-1,
+                 with_across_attention=True):
         """
         """
-        super(EncoderLayer, self).__init__()
-        self.n_heads = n_heads
-        self.d_model = d_model
-        self.dropout = Dropout(dropout)
-        self.d = d_model // n_heads
-
-        self.attention = MultiHeadAttention(n_heads,
-                                            d_model, 
-                                            d_qk, 
-                                            d_v, 
-                                            dropout,
-                                            attn_dropout)
-        self.norm_1 = LayerNorm(d_model, ln_eps)
-        self.ffn = FeedForward(d_model, d_ff, activation, dropout)
-        self.norm_2 = LayerNorm(d_model, ln_eps)
+        super(TransformerLayer, self).__init__()
+        self.self_attention = MultiHeadAttention(n_heads,
+                                                 d_model, 
+                                                 d_qk, 
+                                                 d_v, 
+                                                 dropout,
+                                                 attn_dropout,
+                                                 with_attention_bias,
+                                                 max_relative_len)
+        
+        self.norm_1 = LayerNorm(d_model,ln_eps,use_rms_norm)
+        
+        self.with_across_attention = with_across_attention
+        if self.with_across_attention == True:
+            self.enc_attention = MultiHeadAttention(n_heads,
+                                                    d_model, 
+                                                    d_qk, 
+                                                    d_v, 
+                                                    dropout,
+                                                    attn_dropout,
+                                                    with_attention_bias,
+                                                    max_relative_len)
+        
+            self.norm_2 = LayerNorm(d_model,ln_eps,use_rms_norm)
+            
+        self.ffn = FeedForward(d_model, 
+                               d_ff, 
+                               activation, 
+                               dropout,
+                               with_ffn_bias)
+        if self.with_across_attention == True:
+            self.norm_3 = LayerNorm(d_model,ln_eps,use_rms_norm)
+        else:
+            self.norm_2 = LayerNorm(d_model,ln_eps,use_rms_norm)
         self.use_pre_norm = use_pre_norm
         
         
-    def forward(self, enc_output, attn_mask):
+    def forward(self, 
+                output,  
+                self_attn_mask, 
+                cached_kv=False, 
+                dec_keys=None, 
+                dec_values=None,
+                enc_keys=None, 
+                enc_values=None,
+                dec_enc_attn_mask=None):
         """
         """
-        residual = enc_output
-        
+        residual = output
         if self.use_pre_norm == True:
-            enc_output = self.norm_1(enc_output)
-        enc_output, attn_scores = self.attention(enc_output, 
-                                                 enc_output, 
-                                                 enc_output, 
-                                                 attn_mask)
-        enc_output = residual + enc_output
-        if self.use_pre_norm == False:
-            enc_output = self.norm_1(enc_output)
+            output = self.norm_1(output)
         
-        residual = enc_output
-        if self.use_pre_norm == True:
-            enc_output = self.norm_2(enc_output)
-        enc_output = self.ffn(enc_output)
-        enc_output = residual + enc_output
-        if self.use_pre_norm == False:
-            enc_output = self.norm_2(enc_output)
+        if cached_kv == True:
+            kv = self.cache_dec_kv(output)
             
-        return enc_output, attn_scores
+            if dec_keys is None:
+                dec_keys = kv[0]                
+            else:
+                dec_keys = torch.cat([dec_keys, kv[0]], 2)
+            if dec_values is None:
+                dec_values = kv[1]
+            else:
+                dec_values = torch.cat([dec_values, kv[1]], 2)
+                
+        else:
+            dec_keys = output
+            dec_values = output
+        
+        output, self_attn_scores = self.self_attention(output, 
+                                                       dec_keys, 
+                                                       dec_values, 
+                                                       self_attn_mask,
+                                                       cached_kv)
+        
+        output = residual + output
+        if self.use_pre_norm == False:
+            output = self.norm_1(output)
+            
+        residual = output
+        
+        if self.with_across_attention == True:
+            if self.use_pre_norm == True:
+                output = self.norm_2(output)
+              
+            output, enc_attn_scores = self.enc_attention(output, 
+                                                         enc_keys, 
+                                                         enc_values, 
+                                                         dec_enc_attn_mask,
+                                                         cached_kv)
+
+            output = residual + output
+            if self.use_pre_norm == False:
+                output = self.norm_2(output)
+            
+            residual = output
+                
+        if self.use_pre_norm == True:
+            if self.with_across_attention == True:
+                output = self.norm_3(output)
+            else:
+                output = self.norm_2(output)
+        output = self.ffn(output)
+        output = residual + output
+        if self.use_pre_norm == False:
+            if self.with_across_attention == True:
+                output = self.norm_3(output)
+            else:
+                output = self.norm_2(output)
+       
+        outputs = [output, self_attn_scores]
+        if self.with_across_attention == True:
+            outputs += [enc_attn_scores]
+
+        if cached_kv == True:
+            outputs = outputs + [dec_keys, dec_values]
+        
+        return outputs
+
+
+    def cache_enc_kv(self, enc_output):
+        """
+        """
+        return self.enc_attention.cache_kv(enc_output)
+
+
+    def cache_dec_kv(self, dec_output):
+        """
+        """
+        return self.self_attention.cache_kv(dec_output)
 
 
 class Encoder(nn.Module):
@@ -1311,6 +1494,10 @@ class Encoder(nn.Module):
                  attn_dropout=0,
                  emb_dropout=0,
                  ln_eps=1e-5,
+                 use_rms_norm=False,
+                 with_attention_bias=True,
+                 with_ffn_bias=True,
+                 max_relative_len=-1,
                  embedding_size=None,
                  share_layer_params=False, 
                  n_share_across_layers=1,
@@ -1357,9 +1544,8 @@ class Encoder(nn.Module):
         
         self.emb_dropout = Dropout(emb_dropout)
         
-        if share_layer_params == False:
-            self.layers = nn.ModuleList([
-                    EncoderLayer(n_heads, 
+        self.layers = nn.ModuleList([
+                TransformerLayer(n_heads, 
                                  d_model, 
                                  d_ff, 
                                  d_qk, 
@@ -1367,25 +1553,14 @@ class Encoder(nn.Module):
                                  dropout=dropout,
                                  attn_dropout=attn_dropout,
                                  ln_eps=ln_eps,
-                                 use_pre_norm=use_pre_norm,                                 
-                                 activation=activation)
-                    for _ in range(n_layers)])
-        else:
-            layers = []
-            for i in range(n_layers):
-                if i % n_share_across_layers == 0:
-                    layer = EncoderLayer(n_heads,
-                                         d_model, 
-                                         d_ff, 
-                                         d_qk, 
-                                         d_v,
-                                         dropout=dropout, 
-                                         attn_dropout=attn_dropout,
-                                         ln_eps=ln_eps,
-                                         use_pre_norm=use_pre_norm,
-                                         activation=activation)
-                    layers.append(layer)
-            self.layers = nn.ModuleList(layers)
+                                 use_pre_norm=use_pre_norm,
+                                 activation=activation,
+                                 use_rms_norm=use_rms_norm,
+                                 with_attention_bias=with_attention_bias,
+                                 with_ffn_bias=with_ffn_bias,
+                                 max_relative_len=max_relative_len,
+                                 with_across_attention=False)
+                    for i in range(n_layers//n_share_across_layers)])
     
         if self.norm_before_pred == True:
             self.norm = LayerNorm(self.d_model)
@@ -1418,7 +1593,7 @@ class Encoder(nn.Module):
                 enc_layer = self.layers[i]
             else:
                 enc_layer = self.layers[i // self.n_share_across_layers]
-                
+
             enc_output, enc_attn_scores = enc_layer(enc_output,attn_mask)
             
             enc_self_attn_list.append(enc_attn_scores)
@@ -1432,122 +1607,6 @@ class Encoder(nn.Module):
             outputs = outputs + [embeded, enc_states, enc_self_attn_list]
         
         return outputs
-
-
-class DecoderLayer(nn.Module):
-    """
-    """
-    def __init__(self, 
-                 n_heads,
-                 d_model, 
-                 d_ff, 
-                 d_qk, 
-                 d_v, 
-                 dropout=0,
-                 attn_dropout=0,
-                 ln_eps=1e-5,
-                 use_pre_norm=True,
-                 activation="relu"):
-        """
-        """
-        super(DecoderLayer, self).__init__()
-        self.self_attention = MultiHeadAttention(n_heads,
-                                                 d_model, 
-                                                 d_qk, 
-                                                 d_v, 
-                                                 dropout,
-                                                 attn_dropout)
-        self.norm_1 = LayerNorm(d_model,ln_eps)
-        self.enc_attention = MultiHeadAttention(n_heads,
-                                                d_model, 
-                                                d_qk, 
-                                                d_v, 
-                                                dropout,
-                                                attn_dropout)
-        self.norm_2 = LayerNorm(d_model,ln_eps)
-        self.ffn = FeedForward(d_model, d_ff, activation, dropout)
-        self.norm_3 = LayerNorm(d_model,ln_eps)
-        self.use_pre_norm = use_pre_norm
-        
-        
-    def forward(self, dec_output, 
-                enc_keys, enc_values, self_attn_mask, dec_enc_attn_mask,
-                cached_kv=False, dec_keys=None, dec_values=None):
-        """
-        """
-        residual = dec_output
-        if self.use_pre_norm == True:
-            dec_output = self.norm_1(dec_output)
-        
-        if cached_kv == True:
-            kv = self.cache_dec_kv(dec_output)
-            
-            if dec_keys is None:
-                dec_keys = kv[0]                
-            else:
-                dec_keys = torch.cat([dec_keys, kv[0]], 2)
-            if dec_values is None:
-                dec_values = kv[1]
-            else:
-                dec_values = torch.cat([dec_values, kv[1]], 2)
-                
-        else:
-            dec_keys = dec_output
-            dec_values = dec_output
-        
-        dec_output, self_attn_scores = self.self_attention(dec_output, 
-                                                           dec_keys, 
-                                                           dec_values, 
-                                                           self_attn_mask,
-                                                           cached_kv)
-        
-        dec_output = residual + dec_output
-        if self.use_pre_norm == False:
-            dec_output = self.norm_1(dec_output)
-            
-        residual = dec_output
-        if self.use_pre_norm == True:
-            dec_output = self.norm_2(dec_output)
-              
-        dec_output, enc_attn_scores = self.enc_attention(dec_output, 
-                                                         enc_keys, 
-                                                         enc_values, 
-                                                         dec_enc_attn_mask,
-                                                         cached_kv)
-        enc_context = dec_output
-        dec_output = residual + dec_output
-        if self.use_pre_norm == False:
-            dec_output = self.norm_2(dec_output)
-            
-        residual = dec_output
-                
-        if self.use_pre_norm == True:
-            dec_output = self.norm_3(dec_output)
-        dec_output = self.ffn(dec_output)
-        dec_output = residual + dec_output
-        if self.use_pre_norm == False:
-            dec_output = self.norm_3(dec_output)
-       
-        outputs = [dec_output, self_attn_scores, enc_attn_scores]
-
-        if cached_kv == True:
-            outputs = outputs + [dec_keys, dec_values]
-        
-        outputs = outputs + [enc_context]
-        
-        return outputs
-
-
-    def cache_enc_kv(self, enc_output):
-        """
-        """
-        return self.enc_attention.cache_kv(enc_output)
-
-
-    def cache_dec_kv(self, dec_output):
-        """
-        """
-        return self.self_attention.cache_kv(dec_output)
 
 
 class Decoder(nn.Module):
@@ -1566,6 +1625,10 @@ class Decoder(nn.Module):
                  attn_dropout=0,
                  emb_dropout=0,
                  ln_eps=1e-5,
+                 use_rms_norm=False,
+                 with_attention_bias=True,
+                 with_ffn_bias=True,
+                 max_relative_len=-1,
                  embedding_size=None,
                  share_layer_params=False, 
                  n_share_across_layers=1,
@@ -1604,9 +1667,8 @@ class Decoder(nn.Module):
         if self.norm_after_embedding == True:
             self.norm_emb = LayerNorm(self.d_model)
         
-        if share_layer_params == False:
-            self.layers = nn.ModuleList([
-                    DecoderLayer(n_heads, 
+        self.layers = nn.ModuleList([
+                TransformerLayer(n_heads, 
                                  d_model, 
                                  d_ff, 
                                  d_qk, 
@@ -1615,24 +1677,13 @@ class Decoder(nn.Module):
                                  attn_dropout=attn_dropout,
                                  ln_eps=ln_eps,
                                  use_pre_norm=use_pre_norm,
-                                 activation=activation)
-                    for _ in range(n_layers)])
-        else:
-            layers = []
-            for i in range(n_layers):
-                if i % n_share_across_layers == 0:
-                    layer = DecoderLayer(n_heads,
-                                         d_model, 
-                                         d_ff, 
-                                         d_qk, 
-                                         d_v,
-                                         dropout=dropout,
-                                         attn_dropout=attn_dropout,
-                                         ln_eps=ln_eps,
-                                         use_pre_norm=use_pre_norm,
-                                         activation=activation)
-                    layers.append(layer)
-            self.layers = nn.ModuleList(layers)
+                                 activation=activation,
+                                 use_rms_norm=use_rms_norm,
+                                 with_attention_bias=with_attention_bias,
+                                 with_ffn_bias=with_ffn_bias,
+                                 max_relative_len=max_relative_len,
+                                 with_across_attention=True)
+                    for i in range(n_layers//n_share_across_layers)])
     
         self.share_emb_out_proj = share_emb_out_proj
         if share_emb_out_proj == False: 
@@ -1681,10 +1732,13 @@ class Decoder(nn.Module):
             else:
                 layer = self.layers[i // self.n_share_across_layers]
                 
-            outputs = layer(dec_output, 
+            outputs = layer(dec_output,
+                            self_attn_mask,
+                            False,
+                            None,
+                            None,
                             enc_output, 
                             enc_output, 
-                            self_attn_mask, 
                             dec_enc_attn_mask)
             dec_output, self_attn_scores, enc_attn_scores = outputs[:3]
 
@@ -1751,13 +1805,13 @@ class Decoder(nn.Module):
                 layer = self.layers[i // self.n_share_across_layers]
 
             outputs = layer(dec_output,
-                            enc_kv_list[i][0], 
-                            enc_kv_list[i][1],
                             None,
-                            dec_enc_attn_mask,
                             True,
                             dec_kv_list[i][0], 
-                            dec_kv_list[i][1]
+                            dec_kv_list[i][1],
+                            enc_kv_list[i][0], 
+                            enc_kv_list[i][1],
+                            dec_enc_attn_mask,
                             )
             dec_output, self_attn_scores, enc_attn_scores = outputs[:3]
 
@@ -1784,88 +1838,6 @@ class Decoder(nn.Module):
         return outputs
 
 
-class LMDecoderLayer(nn.Module):
-    """
-    """
-    def __init__(self, 
-                 n_heads, 
-                 d_model,
-                 d_ff, 
-                 d_qk, 
-                 d_v, 
-                 dropout=0,
-                 attn_dropout=0,
-                 ln_eps=1e-5,
-                 use_pre_norm=True,
-                 activation="relu"):
-        """
-        """
-        super(LMDecoderLayer, self).__init__()
-        self.self_attention = MultiHeadAttention(n_heads,
-                                                 d_model, 
-                                                 d_qk, 
-                                                 d_v, 
-                                                 dropout,
-                                                 attn_dropout)
-        self.norm_1 = LayerNorm(d_model, ln_eps)
-        self.ffn = FeedForward(d_model, d_ff, activation, dropout)
-        self.norm_2 = LayerNorm(d_model, ln_eps)
-        self.use_pre_norm = use_pre_norm
-        
-        
-    def forward(self, dec_output, self_attn_mask, 
-                cached_kv=False, dec_keys=None, dec_values=None):
-        """
-        """
-        residual = dec_output
-        if self.use_pre_norm == True:
-            dec_output = self.norm_1(dec_output)
-        
-        if cached_kv == True:
-            kv = self.cache_dec_kv(dec_output)
-            if dec_keys is None:
-                dec_keys = kv[0]
-            else:
-                dec_keys = torch.cat([dec_keys, kv[0]], 2)
-            if dec_values is None:
-                dec_values = kv[1]
-            else:
-                dec_values = torch.cat([dec_values, kv[1]], 2)
-        else:
-            dec_keys = dec_output
-            dec_values = dec_output
-            
-        dec_output, self_attn_scores = self.self_attention(dec_output, 
-                                                           dec_keys, 
-                                                           dec_values, 
-                                                           self_attn_mask,
-                                                           cached_kv)
-
-        dec_output = residual + dec_output
-        if self.use_pre_norm == False:
-            dec_output = self.norm_1(dec_output)
-            
-        residual = dec_output
-        if self.use_pre_norm == True:
-            dec_output = self.norm_2(dec_output)
-        dec_output = self.ffn(dec_output)
-        dec_output = residual + dec_output
-        if self.use_pre_norm == False:
-            dec_output = self.norm_2(dec_output)
-            
-        outputs = [dec_output, self_attn_scores]
-        if cached_kv == True:
-            outputs = outputs + [dec_keys, dec_values]
-            
-        return outputs
-
-
-    def cache_dec_kv(self, dec_output):
-        """
-        """
-        return self.self_attention.cache_kv(dec_output)
-
-
 class LMDecoder(nn.Module):
     """
     """
@@ -1882,6 +1854,10 @@ class LMDecoder(nn.Module):
                  attn_dropout=0,
                  emb_dropout=0,
                  ln_eps=1e-5,
+                 use_rms_norm=False,
+                 with_attention_bias=True,
+                 with_ffn_bias=True,
+                 max_relative_len=-1,
                  share_emb_out_proj=False, 
                  embedding_size=None,
                  share_layer_params=False,
@@ -1922,36 +1898,23 @@ class LMDecoder(nn.Module):
         if self.norm_after_embedding == True:
             self.norm_emb = LayerNorm(self.d_model)
             
-        if share_layer_params == False:
-            self.layers = nn.ModuleList([
-                    LMDecoderLayer(n_heads, 
-                                   d_model, 
-                                   d_ff, 
-                                   d_qk, 
-                                   d_v,
-                                   dropout=dropout,
-                                   attn_dropout=attn_dropout,
-                                   ln_eps=ln_eps,
-                                   use_pre_norm=use_pre_norm,
-                                   activation=activation)
-                    for _ in range(n_layers)])
-        else:
-            layers = []
-            for i in range(n_layers):
-                if i % n_share_across_layers == 0:
-                    layer = LMDecoderLayer(n_heads, 
-                                           d_model,
-                                           d_ff, 
-                                           d_qk,
-                                           d_v,
-                                           dropout=dropout,
-                                           attn_dropout=attn_dropout,
-                                           ln_eps=ln_eps,
-                                           use_pre_norm=use_pre_norm,
-                                           activation=activation)
-
-                    layers.append(layer)
-            self.layers = nn.ModuleList(layers)
+        self.layers = nn.ModuleList([
+                TransformerLayer(n_heads, 
+                                 d_model, 
+                                 d_ff, 
+                                 d_qk, 
+                                 d_v,
+                                 dropout=dropout,
+                                 attn_dropout=attn_dropout,
+                                 ln_eps=ln_eps,
+                                 use_pre_norm=use_pre_norm,
+                                 activation=activation,
+                                 use_rms_norm=use_rms_norm,
+                                 with_attention_bias=with_attention_bias,
+                                 with_ffn_bias=with_ffn_bias,
+                                 max_relative_len=max_relative_len,
+                                 with_across_attention=False)
+                    for i in range(n_layers//n_share_across_layers)])
         
         self.share_emb_out_proj = share_emb_out_proj
         if share_emb_out_proj == False: 
