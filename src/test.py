@@ -10,7 +10,7 @@ import generation_metric
 def test_tokenization():
     """
     """
-    test_str = "1234567号选手是top10哦,hello你好666啊,春 秋 忽 代 谢windows7le, _苍天啊_苍天_"
+    test_str = "1234567号选手是top10哦,hello你好666啊,春 秋 忽 代 谢windows7le, _苍天啊_苍天_오늘 날씨가 참 좋네요."
     mimix_tokenizer = tokenization.MimixTokenizer(
             vocab_file="../model/vocab/zh_vocab.txt",
             pre_tokenized=False,
@@ -25,14 +25,14 @@ def test_tokenization():
     
     print(mimix_tokenizer.tokenize(test_str))
     
-    bert_tokenizer = tokenization.BertTokenizer(
-            vocab_file="../model/pretrain/bert-base-chinese/vocab.txt",
-            pre_tokenized=False,
-            pre_vectorized=False)
+    #bert_tokenizer = tokenization.BertTokenizer(
+    #        vocab_file="../model/pretrain/bert-base-chinese/vocab.txt",
+    #        pre_tokenized=False,
+    #        pre_vectorized=False)
     
-    print(bert_tokenizer.tokenize(test_str))  
+    #print(bert_tokenizer.tokenize(test_str))  
 
-    test_str = "1234567号选手是top10哦,_mask_hello你好666啊,春 秋 忽 代 谢windows7le, _苍天啊_苍天_"
+    test_str = "1234567号选手是top10哦,_mask_hello你好666啊,春 秋 忽 代 谢windows7le, _苍天啊_苍天_오늘 날씨가 참 좋네요."
     mimix_tokenizer = tokenization.MimixTokenizer(
             vocab_file="../model/vocab/zh_vocab.txt",
             pre_tokenized=False,
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     
     test_tokenization()
     
-    test_generation_metric()
+    #test_generation_metric()
     
     
     

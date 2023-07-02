@@ -1140,19 +1140,20 @@ class LayerNorm(nn.Module):
         return norm
 
 
-def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout=None, p_key=None, p_value=None):
+def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout=None, pos_key=None, pos_value=None):
     """
     """
     d = query.size(-1)
-    #q:B x n_heads x L_q x d_qk 
-    #k:B x n_heads x L_k x d_v 
-    #scores:B x n_heads x L_q x L_k
-    scores = torch.matmul(query, key.transpose(-2, -1)) / np.sqrt(d)
+    #q:B x L_q x n_heads x d_qk 
+    #k:B x L_kv x n_heads x d_v 
+    #scores:B x n_heads x L_q x L_kv
+    scores = torch.einsum("bqnd,bknd->bnqk", query, key)
     
-    if p_key is not None:
+    if pos_key is not None:
         #p_k:L_q x L_k x d_qk
-        p_key
-        scores += p_key
+        scores += torch.einsum("bqnd,qkd->bnqk", query, pos_key)
+    
+    scores = scores / np.sqrt(d)
     
     if attn_mask is not None:
         attn_mask = attn_mask.bool()
@@ -1162,14 +1163,21 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout=None
     
     if dropout is not None:
         attn_scores = dropout(attn_scores)
+
+    #scores:B x n_heads x L_q x L_kv
+    #v:B x L_kv x n_heads x d_v 
+    output = torch.einsum("bnqk,bknd->bnqd", attn_scores, value)
+    if pos_value is not None:
+        #p_v:L_q x L_kv x d_v
+        output += torch.einsum("bnqk,qkd->bnqd", attn_scores, pos_value)
     
-    return torch.matmul(attn_scores, value), attn_scores
+    return output, attn_scores
 
 
 class RelativePositionEmbedding(nn.Module):
     """
     """
-    def __init__(self, max_relative_len, d_model, need_train=False):
+    def __init__(self, max_relative_len, d_model, need_train=True):
         """
         """
         super(RelativePositionEmbedding, self).__init__()
@@ -1182,7 +1190,7 @@ class RelativePositionEmbedding(nn.Module):
                 for j in range(0, d_model, 2):
                     W[i, j] = np.sin(i / np.power(10000, 2 * j / d_model))
                     W[i, j + 1] = np.cos(i / np.power(10000, 2 * j / d_model))
-            self.register_buffer('RPW', W)
+            self.register_buffer('W', W)
         else:
             self.W = nn.Parameter(torch.Tensor(2*max_relative_len+1, d_model))
             self.reset_parameters()
@@ -1194,10 +1202,10 @@ class RelativePositionEmbedding(nn.Module):
         for weight in self.parameters():
             weight.data.uniform_(-stdv, stdv)
         
-    def forward(self, seq_q, seq_kv):
+    def forward(self, len_q, len_kv, k_start_pos=0):
         """
         """
-        relative_dis = torch.arange(seq_q.size(1))[:,None] - torch.arange(seq_kv.size(1))[:,None]
+        relative_dis = k_start_pos + torch.arange(len_q)[:,None] - torch.arange(len_kv)[None, :]
         relative_dis = torch.clamp(relative_dis, -self.max_relative_len, self.max_relative_len)
         idx = relative_dis + self.max_relative_len
         if self.need_train == False:
@@ -1211,7 +1219,16 @@ class RelativePositionEmbedding(nn.Module):
 class MultiHeadAttention(nn.Module):
     """
     """
-    def __init__(self, n_heads, d_model, d_qk, d_v, dropout=0, attn_dropout=0, with_bias=True, max_relative_position=-1):
+    def __init__(self, 
+                 n_heads, 
+                 d_model, 
+                 d_qk, 
+                 d_v, 
+                 dropout=0, 
+                 attn_dropout=0, 
+                 with_bias=True, 
+                 max_relative_position=-1,
+                 rel_pos_need_train=True):
         """
         """
         super(MultiHeadAttention, self).__init__()
@@ -1235,8 +1252,8 @@ class MultiHeadAttention(nn.Module):
             self.b_o = nn.Parameter(torch.Tensor(d_model))
         
         if max_relative_position > 0:
-            self.rel_pos_k_emb = RelativePositionEmbedding(self.d_qk)
-            self.rel_pos_v_emb = RelativePositionEmbedding(self.d_v)
+            self.rel_pos_k_emb = RelativePositionEmbedding(max_relative_position, self.d_qk, rel_pos_need_train)
+            self.rel_pos_v_emb = RelativePositionEmbedding(max_relative_position, self.d_v, rel_pos_need_train)
         
         self.reset_parameters()
         
@@ -1252,7 +1269,7 @@ class MultiHeadAttention(nn.Module):
                 weight.data.zero_()
     
     
-    def forward(self, query, key, value, attn_mask=None, cached_kv=False):
+    def forward(self, query, key, value, attn_mask=None, cached_kv=False, k_start_pos=0):
         """
         """
         #B x L x d_model -> B x l x (d*n_heads)
@@ -1272,29 +1289,23 @@ class MultiHeadAttention(nn.Module):
         if cached_kv == False:
             key = key.view(batch_size, -1, self.n_heads, self.d_qk)
             value = value.view(batch_size, -1, self.n_heads, self.d_v)
-
-        #B x L x n_heads x d -> B x n_heads x L x d
-        query = query.transpose(1,2)
-        if cached_kv == False:
-            key = key.transpose(1,2)
-            value = value.transpose(1,2)
         
         if attn_mask is not None:
             attn_mask = attn_mask.unsqueeze(1).repeat(1, self.n_heads, 1, 1)
         
-        p_key = None
-        p_value = None
+        pos_key = None
+        pos_value = None
         if self.max_relative_position > 0:
-            p_key = self.rel_pos_k_emb(query, key)
-            p_value = self.rel_pos_k_emb(query, value)
+            pos_key = self.rel_pos_k_emb(query.size(1), key.size(1), k_start_pos)
+            pos_value = self.rel_pos_k_emb(query.size(1), value.size(1), k_start_pos)
 
         output, attn_scores = scaled_dot_product_attention(query, 
                                                            key, 
                                                            value, 
                                                            attn_mask,
                                                            self.attn_dropout,
-                                                           p_key,
-                                                           p_value)
+                                                           pos_key,
+                                                           pos_value)
         
         #B x n_heads x L x d -> B x L x n_heads x d -> B x L x d_model
         output = output.transpose(1,2)
@@ -1320,9 +1331,6 @@ class MultiHeadAttention(nn.Module):
         key = key.view(batch_size, -1, self.n_heads, self.d_qk)
         value = value.view(batch_size, -1, self.n_heads, self.d_v)
         
-        key = key.transpose(1,2)
-        value = value.transpose(1,2)
-        
         return [key, value]
 
 
@@ -1341,9 +1349,10 @@ class TransformerLayer(nn.Module):
                  use_pre_norm=True,
                  activation="relu",
                  use_rms_norm=False,
-                 with_attention_bias=True,
-                 with_ffn_bias=True,
+                 use_attention_bias=True,
+                 use_ffn_bias=True,
                  max_relative_len=-1,
+                 rel_pos_need_train=True,
                  with_across_attention=True):
         """
         """
@@ -1354,8 +1363,9 @@ class TransformerLayer(nn.Module):
                                                  d_v, 
                                                  dropout,
                                                  attn_dropout,
-                                                 with_attention_bias,
-                                                 max_relative_len)
+                                                 use_attention_bias,
+                                                 max_relative_len,
+                                                 rel_pos_need_train)
         
         self.norm_1 = LayerNorm(d_model,ln_eps,use_rms_norm)
         
@@ -1367,8 +1377,9 @@ class TransformerLayer(nn.Module):
                                                     d_v, 
                                                     dropout,
                                                     attn_dropout,
-                                                    with_attention_bias,
-                                                    max_relative_len)
+                                                    use_attention_bias,
+                                                    max_relative_len,
+                                                    rel_pos_need_train)
         
             self.norm_2 = LayerNorm(d_model,ln_eps,use_rms_norm)
             
@@ -1376,7 +1387,7 @@ class TransformerLayer(nn.Module):
                                d_ff, 
                                activation, 
                                dropout,
-                               with_ffn_bias)
+                               use_ffn_bias)
         if self.with_across_attention == True:
             self.norm_3 = LayerNorm(d_model,ln_eps,use_rms_norm)
         else:
@@ -1392,7 +1403,8 @@ class TransformerLayer(nn.Module):
                 self_values=None,
                 enc_keys=None, 
                 enc_values=None,
-                dec_enc_attn_mask=None):
+                dec_enc_attn_mask=None,
+                k_start_pos=0):
         """
         """
         residual = output
@@ -1405,11 +1417,11 @@ class TransformerLayer(nn.Module):
             if self_keys is None:
                 self_keys = kv[0]                
             else:
-                self_keys = torch.cat([self_keys, kv[0]], 2)
+                self_keys = torch.cat([self_keys, kv[0]], 1)
             if self_values is None:
                 self_values = kv[1]
             else:
-                self_values = torch.cat([self_values, kv[1]], 2)
+                self_values = torch.cat([self_values, kv[1]], 1)
                 
         else:
             self_keys = output
@@ -1419,7 +1431,8 @@ class TransformerLayer(nn.Module):
                                                        self_keys, 
                                                        self_values, 
                                                        self_attn_mask,
-                                                       cached_kv)
+                                                       cached_kv,
+                                                       k_start_pos)
         
         output = residual + output
         if self.use_pre_norm == False:
@@ -1435,7 +1448,8 @@ class TransformerLayer(nn.Module):
                                                          enc_keys, 
                                                          enc_values, 
                                                          dec_enc_attn_mask,
-                                                         cached_kv)
+                                                         cached_kv,
+                                                         k_start_pos)
 
             output = residual + output
             if self.use_pre_norm == False:
@@ -1494,9 +1508,10 @@ class Encoder(nn.Module):
                  emb_dropout=0,
                  ln_eps=1e-5,
                  use_rms_norm=False,
-                 with_attention_bias=True,
-                 with_ffn_bias=True,
+                 use_attention_bias=True,
+                 use_ffn_bias=True,
                  max_relative_len=-1,
+                 rel_pos_need_train=True,
                  embedding_size=None,
                  share_layer_params=False, 
                  n_share_across_layers=1,
@@ -1539,7 +1554,7 @@ class Encoder(nn.Module):
             self.type_embedding = Embedding(self.n_types, self.d_model)
         
         if self.norm_after_embedding == True:
-            self.norm_emb = LayerNorm(self.d_model)
+            self.norm_emb = LayerNorm(self.d_model, ln_eps, use_rms_norm)
         
         self.emb_dropout = Dropout(emb_dropout)
         
@@ -1555,14 +1570,15 @@ class Encoder(nn.Module):
                                  use_pre_norm=use_pre_norm,
                                  activation=activation,
                                  use_rms_norm=use_rms_norm,
-                                 with_attention_bias=with_attention_bias,
-                                 with_ffn_bias=with_ffn_bias,
+                                 use_attention_bias=use_attention_bias,
+                                 use_ffn_bias=use_ffn_bias,
                                  max_relative_len=max_relative_len,
+                                 rel_pos_need_train=rel_pos_need_train,
                                  with_across_attention=False)
                     for i in range(n_layers//n_share_across_layers)])
     
         if self.norm_before_pred == True:
-            self.norm = LayerNorm(self.d_model)
+            self.norm = LayerNorm(self.d_model, ln_eps, use_rms_norm)
     
     
     def forward(self, x, attn_mask, x_type=None, return_states=False):
@@ -1625,9 +1641,10 @@ class Decoder(nn.Module):
                  emb_dropout=0,
                  ln_eps=1e-5,
                  use_rms_norm=False,
-                 with_attention_bias=True,
-                 with_ffn_bias=True,
+                 use_attention_bias=True,
+                 use_ffn_bias=True,
                  max_relative_len=-1,
+                 rel_pos_need_train=True,
                  embedding_size=None,
                  share_layer_params=False, 
                  n_share_across_layers=1,
@@ -1664,7 +1681,7 @@ class Decoder(nn.Module):
                                                pos_need_train)
         
         if self.norm_after_embedding == True:
-            self.norm_emb = LayerNorm(self.d_model)
+            self.norm_emb = LayerNorm(self.d_model, ln_eps, use_rms_norm)
         
         self.layers = nn.ModuleList([
                 TransformerLayer(n_heads, 
@@ -1678,9 +1695,10 @@ class Decoder(nn.Module):
                                  use_pre_norm=use_pre_norm,
                                  activation=activation,
                                  use_rms_norm=use_rms_norm,
-                                 with_attention_bias=with_attention_bias,
-                                 with_ffn_bias=with_ffn_bias,
+                                 use_attention_bias=use_attention_bias,
+                                 use_ffn_bias=use_ffn_bias,
                                  max_relative_len=max_relative_len,
+                                 rel_pos_need_train=rel_pos_need_train,
                                  with_across_attention=True)
                     for i in range(n_layers//n_share_across_layers)])
     
@@ -1692,7 +1710,7 @@ class Decoder(nn.Module):
             self.b = nn.Parameter(torch.Tensor(trg_vocab_size))
 
         if self.norm_before_pred == True:
-            self.norm = LayerNorm(d_model)
+            self.norm = LayerNorm(self.d_model, ln_eps, use_rms_norm)
         
         self.reset_parameters()
     
@@ -1753,7 +1771,9 @@ class Decoder(nn.Module):
         else:
             W = trg_embedding.get_embedding()
             
-        logits = F.linear(dec_output, W) + self.b
+        logits = F.linear(dec_output, W)
+        if self.use_proj_bias == True:
+            logits = logits + self.b
         
         outputs = [logits]
         if return_states == True:
@@ -1811,7 +1831,7 @@ class Decoder(nn.Module):
                             enc_kv_list[i][0], 
                             enc_kv_list[i][1],
                             dec_enc_attn_mask,
-                            )
+                            k_start_pos=steps)
             dec_output, self_attn_scores, enc_attn_scores = outputs[:3]
 
             dec_keys, dec_values = outputs[3:5]
@@ -1854,9 +1874,10 @@ class LMDecoder(nn.Module):
                  emb_dropout=0,
                  ln_eps=1e-5,
                  use_rms_norm=False,
-                 with_attention_bias=True,
-                 with_ffn_bias=True,
+                 use_attention_bias=True,
+                 use_ffn_bias=True,
                  max_relative_len=-1,
+                 rel_pos_need_train=True,
                  share_emb_out_proj=False, 
                  embedding_size=None,
                  share_layer_params=False,
@@ -1895,7 +1916,7 @@ class LMDecoder(nn.Module):
                                                d_model,
                                                pos_need_train)
         if self.norm_after_embedding == True:
-            self.norm_emb = LayerNorm(self.d_model)
+            self.norm_emb = LayerNorm(self.d_model, ln_eps, use_rms_norm)
             
         self.layers = nn.ModuleList([
                 TransformerLayer(n_heads, 
@@ -1909,9 +1930,10 @@ class LMDecoder(nn.Module):
                                  use_pre_norm=use_pre_norm,
                                  activation=activation,
                                  use_rms_norm=use_rms_norm,
-                                 with_attention_bias=with_attention_bias,
-                                 with_ffn_bias=with_ffn_bias,
+                                 use_attention_bias=use_attention_bias,
+                                 use_ffn_bias=use_ffn_bias,
                                  max_relative_len=max_relative_len,
+                                 rel_pos_need_train=rel_pos_need_train,
                                  with_across_attention=False)
                     for i in range(n_layers//n_share_across_layers)])
         
@@ -1924,7 +1946,7 @@ class LMDecoder(nn.Module):
             self.b = nn.Parameter(torch.Tensor(trg_vocab_size))
         
         if self.norm_before_pred == True:
-            self.norm = LayerNorm(d_model)
+            self.norm = LayerNorm(self.d_model, ln_eps, use_rms_norm)
         
         self.reset_parameters()
     
@@ -2020,7 +2042,8 @@ class LMDecoder(nn.Module):
                                     None,
                                     True,
                                     dec_kv_list[i][0], 
-                                    dec_kv_list[i][1])
+                                    dec_kv_list[i][1],
+                                    k_start_pos=steps)
             dec_output, self_attn_scores, dec_keys, dec_values = outputs
 
             dec_kv_list[i][0] = dec_keys

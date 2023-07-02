@@ -15,135 +15,6 @@ from layers import CRF
 from layers import gelu_new,LayerNorm
 from bert import Bert
 
-class TransformerClassifer(nn.Module):
-    """
-    """
-    def __init__(self, 
-                 symbol2id, 
-                 src_vocab_size, 
-                 src_max_len, 
-                 n_heads, 
-                 d_model, 
-                 d_ff, 
-                 d_qk,
-                 d_v, 
-                 n_enc_layers,    
-                 n_class,
-                 dropout=0, 
-                 attn_dropout=0,
-                 emb_dropout=0,
-                 ln_eps=1e-5,
-                 use_rms_norm=False,
-                 with_attention_bias=True,
-                 with_ffn_bias=True,
-                 max_relative_len=-1,
-                 embedding_size=None, 
-                 share_layer_params=False, 
-                 n_share_across_layers=0,
-                 use_pre_norm=True, 
-                 activation="relu", 
-                 scale_embedding=False,
-                 norm_before_pred=False,
-                 norm_after_embedding=False,
-                 pos_need_train=False):
-        """
-        """
-        super(TransformerClassifer, self).__init__()
-        self.PAD = symbol2id["_pad_"]
-        self.BOS = symbol2id["_bos_"]
-        self.EOS = symbol2id["_eos_"]
-        self.UNK = symbol2id["_unk_"]
-        self.SEP = symbol2id["_sep_"]
-        self.CLS = symbol2id["_cls_"]
-        self.MASK = symbol2id["_mask_"]
-        
-        self.src_vocab_size = src_vocab_size
-        self.src_max_len = src_max_len
-        self.n_heads = n_heads
-        self.d_model = d_model
-        self.d_ff = d_ff
-        self.n_enc_layers = n_enc_layers
-        self.dropout = dropout
-        self.n_class = n_class
-        self.encoder = Encoder(src_vocab_size,
-                               src_max_len, 
-                               n_heads,
-                               d_model, 
-                               d_ff, 
-                               d_qk, 
-                               d_v, 
-                               n_enc_layers, 
-                               dropout,
-                               attn_dropout,
-                               emb_dropout,
-                               ln_eps,
-                               use_rms_norm,
-                               with_attention_bias,
-                               with_ffn_bias,
-                               max_relative_len,
-                               embedding_size,
-                               share_layer_params, 
-                               n_share_across_layers,
-                               use_pre_norm,
-                               activation, 
-                               scale_embedding,
-                               norm_before_pred,
-                               norm_after_embedding,
-                               pos_need_train)
-        
-        self.W_pool = nn.Parameter(torch.Tensor(d_model, d_model))
-        self.b_pool = nn.Parameter(torch.zeros(d_model))
-        self.W = nn.Parameter(torch.Tensor(d_model, n_class))
-        self.b = nn.Parameter(torch.zeros(n_class))
-        
-        self.reset_parameters()
-    
-    
-    def reset_parameters(self):
-        """
-        """
-        stdv = 1.0 / np.sqrt(self.d_model)
-        for weight in [self.W_pool, self.W]:
-            weight.data.uniform_(-stdv, stdv)
-    
-    def get_attn_mask(self, seq_query, seq_key):
-        """
-        """
-        len_query = seq_query.size(1)
-        mask = seq_key.eq(self.PAD)
-        mask = mask.unsqueeze(1).repeat(1, len_query, 1)
-        
-        return mask
-        
-    
-    def forward(self, inputs, return_states=False, targets=None, compute_loss=False):
-        """
-        """
-        x = inputs[0]
-        
-        enc_self_attn_mask = self.get_attn_mask(x, x)
-        
-        enc_outputs = self.encoder(x, 
-                                   enc_self_attn_mask, 
-                                   return_states=return_states)
-        
-        enc_output = enc_outputs[0][:,0,:]
-        
-        enc_output = torch.tanh(F.linear(enc_output, self.W_pool) + self.b_pool)
-        
-        logits = torch.matmul(enc_output, self.W) + self.b
-
-        outputs = [logits]
-        
-        if return_states == True:
-            outputs = outputs + enc_outputs 
-
-        if compute_loss == True:
-            loss = self.loss_fn(outputs, targets)
-            outputs = [loss] + outputs
-        
-        return outputs
-
 
 class TransformerEncoder(nn.Module):
     """
@@ -164,9 +35,10 @@ class TransformerEncoder(nn.Module):
                  emb_dropout=0,
                  ln_eps=1e-5,
                  use_rms_norm=False,
-                 with_attention_bias=True,
-                 with_ffn_bias=True,
+                 use_attention_bias=True,
+                 use_ffn_bias=True,
                  max_relative_len=-1,
+                 rel_pos_need_train=True,
                  embedding_size=None, 
                  share_layer_params=False, 
                  n_share_across_layers=0,
@@ -209,9 +81,10 @@ class TransformerEncoder(nn.Module):
                                emb_dropout,
                                ln_eps,
                                use_rms_norm,
-                               with_attention_bias,
-                               with_ffn_bias,
+                               use_attention_bias,
+                               use_ffn_bias,
                                max_relative_len,
+                               rel_pos_need_train,
                                embedding_size,
                                share_layer_params, 
                                n_share_across_layers,
@@ -287,6 +160,138 @@ class TransformerEncoder(nn.Module):
         return outputs
 
 
+class TransformerClassifer(nn.Module):
+    """
+    """
+    def __init__(self, 
+                 symbol2id, 
+                 src_vocab_size, 
+                 src_max_len, 
+                 n_heads, 
+                 d_model, 
+                 d_ff, 
+                 d_qk,
+                 d_v, 
+                 n_enc_layers,    
+                 n_class,
+                 dropout=0, 
+                 attn_dropout=0,
+                 emb_dropout=0,
+                 ln_eps=1e-5,
+                 use_rms_norm=False,
+                 use_attention_bias=True,
+                 use_ffn_bias=True,
+                 max_relative_len=-1,
+                 rel_pos_need_train=True,
+                 embedding_size=None, 
+                 share_layer_params=False, 
+                 n_share_across_layers=0,
+                 use_pre_norm=True, 
+                 activation="relu", 
+                 scale_embedding=False,
+                 norm_before_pred=False,
+                 norm_after_embedding=False,
+                 pos_need_train=False):
+        """
+        """
+        super(TransformerClassifer, self).__init__()
+        self.PAD = symbol2id["_pad_"]
+        self.BOS = symbol2id["_bos_"]
+        self.EOS = symbol2id["_eos_"]
+        self.UNK = symbol2id["_unk_"]
+        self.SEP = symbol2id["_sep_"]
+        self.CLS = symbol2id["_cls_"]
+        self.MASK = symbol2id["_mask_"]
+        
+        self.src_vocab_size = src_vocab_size
+        self.src_max_len = src_max_len
+        self.n_heads = n_heads
+        self.d_model = d_model
+        self.d_ff = d_ff
+        self.n_enc_layers = n_enc_layers
+        self.dropout = dropout
+        self.n_class = n_class
+        self.encoder = Encoder(src_vocab_size,
+                               src_max_len, 
+                               n_heads,
+                               d_model, 
+                               d_ff, 
+                               d_qk, 
+                               d_v, 
+                               n_enc_layers, 
+                               dropout,
+                               attn_dropout,
+                               emb_dropout,
+                               ln_eps,
+                               use_rms_norm,
+                               use_attention_bias,
+                               use_ffn_bias,
+                               max_relative_len,
+                               rel_pos_need_train,
+                               embedding_size,
+                               share_layer_params, 
+                               n_share_across_layers,
+                               use_pre_norm,
+                               activation, 
+                               scale_embedding,
+                               norm_before_pred,
+                               norm_after_embedding,
+                               pos_need_train)
+        
+        self.W_pool = nn.Parameter(torch.Tensor(d_model, d_model))
+        self.b_pool = nn.Parameter(torch.zeros(d_model))
+        self.W = nn.Parameter(torch.Tensor(d_model, n_class))
+        self.b = nn.Parameter(torch.zeros(n_class))
+        
+        self.reset_parameters()
+    
+    
+    def reset_parameters(self):
+        """
+        """
+        stdv = 1.0 / np.sqrt(self.d_model)
+        for weight in [self.W_pool, self.W]:
+            weight.data.uniform_(-stdv, stdv)
+    
+    def get_attn_mask(self, seq_query, seq_key):
+        """
+        """
+        len_query = seq_query.size(1)
+        mask = seq_key.eq(self.PAD)
+        mask = mask.unsqueeze(1).repeat(1, len_query, 1)
+        
+        return mask
+        
+    
+    def forward(self, inputs, return_states=False, targets=None, compute_loss=False):
+        """
+        """
+        x = inputs[0]
+        
+        enc_self_attn_mask = self.get_attn_mask(x, x)
+        
+        enc_outputs = self.encoder(x, 
+                                   enc_self_attn_mask, 
+                                   return_states=return_states)
+        
+        enc_output = enc_outputs[0][:,0,:]
+        
+        enc_output = torch.tanh(F.linear(enc_output, self.W_pool) + self.b_pool)
+        
+        logits = torch.matmul(enc_output, self.W) + self.b
+
+        outputs = [logits]
+        
+        if return_states == True:
+            outputs = outputs + enc_outputs 
+
+        if compute_loss == True:
+            loss = self.loss_fn(outputs, targets)
+            outputs = [loss] + outputs
+        
+        return outputs
+
+
 class TransformerSeqCls(nn.Module):
     """
     """
@@ -306,9 +311,10 @@ class TransformerSeqCls(nn.Module):
                  emb_dropout=0,
                  ln_eps=1e-5,
                  use_rms_norm=False,
-                 with_attention_bias=True,
-                 with_ffn_bias=True,
+                 use_attention_bias=True,
+                 use_ffn_bias=True,
                  max_relative_len=-1,
+                 rel_pos_need_train=True,
                  embedding_size=None, 
                  share_layer_params=False,
                  n_share_across_layers=0,
@@ -351,9 +357,10 @@ class TransformerSeqCls(nn.Module):
                                emb_dropout,
                                ln_eps,
                                use_rms_norm,
-                               with_attention_bias,
-                               with_ffn_bias,
+                               use_attention_bias,
+                               use_ffn_bias,
                                max_relative_len,
+                               rel_pos_need_train,
                                embedding_size,
                                share_layer_params, 
                                n_share_across_layers,
@@ -882,9 +889,10 @@ class Transformer(nn.Module):
                  emb_dropout=0,
                  ln_eps=1e-5,
                  use_rms_norm=False,
-                 with_attention_bias=True,
-                 with_ffn_bias=True,
+                 use_attention_bias=True,
+                 use_ffn_bias=True,
                  max_relative_len=-1,
+                 rel_pos_need_train=True,
                  share_src_trg_emb=False, 
                  share_emb_out_proj=False, 
                  embedding_size=None, 
@@ -938,9 +946,10 @@ class Transformer(nn.Module):
                                emb_dropout,
                                ln_eps,
                                use_rms_norm,
-                               with_attention_bias,
-                               with_ffn_bias,
+                               use_attention_bias,
+                               use_ffn_bias,
                                max_relative_len,
+                               rel_pos_need_train,
                                embedding_size,
                                share_layer_params, 
                                n_share_across_layers,
@@ -964,9 +973,10 @@ class Transformer(nn.Module):
                                emb_dropout,
                                ln_eps,
                                use_rms_norm,
-                               with_attention_bias,
-                               with_ffn_bias,
+                               use_attention_bias,
+                               use_ffn_bias,
                                max_relative_len,
+                               rel_pos_need_train,
                                embedding_size,
                                share_layer_params, 
                                n_share_across_layers,
@@ -1121,9 +1131,10 @@ class TransformerLM(nn.Module):
                  emb_dropout=0,
                  ln_eps=1e-5,
                  use_rms_norm=False,
-                 with_attention_bias=True,
-                 with_ffn_bias=True,
+                 use_attention_bias=True,
+                 use_ffn_bias=True,
                  max_relative_len=-1,
+                 rel_pos_need_train=True,
                  share_emb_out_proj=False, 
                  embedding_size=None, 
                  share_layer_params=False, 
@@ -1173,9 +1184,10 @@ class TransformerLM(nn.Module):
                                  emb_dropout,
                                  ln_eps,
                                  use_rms_norm,
-                                 with_attention_bias,
-                                 with_ffn_bias,
+                                 use_attention_bias,
+                                 use_ffn_bias,
                                  max_relative_len,
+                                 rel_pos_need_train,
                                  share_emb_out_proj, 
                                  embedding_size, 
                                  share_layer_params,
@@ -1267,9 +1279,10 @@ class TransformerBiLM(nn.Module):
                  emb_dropout=0,
                  ln_eps=1e-5,
                  use_rms_norm=False,
-                 with_attention_bias=True,
-                 with_ffn_bias=True,
+                 use_attention_bias=True,
+                 use_ffn_bias=True,
                  max_relative_len=-1,
+                 rel_pos_need_train=True,
                  share_emb_out_proj=False, 
                  embedding_size=None, 
                  share_layer_params=False, 
@@ -1312,9 +1325,10 @@ class TransformerBiLM(nn.Module):
                                emb_dropout,
                                ln_eps,
                                use_rms_norm,
-                               with_attention_bias,
-                               with_ffn_bias,
+                               use_attention_bias,
+                               use_ffn_bias,
                                max_relative_len,
+                               rel_pos_need_train,
                                embedding_size,
                                share_layer_params, 
                                n_share_across_layers,
@@ -1445,9 +1459,10 @@ def build_transformer_model(config):
     emb_dropout = config.get("emb_dropout", 0)
     ln_eps = config.get("ln_eps", 1e-5)
     use_rms_norm = config.get("use_rms_norm", False)
-    with_attention_bias = config.get("with_attention_bias", True)
-    with_ffn_bias = config.get("with_ffn_bias", True)
+    use_attention_bias = config.get("use_attention_bias", True)
+    use_ffn_bias = config.get("use_ffn_bias", True)
     max_relative_len = config.get("max_relative_len", -1)
+    rel_pos_need_train = config.get("rel_pos_need_train", True)
     share_src_trg_emb = config["share_src_trg_emb"]
     share_emb_out_proj = config.get("share_emb_out_proj", False)
     embedding_size = config.get("embedding_size", None)
@@ -1460,7 +1475,6 @@ def build_transformer_model(config):
     norm_after_embedding = config.get("norm_after_embedding", False)
     pos_need_train = config.get("pos_need_train", False)
     use_output_bias = config.get("use_output_bias", True)
-    
     transformer = Transformer(config["symbol2id"],
                               src_vocab_size, 
                               src_max_len, 
@@ -1478,9 +1492,10 @@ def build_transformer_model(config):
                               emb_dropout,
                               ln_eps,
                               use_rms_norm,
-                              with_attention_bias,
-                              with_ffn_bias,
+                              use_attention_bias,
+                              use_ffn_bias,
                               max_relative_len,
+                              rel_pos_need_train,
                               share_src_trg_emb, 
                               share_emb_out_proj,
                               embedding_size,
@@ -1526,9 +1541,10 @@ def build_transformer_lm_model(config):
     emb_dropout = config.get("emb_dropout", 0)
     ln_eps = config.get("ln_eps", 1e-5)
     use_rms_norm = config.get("use_rms_norm", False)
-    with_attention_bias = config.get("with_attention_bias", True)
-    with_ffn_bias = config.get("with_ffn_bias", True)
+    use_attention_bias = config.get("use_attention_bias", True)
+    use_ffn_bias = config.get("use_ffn_bias", True)
     max_relative_len = config.get("max_relative_len", -1)
+    rel_pos_need_train = config.get("rel_pos_need_train", True)
     share_emb_out_proj = config.get("share_emb_out_proj", False)
     share_layer_params = config.get("share_layer_params", False)
     embedding_size = config.get("embedding_size", None)
@@ -1555,9 +1571,10 @@ def build_transformer_lm_model(config):
                                 emb_dropout, 
                                 ln_eps,
                                 use_rms_norm,
-                                with_attention_bias,
-                                with_ffn_bias,
+                                use_attention_bias,
+                                use_ffn_bias,
                                 max_relative_len,
+                                rel_pos_need_train,
                                 share_emb_out_proj,
                                 embedding_size,
                                 share_layer_params,
@@ -1629,9 +1646,10 @@ def build_transformer_bi_lm_model(config):
     emb_dropout = config.get("emb_dropout", 0)
     ln_eps = config.get("ln_eps", 1e-5)
     use_rms_norm = config.get("use_rms_norm", False)
-    with_attention_bias = config.get("with_attention_bias", True)
-    with_ffn_bias = config.get("with_ffn_bias", True)
+    use_attention_bias = config.get("use_attention_bias", True)
+    use_ffn_bias = config.get("use_ffn_bias", True)
     max_relative_len = config.get("max_relative_len", -1)
+    rel_pos_need_train = config.get("rel_pos_need_train", True)
     share_emb_out_proj = config.get("share_emb_out_proj", False)
     share_layer_params = config.get("share_layer_params", False)
     embedding_size = config.get("embedding_size", None)
@@ -1657,9 +1675,10 @@ def build_transformer_bi_lm_model(config):
                                   emb_dropout,
                                   ln_eps,
                                   use_rms_norm,
-                                  with_attention_bias,
-                                  with_ffn_bias,
+                                  use_attention_bias,
+                                  use_ffn_bias,
                                   max_relative_len,
+                                  rel_pos_need_train,
                                   share_emb_out_proj,
                                   embedding_size,
                                   share_layer_params,
@@ -1688,9 +1707,10 @@ def build_bert_model(config):
     dropout = config.get("dropout", 0)
     ln_eps = config.get("ln_eps", 1e-5)
     use_rms_norm = config.get("use_rms_norm", False)
-    with_attention_bias = config.get("with_attention_bias", True)
-    with_ffn_bias = config.get("with_ffn_bias", True)
+    use_attention_bias = config.get("use_attention_bias", True)
+    use_ffn_bias = config.get("use_ffn_bias", True)
     max_relative_len = config.get("max_relative_len", -1)
+    rel_pos_need_train = config.get("rel_pos_need_train", True)
     n_types = config.get("n_types", 2)
     share_emb_out_proj = config.get("share_emb_out_proj", False)
     share_layer_params = config.get("share_layer_params", False)
@@ -1713,9 +1733,10 @@ def build_bert_model(config):
                 dropout,
                 ln_eps,
                 use_rms_norm,
-                with_attention_bias,
-                with_ffn_bias,
+                use_attention_bias,
+                use_ffn_bias,
                 max_relative_len,
+                rel_pos_need_train,
                 embedding_size=embedding_size, 
                 share_layer_params=share_layer_params, 
                 n_share_across_layers=n_share_across_layers,
@@ -1758,9 +1779,10 @@ def build_transformer_encoder_model(config):
     emb_dropout = config.get("emb_dropout", 0)
     ln_eps = config.get("ln_eps", 1e-5)
     use_rms_norm = config.get("use_rms_norm", False)
-    with_attention_bias = config.get("with_attention_bias", True)
-    with_ffn_bias = config.get("with_ffn_bias", True)
+    use_attention_bias = config.get("use_attention_bias", True)
+    use_ffn_bias = config.get("use_ffn_bias", True)
     max_relative_len = config.get("max_relative_len", -1)
+    rel_pos_need_train = config.get("rel_pos_need_train", True)
     share_layer_params = config.get("share_layer_params", False)
     embedding_size = config.get("embedding_size", None)
     n_share_across_layers = config.get("n_share_across_layers", 1)
@@ -1786,9 +1808,10 @@ def build_transformer_encoder_model(config):
                                      emb_dropout,
                                      ln_eps,
                                      use_rms_norm,
-                                     with_attention_bias,
-                                     with_ffn_bias,
+                                     use_attention_bias,
+                                     use_ffn_bias,
                                      max_relative_len,
+                                     rel_pos_need_train,
                                      embedding_size,
                                      share_layer_params,
                                      n_share_across_layers,
@@ -1829,9 +1852,10 @@ def build_transformer_classify_model(config):
     emb_dropout = config.get("emb_dropout", 0)
     ln_eps = config.get("ln_eps", 1e-5)
     use_rms_norm = config.get("use_rms_norm", False)
-    with_attention_bias = config.get("with_attention_bias", True)
-    with_ffn_bias = config.get("with_ffn_bias", True)
+    use_attention_bias = config.get("use_attention_bias", True)
+    use_ffn_bias = config.get("use_ffn_bias", True)
     max_relative_len = config.get("max_relative_len", -1)
+    rel_pos_need_train = config.get("rel_pos_need_train", True)
     n_class = config["n_class"]
     share_layer_params = config.get("share_layer_params", False)
     n_share_across_layers = config.get("n_share_across_layers", 1)
@@ -1858,9 +1882,10 @@ def build_transformer_classify_model(config):
                                        emb_dropout,
                                        ln_eps,
                                        use_rms_norm,
-                                       with_attention_bias,
-                                       with_ffn_bias,
+                                       use_attention_bias,
+                                       use_ffn_bias,
                                        max_relative_len,
+                                       rel_pos_need_train,
                                        embedding_size,
                                        share_layer_params, 
                                        n_share_across_layers,
@@ -1890,9 +1915,10 @@ def build_transformer_seq_cls_model(config):
     emb_dropout = config.get("emb_dropout", 0)
     ln_eps = config.get("ln_eps", 1e-5)
     use_rms_norm = config.get("use_rms_norm", False)
-    with_attention_bias = config.get("with_attention_bias", True)
-    with_ffn_bias = config.get("with_ffn_bias", True)
+    use_attention_bias = config.get("use_attention_bias", True)
+    use_ffn_bias = config.get("use_ffn_bias", True)
     max_relative_len = config.get("max_relative_len", -1)
+    rel_pos_need_train = config.get("rel_pos_need_train", True)
     n_labels = config["n_labels"]
     share_layer_params = config.get("share_layer_params", False)
     n_share_across_layers = config.get("n_share_across_layers", 1)
@@ -1920,9 +1946,10 @@ def build_transformer_seq_cls_model(config):
                                     emb_dropout,
                                     ln_eps, 
                                     use_rms_norm,
-                                    with_attention_bias,
-                                    with_ffn_bias,
+                                    use_attention_bias,
+                                    use_ffn_bias,
                                     max_relative_len,
+                                    rel_pos_need_train,
                                     embedding_size,
                                     share_layer_params, 
                                     n_share_across_layers,

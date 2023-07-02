@@ -288,6 +288,7 @@ class MimixTokenizer(Tokenizer):
         is_last_num_or_alphabet = False
         while i < len(text):
             ch = text[i]
+            print(ch , is_cjk(ch), is_alphabet(ch))
             if is_special(ch):
                 matched = self.prefix_match(text[i:]) 
                 if len(matched) > 0:
