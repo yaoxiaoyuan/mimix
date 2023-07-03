@@ -2,7 +2,7 @@
 
 Mimix is a tool for Seq2seq learning framework based on Pytorch. Basically, I implement several generative models, including rnn-seq2seq and transformer. Some other models, such as Text CNN, Transformer-based classifier and Transformer-based Language model, are also provided. To facilitate the use of pretrained models, Mimix can also load bert model weights. Other pretrained models may be supported in the future.
 
-I have trained some Chinese Generative Models which are listed in Demo section. You can follow the instructions and run the demo.  **An application is required for model download.**
+I have trained some Chinese Generative Models which are listed in Demo section. You can follow the instructions and run the demo.  ~~**An application is required for model download.**~~ Now you can download the weights directly without sending me an email. **You must follow the agreement to use the model. Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/Mimix%20Model%20Release%20Agreement.docx).** 
 
 ### Cite
 
@@ -16,7 +16,7 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 
 ## Models
 
-Several pretrained models are listed below.  **Some models are not available for download due to the data privacy. Please check the "open for download" column. You can follow the instructions to use the open-download model.**
+Several pretrained models are listed below.  ~~**Some models are not available for download due to the data privacy. Please check the "open for download" column. You can follow the instructions to use the open-download model.**~~
 
 | model name                           | architecture                    | n_params  | n_layers | d_model | n_heads | n_samples | data size | open for download |
 | ------------------------------------ | ---- | ---- | :--- | ---- | ---- | ------------------------------------ | ------------------------------------ | ------------------------------------ |
@@ -41,11 +41,11 @@ Several pretrained models are listed below.  **Some models are not available for
 | Chinese ancient translation              | transformer enc-dec     | 216m     | 12       | 768     | 12      | 6m        | 1GB       | True             |
 | Chinese spelling correction | transformer enc-dec | 216m | 12 | 768 | 12 | 32m | 6GB | True |
 
-
+Download link:  https://pan.baidu.com/s/18UmwOwbN2u_J0ym382SxAA?pwd=bxka 
 
 ### HOW TO RUN MODEL
 
-1. Download conf and model data.  **Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/Mimix%20Model%20Release%20Agreement.docx). If agree to the agreement, fill in the information and send the agreement to yaoxiaoyuan1990 at gmail dot com. Without agreement,  I won't reply to you.  I will send links to your email address once the procedure is approved.** **The email title must be written as "Application to download the Mimix Models".**  
+1. Download conf and model data.  
 
 2. Put conf and model under mimix folder
 
