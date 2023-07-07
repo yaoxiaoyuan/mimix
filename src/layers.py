@@ -1227,7 +1227,8 @@ class MultiHeadAttention(nn.Module):
                  dropout=0, 
                  attn_dropout=0, 
                  with_bias=True, 
-                 max_relative_position=-1,
+                 max_relative_len=-1,
+                 use_rel_pos_value=False,
                  rel_pos_need_train=True):
         """
         """
@@ -1239,7 +1240,7 @@ class MultiHeadAttention(nn.Module):
         self.attn_dropout = Dropout(attn_dropout)
         self.d_qk = d_qk
         self.d_v = d_v
-        self.max_relative_position = max_relative_position
+        self.max_relative_len = max_relative_len
         self.W_q = nn.Parameter(torch.Tensor(n_heads*d_qk, d_model))
         self.W_k = nn.Parameter(torch.Tensor(n_heads*d_qk, d_model))
         self.W_v = nn.Parameter(torch.Tensor(n_heads*d_v, d_model))
@@ -1251,9 +1252,12 @@ class MultiHeadAttention(nn.Module):
             self.b_v = nn.Parameter(torch.Tensor(n_heads*d_v))
             self.b_o = nn.Parameter(torch.Tensor(d_model))
         
-        if max_relative_position > 0:
-            self.rel_pos_k_emb = RelativePositionEmbedding(max_relative_position, self.d_qk, rel_pos_need_train)
-            self.rel_pos_v_emb = RelativePositionEmbedding(max_relative_position, self.d_v, rel_pos_need_train)
+        self.rel_pos_k_emb = None
+        self.rel_pos_v_emb = None
+        if max_relative_len > 0:
+            self.rel_pos_k_emb = RelativePositionEmbedding(max_relative_len, self.d_qk, rel_pos_need_train)
+            if use_rel_pos_value == True:
+                self.rel_pos_v_emb = RelativePositionEmbedding(max_relative_len, self.d_v, rel_pos_need_train)
         
         self.reset_parameters()
         
@@ -1295,7 +1299,7 @@ class MultiHeadAttention(nn.Module):
         
         pos_key = None
         pos_value = None
-        if self.max_relative_position > 0:
+        if self.max_relative_len > 0:
             pos_key = self.rel_pos_k_emb(query.size(1), key.size(1), k_start_pos)
             pos_value = self.rel_pos_k_emb(query.size(1), value.size(1), k_start_pos)
 
@@ -1352,6 +1356,7 @@ class TransformerLayer(nn.Module):
                  use_attention_bias=True,
                  use_ffn_bias=True,
                  max_relative_len=-1,
+                 use_rel_pos_value=False,
                  rel_pos_need_train=True,
                  with_across_attention=True):
         """
@@ -1365,6 +1370,7 @@ class TransformerLayer(nn.Module):
                                                  attn_dropout,
                                                  use_attention_bias,
                                                  max_relative_len,
+                                                 use_rel_pos_value,
                                                  rel_pos_need_train)
         
         self.norm_1 = LayerNorm(d_model,ln_eps,use_rms_norm)
@@ -1379,6 +1385,7 @@ class TransformerLayer(nn.Module):
                                                     attn_dropout,
                                                     use_attention_bias,
                                                     max_relative_len,
+                                                    use_rel_pos_value,
                                                     rel_pos_need_train)
         
             self.norm_2 = LayerNorm(d_model,ln_eps,use_rms_norm)
@@ -1511,6 +1518,7 @@ class Encoder(nn.Module):
                  use_attention_bias=True,
                  use_ffn_bias=True,
                  max_relative_len=-1,
+                 use_rel_pos_value=False,
                  rel_pos_need_train=True,
                  embedding_size=None,
                  share_layer_params=False, 
@@ -1573,6 +1581,7 @@ class Encoder(nn.Module):
                                  use_attention_bias=use_attention_bias,
                                  use_ffn_bias=use_ffn_bias,
                                  max_relative_len=max_relative_len,
+                                 use_rel_pos_value=use_rel_pos_value,
                                  rel_pos_need_train=rel_pos_need_train,
                                  with_across_attention=False)
                     for i in range(n_layers//n_share_across_layers)])
@@ -1644,6 +1653,7 @@ class Decoder(nn.Module):
                  use_attention_bias=True,
                  use_ffn_bias=True,
                  max_relative_len=-1,
+                 use_rel_pos_value=False,
                  rel_pos_need_train=True,
                  embedding_size=None,
                  share_layer_params=False, 
@@ -1698,6 +1708,7 @@ class Decoder(nn.Module):
                                  use_attention_bias=use_attention_bias,
                                  use_ffn_bias=use_ffn_bias,
                                  max_relative_len=max_relative_len,
+                                 use_rel_pos_value=use_rel_pos_value,
                                  rel_pos_need_train=rel_pos_need_train,
                                  with_across_attention=True)
                     for i in range(n_layers//n_share_across_layers)])
@@ -1877,6 +1888,7 @@ class LMDecoder(nn.Module):
                  use_attention_bias=True,
                  use_ffn_bias=True,
                  max_relative_len=-1,
+                 use_rel_pos_value=False,
                  rel_pos_need_train=True,
                  share_emb_out_proj=False, 
                  embedding_size=None,
@@ -1933,6 +1945,7 @@ class LMDecoder(nn.Module):
                                  use_attention_bias=use_attention_bias,
                                  use_ffn_bias=use_ffn_bias,
                                  max_relative_len=max_relative_len,
+                                 use_rel_pos_value=use_rel_pos_value,
                                  rel_pos_need_train=rel_pos_need_train,
                                  with_across_attention=False)
                     for i in range(n_layers//n_share_across_layers)])

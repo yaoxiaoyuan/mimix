@@ -38,6 +38,7 @@ class TransformerEncoder(nn.Module):
                  use_attention_bias=True,
                  use_ffn_bias=True,
                  max_relative_len=-1,
+                 use_rel_pos_value=False,
                  rel_pos_need_train=True,
                  embedding_size=None, 
                  share_layer_params=False, 
@@ -84,6 +85,7 @@ class TransformerEncoder(nn.Module):
                                use_attention_bias,
                                use_ffn_bias,
                                max_relative_len,
+                               use_rel_pos_value,
                                rel_pos_need_train,
                                embedding_size,
                                share_layer_params, 
@@ -182,6 +184,7 @@ class TransformerClassifer(nn.Module):
                  use_attention_bias=True,
                  use_ffn_bias=True,
                  max_relative_len=-1,
+                 use_rel_pos_value=False,
                  rel_pos_need_train=True,
                  embedding_size=None, 
                  share_layer_params=False, 
@@ -227,6 +230,7 @@ class TransformerClassifer(nn.Module):
                                use_attention_bias,
                                use_ffn_bias,
                                max_relative_len,
+                               use_rel_pos_value,
                                rel_pos_need_train,
                                embedding_size,
                                share_layer_params, 
@@ -314,6 +318,7 @@ class TransformerSeqCls(nn.Module):
                  use_attention_bias=True,
                  use_ffn_bias=True,
                  max_relative_len=-1,
+                 use_rel_pos_value=False,
                  rel_pos_need_train=True,
                  embedding_size=None, 
                  share_layer_params=False,
@@ -360,6 +365,7 @@ class TransformerSeqCls(nn.Module):
                                use_attention_bias,
                                use_ffn_bias,
                                max_relative_len,
+                               use_rel_pos_value,
                                rel_pos_need_train,
                                embedding_size,
                                share_layer_params, 
@@ -892,6 +898,7 @@ class Transformer(nn.Module):
                  use_attention_bias=True,
                  use_ffn_bias=True,
                  max_relative_len=-1,
+                 use_rel_pos_value=False,
                  rel_pos_need_train=True,
                  share_src_trg_emb=False, 
                  share_emb_out_proj=False, 
@@ -949,6 +956,7 @@ class Transformer(nn.Module):
                                use_attention_bias,
                                use_ffn_bias,
                                max_relative_len,
+                               use_rel_pos_value,
                                rel_pos_need_train,
                                embedding_size,
                                share_layer_params, 
@@ -976,6 +984,7 @@ class Transformer(nn.Module):
                                use_attention_bias,
                                use_ffn_bias,
                                max_relative_len,
+                               use_rel_pos_value,
                                rel_pos_need_train,
                                embedding_size,
                                share_layer_params, 
@@ -1134,6 +1143,7 @@ class TransformerLM(nn.Module):
                  use_attention_bias=True,
                  use_ffn_bias=True,
                  max_relative_len=-1,
+                 use_rel_pos_value=False,
                  rel_pos_need_train=True,
                  share_emb_out_proj=False, 
                  embedding_size=None, 
@@ -1187,6 +1197,7 @@ class TransformerLM(nn.Module):
                                  use_attention_bias,
                                  use_ffn_bias,
                                  max_relative_len,
+                                 use_rel_pos_value,
                                  rel_pos_need_train,
                                  share_emb_out_proj, 
                                  embedding_size, 
@@ -1282,6 +1293,7 @@ class TransformerBiLM(nn.Module):
                  use_attention_bias=True,
                  use_ffn_bias=True,
                  max_relative_len=-1,
+                 use_rel_pos_value=False,
                  rel_pos_need_train=True,
                  share_emb_out_proj=False, 
                  embedding_size=None, 
@@ -1328,6 +1340,7 @@ class TransformerBiLM(nn.Module):
                                use_attention_bias,
                                use_ffn_bias,
                                max_relative_len,
+                               use_rel_pos_value,
                                rel_pos_need_train,
                                embedding_size,
                                share_layer_params, 
@@ -1462,6 +1475,7 @@ def build_transformer_model(config):
     use_attention_bias = config.get("use_attention_bias", True)
     use_ffn_bias = config.get("use_ffn_bias", True)
     max_relative_len = config.get("max_relative_len", -1)
+    use_rel_pos_value = config.get("use_rel_pos_value", False)
     rel_pos_need_train = config.get("rel_pos_need_train", True)
     share_src_trg_emb = config["share_src_trg_emb"]
     share_emb_out_proj = config.get("share_emb_out_proj", False)
@@ -1495,6 +1509,7 @@ def build_transformer_model(config):
                               use_attention_bias,
                               use_ffn_bias,
                               max_relative_len,
+                              use_rel_pos_value,
                               rel_pos_need_train,
                               share_src_trg_emb, 
                               share_emb_out_proj,
@@ -1544,6 +1559,7 @@ def build_transformer_lm_model(config):
     use_attention_bias = config.get("use_attention_bias", True)
     use_ffn_bias = config.get("use_ffn_bias", True)
     max_relative_len = config.get("max_relative_len", -1)
+    use_rel_pos_value = config.get("use_rel_pos_value", False)
     rel_pos_need_train = config.get("rel_pos_need_train", True)
     share_emb_out_proj = config.get("share_emb_out_proj", False)
     share_layer_params = config.get("share_layer_params", False)
@@ -1574,6 +1590,7 @@ def build_transformer_lm_model(config):
                                 use_attention_bias,
                                 use_ffn_bias,
                                 max_relative_len,
+                                use_rel_pos_value,
                                 rel_pos_need_train,
                                 share_emb_out_proj,
                                 embedding_size,
@@ -1649,6 +1666,7 @@ def build_transformer_bi_lm_model(config):
     use_attention_bias = config.get("use_attention_bias", True)
     use_ffn_bias = config.get("use_ffn_bias", True)
     max_relative_len = config.get("max_relative_len", -1)
+    use_rel_pos_value = config.get("use_rel_pos_value", False)
     rel_pos_need_train = config.get("rel_pos_need_train", True)
     share_emb_out_proj = config.get("share_emb_out_proj", False)
     share_layer_params = config.get("share_layer_params", False)
@@ -1678,6 +1696,7 @@ def build_transformer_bi_lm_model(config):
                                   use_attention_bias,
                                   use_ffn_bias,
                                   max_relative_len,
+                                  use_rel_pos_value,
                                   rel_pos_need_train,
                                   share_emb_out_proj,
                                   embedding_size,
@@ -1710,6 +1729,7 @@ def build_bert_model(config):
     use_attention_bias = config.get("use_attention_bias", True)
     use_ffn_bias = config.get("use_ffn_bias", True)
     max_relative_len = config.get("max_relative_len", -1)
+    use_rel_pos_value = config.get("use_rel_pos_value", False)
     rel_pos_need_train = config.get("rel_pos_need_train", True)
     n_types = config.get("n_types", 2)
     share_emb_out_proj = config.get("share_emb_out_proj", False)
@@ -1736,6 +1756,7 @@ def build_bert_model(config):
                 use_attention_bias,
                 use_ffn_bias,
                 max_relative_len,
+                use_rel_pos_value,
                 rel_pos_need_train,
                 embedding_size=embedding_size, 
                 share_layer_params=share_layer_params, 
@@ -1782,6 +1803,7 @@ def build_transformer_encoder_model(config):
     use_attention_bias = config.get("use_attention_bias", True)
     use_ffn_bias = config.get("use_ffn_bias", True)
     max_relative_len = config.get("max_relative_len", -1)
+    use_rel_pos_value = config.get("use_rel_pos_value", False)
     rel_pos_need_train = config.get("rel_pos_need_train", True)
     share_layer_params = config.get("share_layer_params", False)
     embedding_size = config.get("embedding_size", None)
@@ -1811,6 +1833,7 @@ def build_transformer_encoder_model(config):
                                      use_attention_bias,
                                      use_ffn_bias,
                                      max_relative_len,
+                                     use_rel_pos_value,
                                      rel_pos_need_train,
                                      embedding_size,
                                      share_layer_params,
@@ -1855,6 +1878,7 @@ def build_transformer_classify_model(config):
     use_attention_bias = config.get("use_attention_bias", True)
     use_ffn_bias = config.get("use_ffn_bias", True)
     max_relative_len = config.get("max_relative_len", -1)
+    use_rel_pos_value = config.get("use_rel_pos_value", False)
     rel_pos_need_train = config.get("rel_pos_need_train", True)
     n_class = config["n_class"]
     share_layer_params = config.get("share_layer_params", False)
@@ -1885,6 +1909,7 @@ def build_transformer_classify_model(config):
                                        use_attention_bias,
                                        use_ffn_bias,
                                        max_relative_len,
+                                       use_rel_pos_value,
                                        rel_pos_need_train,
                                        embedding_size,
                                        share_layer_params, 
@@ -1918,6 +1943,7 @@ def build_transformer_seq_cls_model(config):
     use_attention_bias = config.get("use_attention_bias", True)
     use_ffn_bias = config.get("use_ffn_bias", True)
     max_relative_len = config.get("max_relative_len", -1)
+    use_rel_pos_value = config.get("use_rel_pos_value", False)
     rel_pos_need_train = config.get("rel_pos_need_train", True)
     n_labels = config["n_labels"]
     share_layer_params = config.get("share_layer_params", False)
@@ -1949,6 +1975,7 @@ def build_transformer_seq_cls_model(config):
                                     use_attention_bias,
                                     use_ffn_bias,
                                     max_relative_len,
+                                    use_rel_pos_value,
                                     rel_pos_need_train,
                                     embedding_size,
                                     share_layer_params, 
