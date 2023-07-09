@@ -447,34 +447,34 @@ class BiLMGenerator():
             device_id = config.get("device_id", "0")
             self.device = torch.device('cuda:%s' % device_id)
         
-        self.trg_word2id = load_vocab(real_path(config["trg_vocab"]))
-        self.trg_id2word = invert_dict(self.trg_word2id)
+        self.src_word2id = load_vocab(real_path(config["src_vocab"]))
+        self.src_id2word = invert_dict(self.src_word2id)
         
-        self.trg_tokenizer = build_tokenizer(
-                tokenizer=config["trg_tokenizer"],
-                vocab_file=config["trg_vocab"], 
+        self.src_tokenizer = build_tokenizer(
+                tokenizer=config["src_tokenizer"],
+                vocab_file=config["src_vocab"], 
                 pre_tokenized=config.get("pre_tokenized", False),  
                 pre_vectorized=config.get("pre_vectorized", False))
         self.add_cls = config.get("add_cls", False)
         
         self.mask_id = config["symbol2id"][config["symbols"]["MASK_TOK"]]
         
-        self.trg_vocab_size = config["trg_vocab_size"]
+        self.src_vocab_size = config["src_vocab_size"]
         self.use_cuda = config["use_cuda"]
-        self.trg_max_len = config["trg_max_len"]
+        self.src_max_len = config["src_max_len"]
     
     
-    def encode_inputs(self, trg_list):
+    def encode_inputs(self, src_list):
         """
         """        
-        trg_ids = list(map(self.trg_tokenizer.tokenize_to_ids, trg_list))
+        src_ids = list(map(self.src_tokenizer.tokenize_to_ids, src_list))
 
-        y = cut_and_pad_seq_list(trg_ids,
-                                 self.trg_max_len, 
+        y = cut_and_pad_seq_list(src_ids,
+                                 self.src_max_len, 
                                  self.model.PAD,
                                  True)
         if self.add_cls == True:
-            y = [[self.model.CLS] + yy[:self.trg_max_len-1] for yy in y]
+            y = [[self.model.CLS] + yy[:self.src_max_len-1] for yy in y]
 
         if y is not None:
             y = torch.tensor(y, dtype=torch.long)
@@ -486,10 +486,10 @@ class BiLMGenerator():
         return y
 
 
-    def predict(self, trg_list, top_k=-1, top_p=-1, return_k=10):
+    def predict(self, src_list, top_k=-1, top_p=-1, return_k=10):
         """
         """
-        y = self.encode_inputs(trg_list)
+        y = self.encode_inputs(src_list)
 
         self.model.eval()
         with torch.no_grad():
@@ -506,14 +506,14 @@ class BiLMGenerator():
         score = score.cpu().numpy()
         
         res = []
-        for i,trg in enumerate(y):
-            res.append([trg_list[i], []])
-            for j,ww in enumerate(trg):
+        for i,src in enumerate(y):
+            res.append([src_list[i], []])
+            for j,ww in enumerate(src):
 
                 if ww == self.mask_id:
                     pred = []
                     for k in range(return_k):
-                        pred.append([self.trg_id2word[indice[i][j][k]], score[i][j][k]])
+                        pred.append([self.src_id2word[indice[i][j][k]], score[i][j][k]])
 
                     res[-1][1].append(pred)
         
@@ -581,7 +581,7 @@ class TextMatcher():
         with torch.no_grad():
             outputs = self.model([y])
         
-        return outputs[1]
+        return outputs[0]
 
 
     def predict(self, src_list):
@@ -592,7 +592,8 @@ class TextMatcher():
         self.model.eval()
         with torch.no_grad():
             outputs = self.model([y])
-            sim = outputs[0]
+            norm_vec = F.normalize(outputs[0][:,0,:], p=2, dim=1)
+            sim = torch.mm(norm_vec, norm_vec.T)
         sim = sim.cpu().numpy()
         return sim
 

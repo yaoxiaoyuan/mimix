@@ -395,7 +395,7 @@ def lm_sample(lm_model,
     trg_seq_len = 0
     vocab_size = lm_model.trg_vocab_size
     while not finished.all() and steps < max_decode_steps and trg_seq_len < max_decode_steps: 
-        outputs = lm_model._step(steps, dec_states, y)
+        outputs = lm_model.step(steps, dec_states, y)
         dec_states, logits = outputs[0:2]
         
         mask = finished.type(torch.float)
@@ -1002,7 +1002,7 @@ def sample_with_constraints(enc_dec_model,
     
     batch_size = x.size(0)
     enc_states, dec_states, dec_enc_attn_mask = enc_dec_model.init_search(x)
-
+    
     search_states = init_search(enc_dec_model, batch_size)    
     if x.is_cuda:
         search_states = nested_to_cuda(search_states, x.device)
@@ -1183,7 +1183,7 @@ def lm_sample_with_constraints(lm_model,
     vocab_size = lm_model.trg_vocab_size
     max_decode_steps = min(max_decode_steps, lm_model.trg_max_len - trg_seq_len)
     while not finished.all() and steps < max_decode_steps: 
-        outputs = lm_model.decoder._step(steps, 
+        outputs = lm_model.decoder.step(steps, 
                                          dec_states, 
                                          y)
         dec_states, logits = outputs[0:2]
