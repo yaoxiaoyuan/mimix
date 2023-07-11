@@ -189,7 +189,7 @@ class MimixTokenizer(Tokenizer):
 
             self.symbols = set()
             for word in self.vocab:
-                if re.search("^_[a-z]+_$", word):
+                if re.search("^_[0-9a-z]+_$", word):
                     self.symbols.add(word)
             self.symbols_tri_tree = self.build_tri_tree(self.symbols)
 

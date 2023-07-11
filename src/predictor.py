@@ -135,9 +135,10 @@ class EncDecGenerator():
             else:
                 raise ValueError("strategy not correct!")
         
+        h_len = torch.sum(hypothesis.ne(self.model.PAD), -1).cpu().numpy()
         hypothesis = hypothesis.cpu().numpy()
         scores = scores.cpu().numpy()
-            
+        
         res = []
         for i,src in enumerate(src_list):
             tmp = []
@@ -150,8 +151,9 @@ class EncDecGenerator():
                 else:
                     trg = trg + " _unfinished_"
                 score = float(scores[j])
+                
                 if self.normalize == "linear":
-                    score = score/len(hypothesis[j])
+                    score = score/h_len[j]
                 tmp.append([trg, score])
             tmp.sort(key=lambda x:x[-1], reverse=True)
             res.append([src, tmp])
@@ -165,26 +167,32 @@ class EncDecGenerator():
         src_list, trg_list, map_ids = [], [], []
         for i,(src,trgs) in enumerate(pairs_list):
             src_list.append(src)
-            trg_list.extend(trg_list)
+            trg_list.extend(trgs)
             for trg in trgs:
                 map_ids.append(i)
+        
 
         x, y = self.encode_inputs(src_list,
                                   trg_list,
                                   add_bos=True,
                                   add_eos=True)
-    
+        
+        self.model.eval()
         with torch.no_grad():
+            
             y_target = y[:, 1:]
             y = y[:, :-1]
-    
+            y_len = torch.sum(y.ne(self.model.PAD), -1)
+            
             enc_self_attn_mask = self.model.get_attn_mask(x, x)
             enc_outputs = self.model.encoder(x, enc_self_attn_mask)
             enc_output = enc_outputs[0]
+            
+            enc_output = enc_output[map_ids]
             dec_self_attn_mask = self.model.get_subsequent_mask(y)
             dec_self_attn_mask = dec_self_attn_mask | self.model.get_attn_mask(y, y)
-            dec_enc_attn_mask = self.model.get_attn_mask(y, x)
-    
+            dec_enc_attn_mask = self.model.get_attn_mask(y, x[map_ids])
+            
             trg_embedding = None
             if self.model.share_src_trg_emb == True:
                 trg_embedding = self.model.encoder.src_embedding
@@ -196,14 +204,30 @@ class EncDecGenerator():
                                              trg_embedding)
     
             logits = dec_outputs[0]
+            
             log_probs = -F.nll_loss(F.log_softmax(logits.view(-1, self.trg_vocab_size), -1),
                                     y_target.contiguous().view(-1),
                                     ignore_index=self.model.PAD,
                                     reduction='none')
     
             log_probs = torch.sum(log_probs.view(logits.size(0), -1), -1)
-
-        return log_probs
+            
+        log_probs = log_probs.cpu().numpy()
+        y_len = y_len.cpu().numpy()
+        res = []
+        i = 0
+        for src,trgs in pairs_list:
+            tmp = []
+            for trg in trgs:
+                score = float(log_probs[i])
+                
+                if self.normalize == "linear":
+                    score /= y_len[i]
+                tmp.append([trg, score])
+                i += 1
+            res.append([src, tmp])
+            
+        return res
 
 
 class LMGenerator():
@@ -249,7 +273,7 @@ class LMGenerator():
         self.use_cuda = config["use_cuda"] 
         
 
-    def encode_inputs(self, trg_list):
+    def encode_inputs(self, trg_list, add_bos=False, add_eos=False):
         """
         """
         trg_ids = list(map(self.trg_tokenizer.tokenize_to_ids, trg_list))
@@ -257,7 +281,11 @@ class LMGenerator():
                                  self.trg_max_len, 
                                  self.model.PAD,
                                  True)
-            
+        if add_bos == True:
+            y = [[self.model.BOS] + seq for seq in y]
+        if add_eos == True:
+            y = [seq + [self.model.EOS] for seq in y]
+                
         if y is not None:
             y = torch.tensor(y, dtype=torch.long)
 
@@ -295,12 +323,13 @@ class LMGenerator():
                 hypothesis,scores = states[4], states[1]
             else:
                 raise ValueError("strategy not correct!")
-                    
+        
+        h_len = torch.sum(hypothesis.ne(self.model.PAD), -1).cpu().numpy()
         hypothesis = hypothesis.cpu().numpy()
         scores = scores.cpu().numpy()
 
         detokenize_res = []
-        for hyp,score in zip(hypothesis, scores):
+        for i,(hyp,score) in enumerate(zip(hypothesis, scores)):
             trg = self.trg_tokenizer.detokenize_ids(hyp)
 
             trg = trg.replace(self.pad_tok, "").strip()
@@ -308,10 +337,10 @@ class LMGenerator():
                 trg = trg.replace(self.eos_tok, "").strip()
             else:
                 trg = trg + " _unfinished_"
-
+            
             if self.normalize == "linear":
-                score = score/len(hyp)
-                
+                score = score/h_len[i]
+            
             detokenize_res.append([trg, score])
         detokenize_res.sort(key=lambda x:x[-1], reverse=True)
         detokenize_res = [detokenize_res]
@@ -322,33 +351,20 @@ class LMGenerator():
     def scoring(self, trg_list):
         """
         """
-        src_list, trg_list, map_ids = [], [], []
-        for i,(src,trgs) in enumerate(trg_list):
-            src_list.append(src)
-            trg_list.extend(trg_list)
-            for trg in trgs:
-                map_ids.append(i)
-
         y = self.encode_inputs(trg_list,
                                add_bos=True,
                                add_eos=True)
-    
+        self.model.eval()
         with torch.no_grad():
             y_target = y[:, 1:]
             y = y[:, :-1]
-    
+            y_len = torch.sum(y.ne(self.model.PAD), -1)
+            
             dec_self_attn_mask = self.model.get_subsequent_mask(y)
             dec_self_attn_mask = dec_self_attn_mask | self.model.get_attn_mask(y, y)
     
-            trg_embedding = None
-            if self.model.share_src_trg_emb == True:
-                trg_embedding = self.model.encoder.src_embedding
-    
             dec_outputs = self.model.decoder(y,
-                                             dec_self_attn_mask,
-                                             None,
-                                             None,
-                                             trg_embedding)
+                                             dec_self_attn_mask)
     
             logits = dec_outputs[0]
             log_probs = -F.nll_loss(F.log_softmax(logits.view(-1, self.trg_vocab_size), -1),
@@ -357,8 +373,20 @@ class LMGenerator():
                                     reduction='none')
     
             log_probs = torch.sum(log_probs.view(logits.size(0), -1), -1)
-
-        return log_probs
+            
+        log_probs = log_probs.cpu().numpy()
+        y_len = y_len.cpu().numpy()
+        res = []
+        i = 0
+        for trg in trg_list:
+            score = float(log_probs[i])
+            
+            if self.normalize == "linear":
+                score /= y_len[i]
+            res.append([trg, score])
+            i += 1
+            
+        return res        
 
 
 class BiLMGenerator():
@@ -424,11 +452,7 @@ class BiLMGenerator():
             outputs = self.model([y])
             logits = outputs[0]
             probs = torch.softmax(logits, -1)
-            if top_k > 0 or top_p > 0:
-                return_k = 1
-                indice = top_k_top_p_sampling(logits, top_k, top_p)
-            else:
-                score,indice = probs.topk(return_k, -1)
+            score,indice = probs.topk(return_k, -1)
 
         indice = indice.cpu().numpy()
         score = score.cpu().numpy()

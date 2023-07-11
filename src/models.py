@@ -172,7 +172,7 @@ class Transformer(nn.Module):
         enc_outputs = self.encoder(x, enc_self_attn_mask,
                                    return_states=return_states)
         enc_output = enc_outputs[0]
-
+        print(x, enc_self_attn_mask)
         trg_embedding = None
         if self.share_src_trg_emb == True:
             trg_embedding = self.encoder.src_embedding

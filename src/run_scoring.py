@@ -10,27 +10,16 @@ import time
 import numpy as np
 import torch
 import torch.nn.functional as F
-from predictor import EncDecGenerator
+from predictor import EncDecGenerator,LMGenerator
 from utils import parse_test_args,load_model_config,real_path
 
 def enc_dec_score(config):
     """
     """
     enc_dec_gen = EncDecGenerator(config)
-    test_batch_size = 1
-    
-    def _process_batch(src_list, trg_list):
-        """
-        """
-        res = scoring_pairs(enc_dec_gen, src_list, trg_list)
-        
-        for src,trg,score in zip(src_list, trg_list, res):
-            outstream.write(src + "\t" + trg + "\t" + str(score) + "\n")
-                    
+                        
     start = time.time()
-    src_list = []
-    trg_list = []
-    
+
     print("INPUT TEXT:")
     for line in sys.stdin:
         line = line.strip()
@@ -38,18 +27,43 @@ def enc_dec_score(config):
         if len(line) == 0:
             continue
         
-        src,trg = line.split("\t")[:2]
+        arr = line.strip().split("\t")
+        src = arr[0]
+        trg_list = arr[1:]
             
-        src_list.append(src)
-        trg_list.append(trg)
+        pairs_list = [[src, trg_list]]
             
-        if len(src_list) >= test_batch_size:
-            _process_batch(src_list, trg_list)
-            src_list = []
-            trg_list = []
+        res = enc_dec_gen.scoring(pairs_list)
+        
+        for src, trg_list in res:
+            for trg,score in trg_list:
+                print(src, trg, score)
 
-    if len(src_list) > 0:
-        _process_batch(src_list, trg_list)
+    end = time.time()
+    cost = end - start
+    print("#cost time: %s s" % cost)
+
+
+def lm_score(config):
+    """
+    """
+    lm_gen = LMGenerator(config)
+                        
+    start = time.time()
+
+    print("INPUT TEXT:")
+    for line in sys.stdin:
+        line = line.strip()
+        
+        if len(line) == 0:
+            continue
+        
+        trg_list = line.strip().split("\t")
+            
+        res = lm_gen.scoring(trg_list)
+        
+        for trg, score in res:
+            print(trg, score)
 
     end = time.time()
     cost = end - start
@@ -66,7 +80,8 @@ def run_scoring():
         
     if config["task"] == "enc_dec":
         enc_dec_score(config)
-
+    elif config["task"] == "lm":
+        lm_score(config)
         
 if __name__ == "__main__":
     run_scoring()
