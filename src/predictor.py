@@ -8,10 +8,7 @@ import random
 import torch
 import torch.nn.functional as F
 from tokenization import build_tokenizer
-from decoding import beam_search, sample
-from decoding import beam_search_with_constraints, sample_with_constraints
-from decoding import lm_sample, lm_sample_with_constraints
-from decoding import top_k_top_p_sampling
+from decoding import search
 from decoding import crf_model_decoding
 from utils import load_model, load_vocab, real_path, invert_dict
 from utils import cut_and_pad_seq_list
@@ -59,37 +56,15 @@ class EncDecGenerator():
         self.max_dec_steps = config["max_decode_steps"]
         
         self.beam_size = config.get("beam_size", 3)
-        self.group_size = config.get("group_size", 1)
-        self.diverse_rate = config.get("diverse_rate", 0)
+        self.group_size = config.get("group_size", -1)
         self.gamma = float(config.get("gamma", 1))
+        self.temperature = config.get("temperature", 1)
         self.strategy = config.get("search_strategy", "beam_search")
-        
-        self.sample_size = config.get("sample_size", 1)
-        self.sample_top_k = config.get("sample_top_k", -1)
-        self.sample_top_k0 = config.get("sample_top_k0", -1)
-        self.sample_top_p = config.get("sample_top_p", -1)
-        self.sample_top_p0 = config.get("sample_top_p0", -1)
-        self.sample_temp = config.get("sample_temp", 1)
-        self.sample_alpha_0 = config.get("sample_alpha_0", self.sample_temp)
-        self.sample_alpha = config.get("sample_alpha", self.sample_temp)
-        self.sample_beta = config.get("sample_beta", 0)
-
-        self.top_group = config.get("top_group", -1)
-        self.alpha_0 = config.get("alpha_0", 1)
-        self.alpha = config.get("alpha", 1)
-        self.beta = config.get("beta", 0)
-        
-        self.combine_search_steps = config.get("combine_search_steps", 1)
-        self.combine_search_eos = config.get("combine_search_eos", None)
-        
-        self.history_penalty = config.get("history_penalty", 0)
-        self.history_penalty_beta = config.get("history_penalty_beta", 0)
+        self.top_k = config.get("top_k", -1)
+        self.top_p = config.get("top_p", -1)
         self.repeat_penalty = config.get("repeat_penalty", 0)
-        self.return_sample_k = config.get("return_sample_k", -1)
         self.normalize = config.get("normalize", "none")
-        self.penalty_vocab_start = config.get("penalty_vocab_start", -1)
-        self.penalty_vocab_end = config.get("penalty_vocab_end", -1) 
-        self.need_mask_unk =  config.get("need_mask_unk", False)
+        self.use_mask_unk =  config.get("use_mask_unk", False)
         self.use_cuda = config["use_cuda"] 
     
     
@@ -141,137 +116,31 @@ class EncDecGenerator():
         x,y = self.encode_inputs(src_list, prefix_list)
         
         with torch.no_grad():
-            if "combine" in self.strategy:
-                beam_size = self.beam_size * self.sample_size
-                outputs = sample_with_constraints(
-                        self.model, 
-                        x, 
-                        self.sample_size,
-                        self.combine_search_steps,
-                        repeat_penalty=self.repeat_penalty,
-                        history_penalty=self.history_penalty,
-                        history_penalty_beta=self.history_penalty_beta,
-                        penalty_vocab_start=self.penalty_vocab_start,
-                        penalty_vocab_end=self.penalty_vocab_end,
-                        need_mask_unk=False,
-                        sample_alpha_0=self.sample_alpha_0,
-                        sample_alpha=self.sample_alpha,
-                        sample_beta=self.sample_beta,
-                        sample_top_k=self.sample_top_k,
-                        sample_top_p=self.sample_top_p,
-                        sample_top_k0=self.sample_top_k0,
-                        sample_top_p0=self.sample_top_p0,
-                        normalize="none",
-                        prefix_y=y,
-                        eos=self.combine_search_eos,
-                        return_states=True,
-                        early_stop=True)
-                
-                init_states = outputs[2:-2] + outputs[0:1] + outputs[-2:]
-                init_states[4].fill_(0)
-                
-                hypothesis,scores = \
-                    beam_search_with_constraints(
-                            self.model, 
-                            x, 
-                            self.beam_size, 
-                            self.strategy,
-                            self.max_dec_steps,
-                            group_size=self.group_size, 
-                            top_k=self.top_group,
-                            diverse_rate=self.diverse_rate,
-                            history_penalty=self.history_penalty,
-                            history_penalty_beta=self.history_penalty_beta,
-                            repeat_penalty=self.repeat_penalty,
-                            penalty_vocab_start=self.penalty_vocab_start,
-                            penalty_vocab_end=self.penalty_vocab_end,
-                            alpha_0=self.alpha_0,
-                            alpha=self.alpha,
-                            beta=self.beta,
-                            prefix_y=y,
-                            normalize=self.normalize,
-                            gamma=self.gamma,
-                            init_states=init_states)
-
-            elif "beam_search" in self.strategy:
-                beam_size = self.beam_size
-                if self.strategy == "beam_search":
-                    hypothesis,scores = \
-                    beam_search(self.model,
-                                x, 
-                                self.beam_size, 
-                                self.max_dec_steps,
-                                normalize=self.normalize,
-                                gamma=self.gamma)
-                else: 
-                    hypothesis,scores = \
-                    beam_search_with_constraints(
-                            self.model, 
-                            x, 
-                            self.beam_size, 
-                            self.strategy,
-                            self.max_dec_steps,
-                            group_size=self.group_size, 
-                            top_k=self.top_group,
-                            diverse_rate=self.diverse_rate,
-                            history_penalty=self.history_penalty,
-                            history_penalty_beta=self.history_penalty_beta,
-                            repeat_penalty=self.repeat_penalty,
-                            penalty_vocab_start=self.penalty_vocab_start,
-                            penalty_vocab_end=self.penalty_vocab_end,
-                            alpha_0=self.alpha_0,
-                            alpha=self.alpha,
-                            beta=self.beta,
-                            prefix_y=y,
-                            normalize=self.normalize,
-                            need_mask_unk=self.need_mask_unk,
-                            gamma=self.gamma)
-                   
-            elif "sample" in self.strategy:
-                beam_size = self.sample_size
-                if self.strategy == "sample":
-                    hypothesis,scores = \
-                    sample(self.model, 
-                           x, 
-                           self.sample_size,
-                           self.max_dec_steps, 
-                           sample_temp=self.sample_temp,
-                           normalize=self.normalize,
-                           gamma=self.gamma)
-                else:
-                    hypothesis,scores = \
-                    sample_with_constraints(
-                            self.model, 
-                            x, 
-                            self.sample_size,
-                            self.max_dec_steps,
-                            repeat_penalty=self.repeat_penalty,
-                            history_penalty=self.history_penalty,
-                            history_penalty_beta=self.history_penalty_beta,
-                            penalty_vocab_start=self.penalty_vocab_start,
-                            penalty_vocab_end=self.penalty_vocab_end,
-                            need_mask_unk=self.need_mask_unk,
-                            sample_alpha_0=self.sample_alpha_0,
-                            sample_alpha=self.sample_alpha,
-                            sample_beta=self.sample_beta,
-                            sample_top_k=self.sample_top_k,
-                            sample_top_p=self.sample_top_p,
-                            sample_top_k0=self.sample_top_k0,
-                            sample_top_p0=self.sample_top_p0,
-                            normalize=self.normalize,
-                            prefix_y=y,
-                            eos=None)
+            if self.strategy in ["beam_search", "sample"]:
+                states, cache = search(self.model, 
+                                       self.beam_size, 
+                                       inputs=[x,y],
+                                       use_cuda=self.use_cuda,
+                                       strategy=self.strategy,
+                                       top_k=self.top_k,
+                                       top_p=self.top_p,
+                                       temperature=self.temperature,
+                                       eos=self.model.EOS,
+                                       group_size=self.group_size, 
+                                       repeat_penalty=self.repeat_penalty,
+                                       use_mask_unk=self.use_mask_unk,
+                                       max_decode_steps=self.max_dec_steps)
+                hypothesis,scores = states[4], states[1]
             else:
                 raise ValueError("strategy not correct!")
         
         hypothesis = hypothesis.cpu().numpy()
         scores = scores.cpu().numpy()
             
-        return_sample_k = min(beam_size, self.return_sample_k)
         res = []
         for i,src in enumerate(src_list):
             tmp = []
-            for j in range(i*beam_size, (i+1)*beam_size):
+            for j in range(i*self.beam_size, (i+1)*self.beam_size):
                 trg = self.trg_tokenizer.detokenize_ids(hypothesis[j])
                 
                 trg = trg.replace(self.pad_tok, "").strip()
@@ -282,9 +151,6 @@ class EncDecGenerator():
                 
                 tmp.append([trg, float(scores[j])])
             
-            if return_sample_k > 0:
-                tmp = random.sample(y[:return_sample_k], 1)
-                
             res.append([src, tmp])
         
         return res
@@ -320,29 +186,17 @@ class LMGenerator():
         self.eos_tok = config["symbols"]["EOS_TOK"]
         self.pad_tok = config["symbols"]["PAD_TOK"]
         
-        self.alpha_0 = config.get("alpha_0", 1)
-        self.alpha = config.get("alpha", 1)
-        self.beta = config.get("beta", 0)
-        
-        self.temp = config.get("temp", 1)
-        
+        self.beam_size = config.get("beam_size", 3)
+        self.group_size = config.get("group_size", -1)
+        self.gamma = float(config.get("gamma", 1))
+        self.temperature = config.get("temperature", 1)
+        self.strategy = config.get("search_strategy", "beam_search")
         self.top_k = config.get("top_k", -1)
-        self.top_k0 = config.get("top_k0", -1)
         self.top_p = config.get("top_p", -1)
-        self.top_p0 = config.get("top_p0", -1)
-        
-        self.history_penalty = config.get("history_penalty", 0)
-        self.history_penalty_beta = config.get("history_penalty_beta", 0) 
-
-        self.penalty_vocab_start = config.get("penalty_vocab_start", -1)
-        self.penalty_vocab_end = config.get("penalty_vocab_end", -1)
-                                          
         self.repeat_penalty = config.get("repeat_penalty", 0)
         self.normalize = config.get("normalize", "none")
-        
-        self.need_mask_unk =  config.get("need_mask_unk", False)
-        self.strategy = config.get("search_strategy", "sample")
-        self.sample_size = config.get("sample_size", 1)
+        self.use_mask_unk =  config.get("use_mask_unk", False)
+        self.use_cuda = config["use_cuda"] 
         
 
     def encode_inputs(self, trg_list):
@@ -367,52 +221,30 @@ class LMGenerator():
     def sample(self, prefix_list):
         """
         """
-        prefix = None
-        if "prefix" in self.strategy and prefix_list is not None:
-            prefix_list = [prefix_list[i//self.sample_size] for i in range(len(prefix_list) * self.sample_size)]
-            prefix = self.encode_inputs(prefix_list)
+        y = None
+        if prefix_list is not None:
+            prefix_list = [prefix_list[i] for i in range(len(prefix_list))]
+            y = self.encode_inputs(prefix_list)
 
         self.model.eval()
         with torch.no_grad():
-            if self.strategy == "sample":
-                hypothesis,scores = \
-                    lm_sample(self.model, 
-                              self.max_dec_steps, 
-                              self.use_cuda,
-                              self.device,
-                              self.sample_size,
-                              normalize=self.normalize,
-                              gamma=self.gamma,
-                              temp=self.temp)
+            if self.strategy in ["beam_search", "sample"]:
+                states, cache = search(self.model, 
+                                       self.beam_size, 
+                                       inputs=[y],
+                                       use_cuda=self.use_cuda,
+                                       strategy=self.strategy,
+                                       top_k=self.top_k,
+                                       top_p=self.top_p,
+                                       temperature=self.temperature,
+                                       eos=self.model.EOS,
+                                       group_size=self.group_size, 
+                                       repeat_penalty=self.repeat_penalty,
+                                       use_mask_unk=self.use_mask_unk,
+                                       max_decode_steps=self.max_dec_steps)
+                hypothesis,scores = states[4], states[1]
             else:
-                batch_size = self.sample_size
-                if prefix is not None and len(prefix_list) > 0:
-                    batch_size = len(prefix_list)
-                hypothesis,scores = \
-                    lm_sample_with_constraints(                            
-                            self.model, 
-                            self.max_dec_steps, 
-                            self.use_cuda,
-                            self.device,
-                            batch_size=batch_size,
-                            alpha_0=self.alpha_0,
-                            alpha=self.alpha,
-                            beta=self.beta,
-                            history_penalty=self.history_penalty,
-                            history_penalty_beta=self.history_penalty_beta,
-                            repeat_penalty=self.repeat_penalty,
-                            penalty_vocab_start=self.penalty_vocab_start,
-                            penalty_vocab_end=self.penalty_vocab_end,
-                            prefix=prefix,
-                            gamma=1,
-                            normalize="none",
-                            top_k=self.top_k,
-                            top_k0=self.top_k0,
-                            top_p=self.top_p,
-                            top_p0=self.top_p0,
-                            eos=None,
-                            need_mask_unk=self.need_mask_unk,
-                            return_states=False)
+                raise ValueError("strategy not correct!")
                     
         hypothesis = hypothesis.cpu().numpy()
         scores = scores.cpu().numpy()

@@ -21,7 +21,13 @@ def enc_dec_demo(config):
     enc_dec_gen = EncDecGenerator(config)
     
     print("INPUT TEXT:")
-    
+    #src_list = ["人民网北京7月10日电（欧阳易佳）据中国气象局消息，在刚刚过去的周末，京津冀和河南、山东、浙江、福建、江西等地出现高温天气，多地超过40℃。今天，高温天气将继续发力，中央气象台继续发布高温橙色预警，西北地区东部、华北大部、黄淮、江汉、江南、华南大部以及四川盆地等地有35℃以上的高温天气，其中，华北东部、黄淮中北部、江南中北部和东部及四川盆地中南部等地部分地区最高气温37至39℃，北京东南部、河北南部、河南北部、浙江东部、福建东部等局地可达40℃以上。11日，北方地区高温范围和强度将有所减小，12日受降水影响，此轮高温过程基本结束。",
+    #            "根据北京市住建委官网数据统计，自今年4月起，北京二手房市场成交量已连续三个月下跌，另据机构数据，截至6月底，北京二手房挂牌量已高达近19万套。三个月以来市场的“活跃度不高”，让买卖双方之间的“堰塞湖”逐步形成：一方面，部分千万级别的房源开始被中介通知“降价200才有信心卖掉”；另一方面，卖房的不顺畅，直接影响到置换的第二步，部分刚改新房项目已经开始收到“因卖不掉二手房”为理由退掉的预定。"]
+    #search_res = enc_dec_gen.predict(src_list, prefix_list=None)
+            
+    #search_res = [{"src":x, "predict":y} for x,y in search_res]
+    #pretty_print(search_res)
+        
     for line in sys.stdin:
         line = line.strip()
 
@@ -31,12 +37,9 @@ def enc_dec_demo(config):
         src_list = [line.strip().split("\t")[0]]
             
         prefix_list = None
-        if "prefix" in enc_dec_gen.strategy:
-            if "\t" not in line:
-                print("prefix can't be empty!")
-                continue
+        if "\t" in line:
             prefix_list = [line.split("\t")[1]]
-        
+        print(src_list, prefix_list)
         start = time.time()
         search_res = enc_dec_gen.predict(src_list, prefix_list=prefix_list)
             
@@ -58,9 +61,8 @@ def lm_demo(config):
     for line in sys.stdin:
         line = line.strip()
         prefix_list = None
-        if "prefix" in lm_gen.strategy:
-            if len(line) > 0:
-                prefix_list = [line] 
+        if len(line) > 0:
+            prefix_list = [line] 
         
         start = time.time()
         search_res = lm_gen.sample(prefix_list=prefix_list) 

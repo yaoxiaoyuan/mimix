@@ -194,70 +194,77 @@ class Transformer(nn.Module):
         return outputs
 
 
-    def init_search(self, x):
+    def init_search(self, states, inputs):
         """
         """
-        enc_states = self.get_enc_states(x)
-        
-        dec_kv_list = []
-        for i in range(self.n_dec_layers):
-            dec_kv_list.append([None, None])
-        
+        steps = 0
+        x = inputs[0]
+
+        enc_attn_mask = self.get_attn_mask(x, x)
+        enc_outputs = self.encoder(x, enc_attn_mask)      
+        enc_output = enc_outputs[0]
+        enc_kv_list = self.decoder.cache_enc_kv(enc_output)
+                 
+        dec_kv_list = self.decoder.cache_dec_kv()
+        if len(inputs) > 1 and inputs[1] is not None: 
+            y = torch.cat([states[0], inputs[1][:,:-1]], -1)
+            steps = y.size(1)
+            dec_self_attn_mask = self.get_subsequent_mask(y)
+            dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y, y)
+            dec_enc_attn_mask = self.get_attn_mask(y, x)
+            trg_embedding = None
+            if self.share_src_trg_emb == True:
+                trg_embedding = self.encoder.src_embedding
+            dec_kv_list = self.decoder.cache_dec_kv(y, dec_self_attn_mask, enc_kv_list, dec_enc_attn_mask, trg_embedding) 
+            states[0][0,:] = inputs[1][:,-1] 
+            states[4] = torch.cat([states[4], inputs[1]], -1)
+            
         dec_enc_attn_mask = x.eq(self.PAD).unsqueeze(1).byte()
         
-        return enc_states, dec_kv_list, dec_enc_attn_mask
+        cache = [steps, enc_kv_list, dec_kv_list, dec_enc_attn_mask]
 
+        return states, cache
 
-    def get_enc_states(self, x):
+    
+    def step(self, states, cache):
         """
         """
-        enc_attn_mask = self.get_attn_mask(x, x)
-        enc_outputs = self.encoder(x, enc_attn_mask)
+        y = states[0]
+        steps, enc_kv_list, dec_kv_list, dec_enc_attn_mask = cache
+        
+        trg_embedding = None
+        if self.share_src_trg_emb == True:
+            trg_embedding = self.encoder.src_embedding
+        outputs = self.decoder.step(steps, 
+                                    dec_kv_list, 
+                                    y,
+                                    None,
+                                    enc_kv_list, 
+                                    dec_enc_attn_mask, 
+                                    trg_embedding)
+        dec_kv_list, logits = outputs[:2]
+        steps += 1
+        cache = [steps, enc_kv_list, dec_kv_list, dec_enc_attn_mask]
+        return logits, cache
 
-        enc_output = enc_outputs[0]
-        enc_states = self.decoder.cache_enc_kv(enc_output)
 
-        return enc_states
-
-
-    def gather_beam_states(self, 
-                           dec_kv_list, 
-                           dec_enc_attn_mask,
-                           beam_id,
-                           enc_kv_list=None):
+    def gather_cache(self, cache, beam_id):
         """
         """
+        steps, enc_kv_list, dec_kv_list, dec_enc_attn_mask = cache
+
         for i in range(self.n_dec_layers):
             if enc_kv_list is not None:
                 enc_kv_list[i][0] = enc_kv_list[i][0][beam_id]
                 enc_kv_list[i][1] = enc_kv_list[i][1][beam_id]
-            
+
             dec_kv_list[i][0] = dec_kv_list[i][0][beam_id]
             dec_kv_list[i][1] = dec_kv_list[i][1][beam_id]
-            
-        dec_enc_attn_mask = dec_enc_attn_mask[beam_id]
-        
-        return dec_kv_list, dec_enc_attn_mask, enc_kv_list
 
-    
-    def step(self,
-             steps, 
-             enc_states, 
-             dec_enc_attn_mask, 
-             dec_states, 
-             y):
-        """
-        """
-        trg_embedding = None
-        if self.share_src_trg_emb == True:
-            trg_embedding = self.encoder.src_embedding
-        return self.decoder.step(steps, 
-                                 dec_states, 
-                                 y,
-                                 None,
-                                 enc_states, 
-                                 dec_enc_attn_mask, 
-                                 trg_embedding)
+        dec_enc_attn_mask = dec_enc_attn_mask[beam_id]
+
+        cache = [steps, enc_kv_list, dec_kv_list, dec_enc_attn_mask]
+        return cache
 
 
 class TransformerLM(nn.Module):
@@ -395,21 +402,56 @@ class TransformerLM(nn.Module):
         return outputs
 
 
-    def step(self, steps, dec_kv_list, y):
+    def init_search(self, states, inputs):
         """
         """
-        return self.decoder.step(steps, dec_kv_list, y)
-
-
-    def init_search(self):
-        """
-        """
+        steps = 0
         dec_kv_list = []
         for i in range(self.n_dec_layers):
             dec_kv_list.append([None, None])
+        
+        if len(inputs) > 0 and inputs[0] is not None:
+            y = torch.cat([states[0], inputs[0][:,:-1]], -1)
+            steps = y.size(1)
+            dec_self_attn_mask = self.get_subsequent_mask(y)
+            dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y, y)
+            dec_kv_list = self.decoder.cache_dec_kv(y, dec_self_attn_mask)
+            states[0][0,:] = inputs[0][:,-1] 
+            states[4] = torch.cat([states[4], inputs[0]], -1)
             
-        return dec_kv_list
+        cache = [steps, dec_kv_list]
+
+        return states, cache
     
+
+    def step(self, states, cache):
+        """
+        """
+        steps, dec_kv_list = cache
+        y = states[0]
+        outputs = self.decoder.step(steps, dec_kv_list, y)
+        dec_kv_list, logits = outputs[:2]
+
+        steps += 1
+        cache = [steps, dec_kv_list]
+
+        return logits, cache
+
+
+    def gather_cache(self, cache, beam_id):
+        """
+        """
+        steps, dec_kv_list = cache
+
+        for i in range(self.n_dec_layers):
+            
+            dec_kv_list[i][0] = dec_kv_list[i][0][beam_id]
+            dec_kv_list[i][1] = dec_kv_list[i][1][beam_id]
+
+        cache = [steps, dec_kv_list]
+        
+        return cache
+
     
 class TransformerEncoder(nn.Module):
     """

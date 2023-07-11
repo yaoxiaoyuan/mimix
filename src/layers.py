@@ -1016,7 +1016,47 @@ class Decoder(nn.Module):
             
         return kv_list
     
+
+    def cache_dec_kv(self, y=None, self_attn_mask=None, enc_kv_list=None, dec_enc_attn_mask=None, trg_embedding=None):
+        """
+        """
+        dec_kv_list = []
+        for i in range(self.n_layers):
+            dec_kv_list.append([None, None])
+        if y is None:
+            return dec_kv_list
+        
+        if trg_embedding is None:
+            trg_embedding = self.trg_embedding
+        word_embeded = trg_embedding(y)
+
+        dec_output = word_embeded + self.pos_embedding(y)
+        if self.norm_after_embedding == True:
+            dec_output = self.norm_emb(dec_output)
+
+        for i in range(self.n_layers):
+            if self.share_layer_params == False:
+                layer = self.layers[i]
+            else:
+                layer = self.layers[i // self.n_share_across_layers]
+
+            outputs = layer(dec_output,
+                            self_attn_mask,
+                            True,
+                            dec_kv_list[i][0],
+                            dec_kv_list[i][1],
+                            enc_kv_list[i][0] if enc_kv_list else None,
+                            enc_kv_list[i][1] if enc_kv_list else None,
+                            dec_enc_attn_mask)
+            dec_output = outputs[0]
+
+            dec_keys, dec_values = outputs[-2:]
+            dec_kv_list[i][0] = dec_keys
+            dec_kv_list[i][1] = dec_values
+
+        return dec_kv_list
     
+
     def step(self, 
              steps,
              dec_kv_list, 
