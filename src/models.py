@@ -177,8 +177,10 @@ class Transformer(nn.Module):
         if self.share_src_trg_emb == True:
             trg_embedding = self.encoder.src_embedding
 
-        dec_outputs = self.decoder(y, enc_output, 
-                                   dec_self_attn_mask, dec_enc_attn_mask,
+        dec_outputs = self.decoder(y, 
+                                   dec_self_attn_mask, 
+                                   enc_output,
+                                   dec_enc_attn_mask,
                                    return_states=return_states,
                                    trg_embedding=trg_embedding)
         
@@ -489,7 +491,7 @@ class TransformerEncoder(nn.Module):
                  use_pooling=False,
                  out_dim=None,
                  n_class=None,
-                 crf=False,
+                 use_crf=False,
                  with_mlm=False,
                  share_emb_out_proj=False):
 
@@ -539,13 +541,7 @@ class TransformerEncoder(nn.Module):
                                norm_before_pred,
                                norm_after_embedding,
                                pos_need_train,
-                               n_types,
-                               use_pooling,
-                               out_dim,
-                               n_class,
-                               crf,
-                               with_mlm,
-                               share_emb_out_proj)
+                               n_types)
 
         self.n_class = n_class
         self.share_emb_out_proj = share_emb_out_proj
@@ -573,8 +569,8 @@ class TransformerEncoder(nn.Module):
             self.b_out = nn.Parameter(torch.zeros(self.out_dim))
         
         self.crf = None
-        if self.n_class is not None and crf == True:
-            self.crf = CRF(self.n_labels)
+        if self.n_class is not None and use_crf == True:
+            self.crf = CRF(self.n_class)
         
         self.W_mlm = None
         self.b_mlm = None
@@ -635,7 +631,7 @@ class TransformerEncoder(nn.Module):
             if self.out_dim is not None or self.n_class is not None:
                 enc_output = torch.matmul(enc_output, self.W_out) + self.b_out
 
-                outputs = [enc_output] + outputs
+                outputs = [enc_output[:,0,:]] + outputs
             
             if self.crf is not None:
                 mask = x.ne(self.PAD).float()
@@ -661,12 +657,12 @@ class TransformerEncoder(nn.Module):
         
         outputs = outputs + enc_outputs
         
-        if return_states == False:
-            outputs = outputs[:1]
-
         if compute_loss == True:
             loss = self.loss_fn(outputs, targets)
             outputs = [loss] + outputs
+
+        if return_states == False:
+            outputs = outputs[:1]
                     
         return outputs        
 
@@ -849,7 +845,7 @@ def build_transformer_encoder_model(config):
     use_pooling = config.get("use_pooling", True)
     out_dim = config.get("out_dim", None)
     n_class = config.get("n_class", None)
-    crf = config.get("crf", False)
+    use_crf = config.get("use_crf", False)
     with_mlm = config.get("with_mlm", False)
     share_emb_out_proj = config.get("share_emb_out_proj", False)
     dropout = config.get("dropout", 0)
@@ -904,7 +900,7 @@ def build_transformer_encoder_model(config):
                                      use_pooling,
                                      out_dim,
                                      n_class,
-                                     crf,
+                                     use_crf,
                                      with_mlm,
                                      share_emb_out_proj)
     

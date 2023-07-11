@@ -715,13 +715,7 @@ class Encoder(nn.Module):
                  norm_before_pred=False,
                  norm_after_embedding=False,
                  pos_need_train=False,
-                 n_types=None,
-                 use_pooling=False,
-                 out_dim=None,
-                 n_class=None,
-                 crf=False,
-                 with_mlm=False,
-                 share_emb_out_proj=False):
+                 n_types=None):
         """
         """
         super(Encoder, self).__init__()
@@ -973,10 +967,14 @@ class Decoder(nn.Module):
                             enc_output, 
                             enc_output, 
                             dec_enc_attn_mask)
-            dec_output, self_attn_scores, enc_attn_scores = outputs[:3]
 
+            dec_output, self_attn_scores = outputs[:2]
+            if self.with_across_attention == True:
+                enc_attn_scores = outputs[2]
+                
             self_attn_scores_list.append(self_attn_scores)
-            enc_attn_scores_list.append(enc_attn_scores)
+            if self.with_across_attention == True:
+                enc_attn_scores_list.append(enc_attn_scores)
             dec_states.append(dec_output)
 
         if self.norm_before_pred == True:
@@ -1111,7 +1109,9 @@ class Decoder(nn.Module):
         else:
             W = trg_embedding.get_embedding()
             
-        logits = F.linear(dec_output, W) + self.b
+        logits = F.linear(dec_output, W)
+        if self.use_output_bias == True:
+            logits = logits + self.b
         
         logits = logits.view(-1, self.trg_vocab_size)
         

@@ -13,6 +13,7 @@ from decoding import crf_model_decoding
 from utils import load_model, load_vocab, real_path, invert_dict
 from utils import cut_and_pad_seq_list
 
+
 class EncDecGenerator():
     """
     """
@@ -148,12 +149,61 @@ class EncDecGenerator():
                     trg = trg.replace(self.eos_tok, "").strip()
                 else:
                     trg = trg + " _unfinished_"
-                
-                tmp.append([trg, float(scores[j])])
-            
+                score = float(scores[j])
+                if self.normalize == "linear":
+                    score = score/len(hypothesis[j])
+                tmp.append([trg, score])
+            tmp.sort(key=lambda x:x[-1], reverse=True)
             res.append([src, tmp])
         
         return res
+
+
+    def scoring(self, pairs_list):
+        """
+        """
+        src_list, trg_list, map_ids = [], [], []
+        for i,(src,trgs) in enumerate(pairs_list):
+            src_list.append(src)
+            trg_list.extend(trg_list)
+            for trg in trgs:
+                map_ids.append(i)
+
+        x, y = self.encode_inputs(src_list,
+                                  trg_list,
+                                  add_bos=True,
+                                  add_eos=True)
+    
+        with torch.no_grad():
+            y_target = y[:, 1:]
+            y = y[:, :-1]
+    
+            enc_self_attn_mask = self.model.get_attn_mask(x, x)
+            enc_outputs = self.model.encoder(x, enc_self_attn_mask)
+            enc_output = enc_outputs[0]
+            dec_self_attn_mask = self.model.get_subsequent_mask(y)
+            dec_self_attn_mask = dec_self_attn_mask | self.model.get_attn_mask(y, y)
+            dec_enc_attn_mask = self.model.get_attn_mask(y, x)
+    
+            trg_embedding = None
+            if self.model.share_src_trg_emb == True:
+                trg_embedding = self.model.encoder.src_embedding
+    
+            dec_outputs = self.model.decoder(y,
+                                             dec_self_attn_mask,
+                                             enc_output,
+                                             dec_enc_attn_mask,
+                                             trg_embedding)
+    
+            logits = dec_outputs[0]
+            log_probs = -F.nll_loss(F.log_softmax(logits.view(-1, self.trg_vocab_size), -1),
+                                    y_target.contiguous().view(-1),
+                                    ignore_index=self.model.PAD,
+                                    reduction='none')
+    
+            log_probs = torch.sum(log_probs.view(logits.size(0), -1), -1)
+
+        return log_probs
 
 
 class LMGenerator():
@@ -218,7 +268,7 @@ class LMGenerator():
         return y
 
     
-    def sample(self, prefix_list):
+    def predict(self, prefix_list):
         """
         """
         y = None
@@ -258,11 +308,57 @@ class LMGenerator():
                 trg = trg.replace(self.eos_tok, "").strip()
             else:
                 trg = trg + " _unfinished_"
+
+            if self.normalize == "linear":
+                score = score/len(hyp)
                 
             detokenize_res.append([trg, score])
+        detokenize_res.sort(key=lambda x:x[-1], reverse=True)
         detokenize_res = [detokenize_res]
         
         return detokenize_res
+
+
+    def scoring(self, trg_list):
+        """
+        """
+        src_list, trg_list, map_ids = [], [], []
+        for i,(src,trgs) in enumerate(trg_list):
+            src_list.append(src)
+            trg_list.extend(trg_list)
+            for trg in trgs:
+                map_ids.append(i)
+
+        y = self.encode_inputs(trg_list,
+                               add_bos=True,
+                               add_eos=True)
+    
+        with torch.no_grad():
+            y_target = y[:, 1:]
+            y = y[:, :-1]
+    
+            dec_self_attn_mask = self.model.get_subsequent_mask(y)
+            dec_self_attn_mask = dec_self_attn_mask | self.model.get_attn_mask(y, y)
+    
+            trg_embedding = None
+            if self.model.share_src_trg_emb == True:
+                trg_embedding = self.model.encoder.src_embedding
+    
+            dec_outputs = self.model.decoder(y,
+                                             dec_self_attn_mask,
+                                             None,
+                                             None,
+                                             trg_embedding)
+    
+            logits = dec_outputs[0]
+            log_probs = -F.nll_loss(F.log_softmax(logits.view(-1, self.trg_vocab_size), -1),
+                                    y_target.contiguous().view(-1),
+                                    ignore_index=self.model.PAD,
+                                    reduction='none')
+    
+            log_probs = torch.sum(log_probs.view(logits.size(0), -1), -1)
+
+        return log_probs
 
 
 class BiLMGenerator():
@@ -424,7 +520,7 @@ class TextMatcher():
         self.model.eval()
         with torch.no_grad():
             outputs = self.model([y])
-            norm_vec = F.normalize(outputs[0][:,0,:], p=2, dim=1)
+            norm_vec = F.normalize(outputs[0], p=2, dim=1)
             sim = torch.mm(norm_vec, norm_vec.T)
         sim = sim.cpu().numpy()
         return sim

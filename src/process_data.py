@@ -416,7 +416,7 @@ def build_sequence_labeling_processor(train_config, model_config):
     return SequenceLabelingDataProcessor(
                 model_config["src_max_len"], 
                 label2id, 
-                model_config["n_labels"],
+                model_config["n_class"],
                 model_config["symbol2id"], 
                 src_tokenizer)
 

@@ -28,6 +28,7 @@ def cross_entropy_with_smoothing(logits, target, eps, pad):
 def seq_cross_entropy(logits, target, eps, pad):
     """
     """
+    
     if logits.dim() == 3:
         logits = torch.flatten(logits, start_dim=0, end_dim=1)
     if eps > 0:
@@ -38,6 +39,16 @@ def seq_cross_entropy(logits, target, eps, pad):
                                ignore_index=pad)
     return loss
 
+
+def contrastive_loss(vec, target, sim_alpha):
+    """
+    """
+    norm_vec = F.normalize(vec, p=2, dim=1)
+    sim = torch.mm(norm_vec, norm_vec.T)
+    sim = torch.masked_fill(sim, torch.eye(sim.shape[0], device=sim.device).bool(), -10000)
+    loss = F.cross_entropy(sim_alpha * sim, target)
+
+    return loss
 
 def classify_loss(logits, target, eps):
     """
@@ -103,15 +114,13 @@ def build_sequence_labeling_loss(model_config, train_config):
     if model_config["use_crf"] == True:
         return lambda x,y:x[0]
     else:
-        return lambda x,y:seq_cross_entropy(x[0], y[0], eps, pad)
+        return lambda x,y:seq_cross_entropy(x[1], y[0], eps, pad)
 
 
 def build_match_loss(model_config, train_config):
     """
     """
-    eps = train_config.get("eps", 0)
-    pad = model_config["symbol2id"]["_pad_"]
-    return lambda x,y:seq_cross_entropy(train_config["sim_alpha"] * x[0], y[0], eps, pad)
+    return lambda x,y:contrastive_loss(x[0], y[0], train_config["sim_alpha"])
 
 
 loss_builder_dict = {

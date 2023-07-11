@@ -4,10 +4,7 @@ Created on Fri Aug 23 10:59:36 2019
 
 @author: Xiaoyuan Yao
 """
-import math
 import torch
-import torch.nn.functional as F
-from torch.distributions import Categorical
 from utils import nested_to_cuda
 
 def init_search(model, batch_size):
@@ -102,7 +99,7 @@ def search(model,
 
     states = init_search(model, batch_size)
     if use_cuda == True:
-        states = nested_to_cuda(states)
+        states = nested_to_cuda(states, "cuda")
 
     states, cache = model.init_search(states, inputs)
     

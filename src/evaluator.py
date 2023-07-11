@@ -72,10 +72,11 @@ def eval_sequence_labeling_acc(trainer, dataset="val"):
             inputs = nested_to_cuda(inputs, trainer.device)
             targets = nested_to_cuda(targets, trainer.device)
             x = inputs[0]
-            if trainer.model.use_crf == True:
+            if trainer.model.crf is not None:
                 pred = crf_model_decoding(trainer.model, x)
             else:
-                pred = trainer.model(inputs)[0].argmax(-1)
+                pred = trainer.model(inputs, return_states=True)[1].argmax(-1)
+            
             shot = torch.sum((pred == targets[0]) * (x != trainer.model.PAD))
             
             shot_count = shot_count + shot.item()
