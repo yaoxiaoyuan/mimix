@@ -1271,7 +1271,7 @@ def crf_decoding(crf, emission, mask=None, pad_tag=0):
     scores = crf.start_trans + emission[:, 0, :]
     if mask is not None:
         scores = scores + end_mask[:, 0:1] * crf.end_trans
-    path_table = torch.zeros(batch_size, seq_len-1, n_labels, dtype=torch.long)
+    path_table = torch.zeros(batch_size, seq_len-1, n_labels, dtype=torch.long, device=scores.device)
     
     for i in range(1, seq_len):
         all_scores = scores.unsqueeze(2) + emission[:, i, :].unsqueeze(1) + crf.trans.unsqueeze(0)
