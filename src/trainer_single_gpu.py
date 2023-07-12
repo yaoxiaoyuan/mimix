@@ -52,7 +52,7 @@ class Trainer():
         if self.use_cuda == True:
             device_id = train_config.get("device_id", "0")
             self.device = torch.device('cuda:%s' % device_id)
-        
+
         self.num_shards = train_config["num_shards"]
         
         self.logger = self.build_logger()

@@ -652,7 +652,7 @@ class SequenceLabeler():
                 pre_vectorized=config.get("pre_vectorized", False))
 
         self.src_max_len = config["src_max_len"]
-        self.n_labels = config["n_labels"]
+        self.n_class = config["n_class"]
         
         self.use_cuda = config["use_cuda"]
     
@@ -681,7 +681,7 @@ class SequenceLabeler():
         
         self.model.eval()
         with torch.no_grad():
-            if self.model.use_crf == True:
+            if self.model.crf is not None:
                 labels = crf_model_decoding(self.model, x)
             else:
                 labels = self.model.compute_logits([x])

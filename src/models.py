@@ -172,7 +172,7 @@ class Transformer(nn.Module):
         enc_outputs = self.encoder(x, enc_self_attn_mask,
                                    return_states=return_states)
         enc_output = enc_outputs[0]
-        print(x, enc_self_attn_mask)
+        
         trg_embedding = None
         if self.share_src_trg_emb == True:
             trg_embedding = self.encoder.src_embedding
@@ -611,6 +611,21 @@ class TransformerEncoder(nn.Module):
         return mask
     
     
+    def get_emission(self, x):
+        """
+        """
+        enc_self_attn_mask = self.get_attn_mask(x, x)
+
+        enc_outputs = self.encoder(x, enc_self_attn_mask)
+        enc_output = enc_outputs[0]
+        
+        enc_output = torch.tanh(torch.matmul(enc_output, self.W_pool) + self.b_pool)
+            
+        enc_output = torch.matmul(enc_output, self.W_out) + self.b_out
+
+        return enc_output    
+    
+    
     def forward(self, inputs, return_states=False, targets=None, compute_loss=False):
         """
         """
@@ -635,7 +650,7 @@ class TransformerEncoder(nn.Module):
             
             if self.crf is not None:
                 mask = x.ne(self.PAD).float()
-                nlg = self.crf(enc_output, x, mask)
+                nlg = self.crf(enc_output, inputs[1], mask)
                 outputs = [nlg] + outputs 
         
         if self.with_mlm == True:

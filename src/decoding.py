@@ -210,19 +210,19 @@ def crf_model_decoding(model, x):
     """
     emission = model.get_emission(x)
     
-    mask = x.ne(model.PAD)
+    mask = x.ne(model.PAD).float()
     
     crf, emission, mask, pad_tag = model.crf, emission, mask, model.PAD
 
     batch_size, seq_len, n_labels = emission.size()
     
     if mask is not None:
-        end_mask = crf.get_end_mask(mask)
+        end_mask = crf.get_end_mask(mask).float()
     
     scores = crf.start_trans + emission[:, 0, :]
     if mask is not None:
         scores = scores + end_mask[:, 0:1] * crf.end_trans
-    path_table = torch.zeros(batch_size, seq_len-1, n_labels, dtype=torch.long)
+    path_table = torch.zeros(batch_size, seq_len-1, n_labels, dtype=torch.long, device=x.device)
     
     for i in range(1, seq_len):
         all_scores = scores.unsqueeze(2) + emission[:, i, :].unsqueeze(1) + crf.trans.unsqueeze(0)
