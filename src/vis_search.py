@@ -13,13 +13,13 @@ from torch.distributions import Categorical
 from predictor import EncDecGenerator
 from utils import parse_test_args,load_model_config,real_path
 
-def debug(enc_dec_gen, src_list, trg_list, topk=20):
+def get_topk_pred(enc_dec_gen, src_list, trg_list, topk=10):
     """
     """
-    x, y = enc_dec_gen.encode_inputs(src_list, trg_list, add_bos=True)
-
+    x, y = enc_dec_gen.encode_inputs(src_list, trg_list, add_bos=True, add_eos=True)
+    enc_dec_gen.model.eval()
     with torch.no_grad():
-        outputs = enc_dec_gen.model([x,y], return_states=True)
+        outputs = enc_dec_gen.model([x,y])
             
         logits = outputs[0]
         logits = logits.view(-1, enc_dec_gen.trg_vocab_size)
@@ -27,16 +27,16 @@ def debug(enc_dec_gen, src_list, trg_list, topk=20):
         probs = F.softmax(logits, -1)
         probs = probs.view(y.size(0), y.size(1), -1)
         
-        top_probs, top_words = probs.topk(topk, -1)
-    
+        top_probs, top_ids = probs.topk(topk, -1)
+        
         y_len = torch.sum(y.ne(enc_dec_gen.model.PAD), -1)
         
         entropy = Categorical(probs=probs).entropy()
         
-        log_probs = F.log_softmax(logits, -1).view(y.size(0), y.size(1), -1)
-        history = torch.gather(log_probs[:,:-1,:], -1, y[:,1:].unsqueeze(-1))
-    
-    top_words = top_words.cpu().numpy()
+        history = torch.gather(probs[:,:-1,:], -1, y[:,1:].unsqueeze(-1))
+        
+    y = y.cpu().numpy()
+    top_ids = top_ids.cpu().numpy()
     top_probs = np.round(top_probs.cpu().numpy(), 3)
     y_len = y_len.cpu().numpy()
     history = np.round(history.squeeze(-1).cpu().numpy(), 3)
@@ -44,15 +44,18 @@ def debug(enc_dec_gen, src_list, trg_list, topk=20):
 
     res = []
     for i,(src,trg) in enumerate(zip(src_list, trg_list)):
-        word_ids = top_words[i][y_len[i]-1]
-        words = [enc_dec_gen.trg_id2word.get(w, "_unk_") for w in word_ids]
-        word_prob = top_probs[i][y_len[i]-1]
-        pairs = tuple(zip(words, word_prob))
+        words = [enc_dec_gen.trg_id2word.get(w, "_unk_") for w in  y[i][1:]]
+        topk_pairs = []
+        for j in range(y_len[i].item() - 1):
+
+            top_words = [enc_dec_gen.trg_id2word.get(w, "_unk_") for w in top_ids[i][j]]
+            pairs = tuple(zip(top_words, top_probs[i][j]))
+            topk_pairs.append(pairs)
         
         history_probs = list(history[i][:y_len[i]])
-        sum_log_probs = sum(history[i][:y_len[i]])
+        sum_log_probs = sum(np.log(history[i][:y_len[i]]))
         
-        res.append([pairs, history_probs, sum_log_probs, list(entropy[i])])
+        res.append([words, topk_pairs, history_probs, sum_log_probs, list(entropy[i])])
         
     return res
         
@@ -61,43 +64,28 @@ def enc_dec_debug(config):
     """
     """
     enc_dec_gen = EncDecGenerator(config)
+    
     print("INPUT TEXT:")
-    def _process_batch(src_list, trg_list):
-        """
-        """
-        res = debug(enc_dec_gen, src_list, trg_list, topk=20)
-        
-        for i,(src,trg) in enumerate(zip(src_list, trg_list)):
-            print("src: %s" % src)
-            print("trg: %s" % trg)
-            pairs, history, sum_log_probs, entropy = res[i]
-            print("scores: ", history)
-            print("sum log probs: ", sum_log_probs)
-            print("entropy: ", entropy)
-            for word,prob in pairs:
-                print(word, prob)
-                    
     src_list = []
     trg_list = []
-        
     for line in sys.stdin:
         line = line.strip()
         
-        if len(line) == 0:
-            continue
-        
-        try:
-            src,trg = line.split("\t")[:2]
-        except:
-            src,trg = line, ""
+        src,trg = line.split("\t")[:2]
             
         src_list.append(src)
         trg_list.append(trg)
             
-        _process_batch(src_list, trg_list)
-        src_list = []
-        trg_list = []
-
+        res = get_topk_pred(enc_dec_gen, src_list, trg_list, topk=10)[0]
+        words, topk_pairs, history, sum_log_probs, entropy = res
+        print("src: %s" % src)
+        print("trg: %s" % trg)
+        print("sum_log_probs: %.2f" % sum_log_probs)
+        for i,word in enumerate(words):
+            info = word
+            info = info + " prob: %.2f entropy: %.2f" % (history[i], entropy[i])
+            info = info + " topk:" + " ".join(["%s:%.2f" % (w,s) for w,s in topk_pairs[i]])
+            print(info)
 
 def run_debug():
     """

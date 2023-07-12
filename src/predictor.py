@@ -13,7 +13,6 @@ from decoding import crf_model_decoding
 from utils import load_model, load_vocab, real_path, invert_dict
 from utils import cut_and_pad_seq_list
 
-
 class EncDecGenerator():
     """
     """
@@ -539,13 +538,9 @@ class TextMatcher():
     def predict(self, src_list):
         """
         """
-        y = self.encode_inputs(src_list)
-        
-        self.model.eval()
-        with torch.no_grad():
-            outputs = self.model([y])
-            norm_vec = F.normalize(outputs[0], p=2, dim=1)
-            sim = torch.mm(norm_vec, norm_vec.T)
+        vec = self.encode_texts(src_list)
+        norm_vec = F.normalize(vec, p=2, dim=1)
+        sim = torch.mm(norm_vec, norm_vec.T)
         sim = sim.cpu().numpy()
         return sim
 
