@@ -278,13 +278,15 @@ def nested_to_cuda(nested_tensor, device):
     return res
 
 
-def cut_and_pad_seq(seq, max_len, pad):
+def cut_and_pad_seq(seq, max_len, pad, left=False):
     """
     """
+    if left == True:
+        return [pad] * (max_len - len(seq)) + seq[:max_len]
     return seq[:max_len] + [pad] * (max_len - len(seq))
 
 
-def cut_and_pad_seq_list(seq_list, max_len, pad, auto=False):
+def cut_and_pad_seq_list(seq_list, max_len, pad, auto=False, pad_left=False):
     """
     """
     if auto == True:
@@ -292,7 +294,7 @@ def cut_and_pad_seq_list(seq_list, max_len, pad, auto=False):
         
     x = []
     for seq in seq_list:
-        x.append(cut_and_pad_seq(seq, max_len, pad))
+        x.append(cut_and_pad_seq(seq, max_len, pad, pad_left))
 
     return x
 

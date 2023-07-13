@@ -21,7 +21,6 @@ def enc_dec_demo(config):
     enc_dec_gen = EncDecGenerator(config)
     
     print("INPUT TEXT:")
-        
     for line in sys.stdin:
         line = line.strip()
 
@@ -51,7 +50,6 @@ def lm_demo(config):
     lm_gen = LMGenerator(config)
     
     print("INPUT TEXT:")
-    
     for line in sys.stdin:
         line = line.strip()
         prefix_list = None
@@ -61,7 +59,7 @@ def lm_demo(config):
         start = time.time()
         search_res = lm_gen.predict(prefix_list=prefix_list) 
         
-        search_res = [{"predict":y} for y in search_res]
+        search_res = [{"src":x, "predict":y} for x,y in search_res]
         pretty_print(search_res)
 
         end = time.time()

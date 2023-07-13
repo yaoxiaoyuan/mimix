@@ -182,6 +182,7 @@ class PositionEmbedding(nn.Module):
     """
     def __init__(self, max_len, d_model, need_train=False):
         super(PositionEmbedding, self).__init__()
+        self.max_len = max_len
         self.embedding_size = d_model
         self.need_train = need_train
         if need_train == False:
@@ -202,17 +203,15 @@ class PositionEmbedding(nn.Module):
         for weight in self.parameters():
             weight.data.uniform_(-stdv, stdv)
         
-    def forward(self, x, start_pos=0):
+    def forward(self, pos_ids):
         """
         """
-        seq_len = x.size(1)
-        
+        pos_ids[pos_ids >=self.max_len] = -1 
         if self.need_train == False:
-            pe = Variable(self.W[start_pos:start_pos + seq_len, :], 
-                          requires_grad=False)
+            pe = Variable(self.W[pos_ids], requires_grad=False)
             return pe
         else:
-            return self.W[start_pos:start_pos + seq_len, :]
+            return self.W[pos_ids]
 
 
 class Dropout(nn.Module):
@@ -380,10 +379,10 @@ class RelativePositionEmbedding(nn.Module):
         for weight in self.parameters():
             weight.data.uniform_(-stdv, stdv)
         
-    def forward(self, len_q, len_kv, k_start_pos=0):
+    def forward(self, q_pos_ids, kv_pos_ids):
         """
         """
-        relative_dis = k_start_pos + torch.arange(len_q)[:,None] - torch.arange(len_kv)[None, :]
+        relative_dis = q_pos_ids[:,:,None] - kv_pos_ids[:,None,:] 
         relative_dis = torch.clamp(relative_dis, -self.max_relative_len, self.max_relative_len)
         idx = relative_dis + self.max_relative_len
         if self.need_train == False:
@@ -392,7 +391,7 @@ class RelativePositionEmbedding(nn.Module):
             return pe
         else:
             return self.W[idx]
-
+            
 
 class MultiHeadAttention(nn.Module):
     """
@@ -455,7 +454,7 @@ class MultiHeadAttention(nn.Module):
                 weight.data.zero_()
     
     
-    def forward(self, query, key, value, attn_mask=None, cached_kv=False, k_start_pos=0):
+    def forward(self, query, key, value, attn_mask=None, cached_kv=False, q_pos_ids=None, kv_pos_ids=None):
         """
         """
         #B x L x d_model -> B x l x (d*n_heads)
@@ -482,8 +481,9 @@ class MultiHeadAttention(nn.Module):
         pos_key = None
         pos_value = None
         if self.max_relative_len > 0:
-            pos_key = self.rel_pos_k_emb(query.size(1), key.size(1), k_start_pos)
-            pos_value = self.rel_pos_k_emb(query.size(1), value.size(1), k_start_pos)
+            pos_key = self.rel_pos_k_emb(q_pos_ids, kv_pos_ids)
+            if self.use_rel_pos_value == True:
+                pos_value = self.rel_pos_k_emb(q_pos_ids, kv_pos_ids)
 
         output, attn_scores = scaled_dot_product_attention(query, 
                                                            key, 
@@ -597,7 +597,8 @@ class TransformerLayer(nn.Module):
                 enc_keys=None, 
                 enc_values=None,
                 dec_enc_attn_mask=None,
-                k_start_pos=0):
+                self_pos_ids=None,
+                enc_pos_ids=None):
         """
         """
         residual = output
@@ -619,13 +620,14 @@ class TransformerLayer(nn.Module):
         else:
             self_keys = output
             self_values = output
-        
+
         output, self_attn_scores = self.self_attention(output, 
                                                        self_keys, 
                                                        self_values, 
                                                        self_attn_mask,
                                                        cached_kv,
-                                                       k_start_pos)
+                                                       self_pos_ids,
+                                                       self_pos_ids)
         
         output = residual + output
         if self.use_pre_norm == False:
@@ -636,13 +638,14 @@ class TransformerLayer(nn.Module):
         if self.with_across_attention == True:
             if self.use_pre_norm == True:
                 output = self.norm_2(output)
-              
+            
             output, enc_attn_scores = self.enc_attention(output, 
                                                          enc_keys, 
                                                          enc_values, 
                                                          dec_enc_attn_mask,
                                                          cached_kv,
-                                                         k_start_pos)
+                                                         self_pos_ids,
+                                                         enc_pos_ids)
 
             output = residual + output
             if self.use_pre_norm == False:
@@ -714,6 +717,7 @@ class Encoder(nn.Module):
                  scale_embedding=False,
                  norm_before_pred=False,
                  norm_after_embedding=False,
+                 use_pos_embeding=True,
                  pos_need_train=False,
                  n_types=None):
         """
@@ -737,9 +741,11 @@ class Encoder(nn.Module):
                                                      embedding_size,
                                                      d_model)
 
-        self.pos_embedding = PositionEmbedding(src_max_len, 
-                                               d_model, 
-                                               pos_need_train)
+        self.use_pos_embeding = use_pos_embeding
+        if use_pos_embeding:
+            self.pos_embedding = PositionEmbedding(src_max_len, 
+                                                   d_model, 
+                                                   pos_need_train)
         
         self.n_types = n_types
         if self.n_types is not None:
@@ -776,23 +782,23 @@ class Encoder(nn.Module):
             self.norm = LayerNorm(self.d_model, ln_eps, use_rms_norm)
             
     
-    def forward(self, x, attn_mask, x_type=None, return_states=False):
+    def forward(self, x, attn_mask, self_pos_ids=None, x_type=None, return_states=False):
         """
         """
         enc_self_attn_list = []
         
         word_embeded = self.src_embedding(x)
         
-        embeded = word_embeded + self.pos_embedding(x)
-        enc_output = embeded
+        embeded = word_embeded
+        if self.use_pos_embeding == True:
+           embeded += self.pos_embedding(self_pos_ids)
         
         if self.n_types is not None:
-            embeded = embeded + self.type_embedding(x_type)
-            enc_output = embeded
+            embeded += self.type_embedding(x_type)
+        enc_output = embeded
            
         if self.norm_after_embedding == True:
-            embeded = self.norm_emb(embeded)
-            enc_output = embeded
+            enc_output = self.norm_emb(enc_output)
         
         if self.emb_dropout is not None:
             enc_output = self.emb_dropout(enc_output)
@@ -805,7 +811,7 @@ class Encoder(nn.Module):
             else:
                 enc_layer = self.layers[i // self.n_share_across_layers]
             
-            enc_output, enc_attn_scores = enc_layer(enc_output,attn_mask)
+            enc_output, enc_attn_scores = enc_layer(enc_output, attn_mask, self_pos_ids=self_pos_ids)
             
             enc_self_attn_list.append(enc_attn_scores)
             enc_states.append(enc_output)
@@ -854,6 +860,7 @@ class Decoder(nn.Module):
                  scale_embedding=False,
                  norm_before_pred=False,
                  norm_after_embedding=False,
+                 use_pos_embedding=True,
                  pos_need_train=False,
                  use_output_bias=False):
         """
@@ -878,10 +885,12 @@ class Decoder(nn.Module):
         self.emb_dropout = None
         if emb_dropout > 0:
             self.emb_dropout = Dropout(dropout)
-            
-        self.pos_embedding = PositionEmbedding(trg_max_len, 
-                                               d_model, 
-                                               pos_need_train)
+        
+        self.use_pos_embedding = use_pos_embedding
+        if use_pos_embedding == True:    
+            self.pos_embedding = PositionEmbedding(trg_max_len, 
+                                                   d_model, 
+                                                   pos_need_train)
         
         if self.norm_after_embedding == True:
             self.norm_emb = LayerNorm(self.d_model, ln_eps, use_rms_norm)
@@ -931,9 +940,13 @@ class Decoder(nn.Module):
             
     def forward(self, 
                 y, 
-                self_attn_mask, 
-                enc_output=None, 
-                dec_enc_attn_mask=None, 
+                self_attn_mask=None,
+                dec_kv_list=None, 
+                dec_enc_attn_mask=None,
+                enc_kv_list=None,
+                self_pos_ids=None,
+                enc_pos_ids=None,
+                cached_kv=False, 
                 trg_embedding=None,
                 return_states=False):
         """
@@ -941,10 +954,13 @@ class Decoder(nn.Module):
         if trg_embedding is None:
             trg_embedding = self.trg_embedding
 
-        word_embeded = trg_embedding(y)
-            
-        dec_output = word_embeded + self.pos_embedding(y)
-        embeded = dec_output
+        embeded = trg_embedding(y)
+        
+        if self.use_pos_embedding == True:    
+            embeded = embeded + self.pos_embedding(self_pos_ids)
+
+        dec_output = embeded
+
         if self.norm_after_embedding == True:
             dec_output = self.norm_emb(dec_output)
         if self.emb_dropout is not None:
@@ -961,14 +977,17 @@ class Decoder(nn.Module):
                 
             outputs = layer(dec_output,
                             self_attn_mask,
-                            False,
-                            None,
-                            None,
-                            enc_output, 
-                            enc_output, 
-                            dec_enc_attn_mask)
+                            cached_kv,
+                            dec_kv_list[i][0] if dec_kv_list else None,
+                            dec_kv_list[i][1] if dec_kv_list else None,
+                            enc_kv_list[i][0] if enc_kv_list else None, 
+                            enc_kv_list[i][1] if enc_kv_list else None, 
+                            dec_enc_attn_mask,
+                            self_pos_ids,
+                            enc_pos_ids)
 
             dec_output, self_attn_scores = outputs[:2]
+            
             if self.with_across_attention == True:
                 enc_attn_scores = outputs[2]
                 
@@ -976,6 +995,13 @@ class Decoder(nn.Module):
             if self.with_across_attention == True:
                 enc_attn_scores_list.append(enc_attn_scores)
             dec_states.append(dec_output)
+
+            dec_output = outputs[0]
+
+            if cached_kv == True:
+                dec_keys, dec_values = outputs[-2:]
+                dec_kv_list[i][0] = dec_keys
+                dec_kv_list[i][1] = dec_values
 
         if self.norm_before_pred == True:
             dec_output = self.norm(dec_output)
@@ -990,6 +1016,9 @@ class Decoder(nn.Module):
             logits = logits + self.b
         
         outputs = [logits]
+        if cached_kv == True:
+            outputs += [dec_kv_list]
+
         if return_states == True:
             outputs = outputs + \
             [embeded, dec_states, self_attn_scores_list, enc_attn_scores_list]
@@ -1015,7 +1044,14 @@ class Decoder(nn.Module):
         return kv_list
     
 
-    def cache_dec_kv(self, y=None, self_attn_mask=None, enc_kv_list=None, dec_enc_attn_mask=None, trg_embedding=None):
+    def cache_dec_kv(self, 
+                     y=None, 
+                     self_attn_mask=None, 
+                     enc_kv_list=None, 
+                     dec_enc_attn_mask=None, 
+                     self_pos_ids=None, 
+                     enc_pos_ids=None, 
+                     trg_embedding=None):
         """
         """
         dec_kv_list = []
@@ -1027,8 +1063,9 @@ class Decoder(nn.Module):
         if trg_embedding is None:
             trg_embedding = self.trg_embedding
         word_embeded = trg_embedding(y)
-
-        dec_output = word_embeded + self.pos_embedding(y)
+        if self.use_pos_embedding == True:
+            dec_output = word_embeded + self.pos_embedding(self_pos_ids)
+        
         if self.norm_after_embedding == True:
             dec_output = self.norm_emb(dec_output)
 
@@ -1045,7 +1082,10 @@ class Decoder(nn.Module):
                             dec_kv_list[i][1],
                             enc_kv_list[i][0] if enc_kv_list else None,
                             enc_kv_list[i][1] if enc_kv_list else None,
-                            dec_enc_attn_mask)
+                            dec_enc_attn_mask,
+                            self_pos_ids,
+                            enc_pos_ids
+                            )
             dec_output = outputs[0]
 
             dec_keys, dec_values = outputs[-2:]
@@ -1053,71 +1093,6 @@ class Decoder(nn.Module):
             dec_kv_list[i][1] = dec_values
 
         return dec_kv_list
-    
-
-    def step(self, 
-             steps,
-             dec_kv_list, 
-             y, 
-             self_attn_mask=None, 
-             enc_kv_list=None, 
-             dec_enc_attn_mask=None, 
-             trg_embedding=None):
-        """
-        """
-        if trg_embedding is None:
-            trg_embedding = self.trg_embedding
-
-        word_embeded = trg_embedding(y)
-            
-        dec_output = word_embeded + self.pos_embedding(y, steps)
-        if self.norm_after_embedding == True:
-            dec_output = self.norm_emb(dec_output)
-        
-        dec_enc_attn_list = []
-        dec_self_attn_list = []
-
-        for i in range(self.n_layers):
-            if self.share_layer_params == False:
-                layer = self.layers[i]
-            else:
-                layer = self.layers[i // self.n_share_across_layers]
-
-            outputs = layer(dec_output,
-                            None,
-                            True,
-                            dec_kv_list[i][0], 
-                            dec_kv_list[i][1],
-                            enc_kv_list[i][0] if enc_kv_list else None, 
-                            enc_kv_list[i][1] if enc_kv_list else None,
-                            dec_enc_attn_mask,
-                            k_start_pos=steps)
-            dec_output = outputs[0]
-
-            dec_keys, dec_values = outputs[-2:]
-            if self.with_across_attention:
-                dec_enc_attn_list.append(outputs[2])
-            dec_self_attn_list.append(outputs[1])
-            dec_kv_list[i][0] = dec_keys
-            dec_kv_list[i][1] = dec_values
-
-        if self.norm_before_pred == True:
-            dec_output = self.norm(dec_output)
-            
-        if self.share_emb_out_proj == False:
-            W = self.W
-        else:
-            W = trg_embedding.get_embedding()
-            
-        logits = F.linear(dec_output, W)
-        if self.use_output_bias == True:
-            logits = logits + self.b
-        
-        logits = logits.view(-1, self.trg_vocab_size)
-        
-        outputs = [dec_kv_list, logits, dec_enc_attn_list, dec_self_attn_list]
-        
-        return outputs
 
 
 if __name__ == "__main__":

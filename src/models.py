@@ -46,6 +46,7 @@ class Transformer(nn.Module):
                  scale_embedding=False,
                  norm_before_pred=False,
                  norm_after_embedding=False,
+                 use_pos_embedding=True,
                  pos_need_train=False,
                  use_output_bias=True):
         """
@@ -75,7 +76,7 @@ class Transformer(nn.Module):
         self.MIN_LOGITS = -10000.
         
         self.d = self.d_model // self.n_heads
-        
+
         self.encoder = Encoder(src_vocab_size, 
                                src_max_len, 
                                n_heads,
@@ -102,6 +103,7 @@ class Transformer(nn.Module):
                                scale_embedding,
                                norm_before_pred,
                                norm_after_embedding,
+                               use_pos_embedding,
                                pos_need_train)
         
         self.decoder = Decoder(trg_vocab_size,
@@ -133,6 +135,7 @@ class Transformer(nn.Module):
                                scale_embedding,
                                norm_before_pred,
                                norm_after_embedding,
+                               use_pos_embedding,
                                pos_need_train,
                                use_output_bias)
         
@@ -168,8 +171,13 @@ class Transformer(nn.Module):
 
         dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y, y)
         dec_enc_attn_mask = self.get_attn_mask(y, x)
+                      
+        enc_pos_ids = x.ne(self.PAD).cumsum(-1) - 1
+        dec_pos_ids = y.ne(self.PAD).cumsum(-1) - 1
         
-        enc_outputs = self.encoder(x, enc_self_attn_mask,
+        enc_outputs = self.encoder(x, 
+                                   enc_self_attn_mask,
+                                   self_pos_ids=enc_pos_ids,
                                    return_states=return_states)
         enc_output = enc_outputs[0]
         
@@ -181,6 +189,8 @@ class Transformer(nn.Module):
                                    dec_self_attn_mask, 
                                    enc_output,
                                    dec_enc_attn_mask,
+                                   self_pos_ids=dec_pos_ids,
+                                   enc_pos_ids=enc_pos_ids,
                                    return_states=return_states,
                                    trg_embedding=trg_embedding)
         
@@ -199,32 +209,45 @@ class Transformer(nn.Module):
     def init_search(self, states, inputs):
         """
         """
-        steps = 0
         x = inputs[0]
-
+        
+        enc_pos_ids = x.ne(self.PAD).cumsum(-1) - 1
         enc_attn_mask = self.get_attn_mask(x, x)
-        enc_outputs = self.encoder(x, enc_attn_mask)      
+        enc_outputs = self.encoder(x, enc_attn_mask, self_pos_ids=enc_pos_ids)      
         enc_output = enc_outputs[0]
         enc_kv_list = self.decoder.cache_enc_kv(enc_output)
-                 
+        
+        dec_pos_ids = states[0].ne(self.PAD).cumsum(-1) - 1         
         dec_kv_list = self.decoder.cache_dec_kv()
         if len(inputs) > 1 and inputs[1] is not None: 
-            y = torch.cat([states[0], inputs[1][:,:-1]], -1)
-            steps = y.size(1)
+            y = inputs[1][:, :-1].clone()
+            states[0] = inputs[1][:,-1][:,None].clone() 
+            states[4] = inputs[1].clone()
+            
+            dec_pos_ids = y.ne(self.PAD).cumsum(-1) - 1 
+            
             dec_self_attn_mask = self.get_subsequent_mask(y)
+            
             dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y, y)
             dec_enc_attn_mask = self.get_attn_mask(y, x)
+            
             trg_embedding = None
             if self.share_src_trg_emb == True:
                 trg_embedding = self.encoder.src_embedding
-            dec_kv_list = self.decoder.cache_dec_kv(y, dec_self_attn_mask, enc_kv_list, dec_enc_attn_mask, trg_embedding) 
-            states[0][0,:] = inputs[1][:,-1] 
-            states[4] = torch.cat([states[4], inputs[1]], -1)
             
+            dec_kv_list = self.decoder.cache_dec_kv(y, 
+                                                    dec_self_attn_mask, 
+                                                    enc_kv_list, 
+                                                    dec_enc_attn_mask, 
+                                                    dec_pos_ids, 
+                                                    enc_pos_ids, 
+                                                    trg_embedding)         
+            
+            dec_pos_ids = dec_pos_ids[:,-1][:,None] + 1 
         dec_enc_attn_mask = x.eq(self.PAD).unsqueeze(1).byte()
         
-        cache = [steps, enc_kv_list, dec_kv_list, dec_enc_attn_mask]
-
+        cache = [enc_kv_list, dec_kv_list, dec_enc_attn_mask, enc_pos_ids, dec_pos_ids]
+        
         return states, cache
 
     
@@ -232,28 +255,36 @@ class Transformer(nn.Module):
         """
         """
         y = states[0]
-        steps, enc_kv_list, dec_kv_list, dec_enc_attn_mask = cache
+        
+        enc_kv_list, dec_kv_list, dec_enc_attn_mask, enc_pos_ids, dec_pos_ids = cache
         
         trg_embedding = None
         if self.share_src_trg_emb == True:
             trg_embedding = self.encoder.src_embedding
-        outputs = self.decoder.step(steps, 
-                                    dec_kv_list, 
-                                    y,
-                                    None,
-                                    enc_kv_list, 
-                                    dec_enc_attn_mask, 
-                                    trg_embedding)
-        dec_kv_list, logits = outputs[:2]
-        steps += 1
-        cache = [steps, enc_kv_list, dec_kv_list, dec_enc_attn_mask]
+        
+        dec_self_attn_mask = self.get_attn_mask(y, states[4]) 
+      
+        outputs = self.decoder(y,
+                               dec_self_attn_mask,
+                               dec_kv_list,
+                               dec_enc_attn_mask,
+                               enc_kv_list,
+                               self_pos_ids=dec_pos_ids,
+                               enc_pos_ids=enc_pos_ids,
+                               cached_kv=True,
+                               trg_embedding=trg_embedding)
+                
+        logits, dec_kv_list = outputs[:2]
+        dec_pos_ids = dec_pos_ids + 1
+        
+        cache = [enc_kv_list, dec_kv_list, dec_enc_attn_mask, enc_pos_ids, dec_pos_ids]
         return logits, cache
 
 
     def gather_cache(self, cache, beam_id):
         """
         """
-        steps, enc_kv_list, dec_kv_list, dec_enc_attn_mask = cache
+        enc_kv_list, dec_kv_list, dec_enc_attn_mask, enc_pos_ids, dec_pos_ids = cache
 
         for i in range(self.n_dec_layers):
             if enc_kv_list is not None:
@@ -265,7 +296,11 @@ class Transformer(nn.Module):
 
         dec_enc_attn_mask = dec_enc_attn_mask[beam_id]
 
-        cache = [steps, enc_kv_list, dec_kv_list, dec_enc_attn_mask]
+        enc_pos_ids = enc_pos_ids[beam_id]
+        
+        dec_pos_ids = dec_pos_ids[beam_id]
+
+        cache = [enc_kv_list, dec_kv_list, dec_enc_attn_mask, enc_pos_ids, dec_pos_ids]
         return cache
 
 
@@ -301,6 +336,7 @@ class TransformerLM(nn.Module):
                  scale_embedding=False,
                  norm_before_pred=False,
                  norm_after_embedding=False,
+                 use_pos_embedding=True,
                  pos_need_train=False,
                  use_output_bias=False):
         """
@@ -357,6 +393,7 @@ class TransformerLM(nn.Module):
                                scale_embedding,
                                norm_before_pred,
                                norm_after_embedding,
+                               use_pos_embedding,
                                pos_need_train,
                                use_output_bias)
     
@@ -388,8 +425,10 @@ class TransformerLM(nn.Module):
         dec_self_attn_mask = self.get_subsequent_mask(y)
 
         dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y, y)
-
-        dec_outputs = self.decoder(y, dec_self_attn_mask, 
+        self_pos_ids = y.ne(self.PAD).cumsum() - 1
+        dec_outputs = self.decoder(y, 
+                                   dec_self_attn_mask,
+                                   self_pos_ids=self_pos_ids, 
                                    return_states=return_states)
 
         outputs = dec_outputs
@@ -407,21 +446,29 @@ class TransformerLM(nn.Module):
     def init_search(self, states, inputs):
         """
         """
-        steps = 0
-        dec_kv_list = []
-        for i in range(self.n_dec_layers):
-            dec_kv_list.append([None, None])
+        self_pos_ids = states[0].ne(self.PAD).cumsum(-1) - 1
+        dec_kv_list = self.decoder.cache_dec_kv()
         
         if len(inputs) > 0 and inputs[0] is not None:
-            y = torch.cat([states[0], inputs[0][:,:-1]], -1)
-            steps = y.size(1)
-            dec_self_attn_mask = self.get_subsequent_mask(y)
-            dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y, y)
-            dec_kv_list = self.decoder.cache_dec_kv(y, dec_self_attn_mask)
-            states[0][0,:] = inputs[0][:,-1] 
-            states[4] = torch.cat([states[4], inputs[0]], -1)
+
+            y = inputs[0][:,:-1].clone() 
+            states[0] = inputs[0][:,-1][:,None].clone() 
+            states[4] = inputs[0].clone() 
             
-        cache = [steps, dec_kv_list]
+            self_pos_ids = y.ne(self.PAD).cumsum(-1) - 1
+            
+            dec_self_attn_mask = self.get_subsequent_mask(y)
+
+            dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y, y)
+            
+            dec_kv_list = self.decoder.cache_dec_kv(y=y,
+                                                    self_attn_mask=dec_self_attn_mask,
+                                                    self_pos_ids=self_pos_ids)
+
+            
+            self_pos_ids = self_pos_ids[:,-1][:,None] + 1
+
+        cache = [dec_kv_list, self_pos_ids]
 
         return states, cache
     
@@ -429,13 +476,19 @@ class TransformerLM(nn.Module):
     def step(self, states, cache):
         """
         """
-        steps, dec_kv_list = cache
+        dec_kv_list, self_pos_ids = cache
         y = states[0]
-        outputs = self.decoder.step(steps, dec_kv_list, y)
-        dec_kv_list, logits = outputs[:2]
+        
+        dec_self_attn_mask = self.get_attn_mask(y, states[4])
+        outputs = self.decoder(y, 
+                               self_attn_mask=dec_self_attn_mask, 
+                               dec_kv_list=dec_kv_list,
+                               self_pos_ids=self_pos_ids, 
+                               cached_kv=True)
+        logits,dec_kv_list = outputs[:2]
 
-        steps += 1
-        cache = [steps, dec_kv_list]
+        self_pos_ids = self_pos_ids + 1
+        cache = [dec_kv_list, self_pos_ids]
 
         return logits, cache
 
@@ -443,14 +496,15 @@ class TransformerLM(nn.Module):
     def gather_cache(self, cache, beam_id):
         """
         """
-        steps, dec_kv_list = cache
+        dec_kv_list,self_pos_ids = cache
 
         for i in range(self.n_dec_layers):
             
             dec_kv_list[i][0] = dec_kv_list[i][0][beam_id]
             dec_kv_list[i][1] = dec_kv_list[i][1][beam_id]
-
-        cache = [steps, dec_kv_list]
+        
+        self_pos_ids = self_pos_ids[beam_id]               
+        cache = [dec_kv_list, self_pos_ids]
         
         return cache
 
@@ -486,6 +540,7 @@ class TransformerEncoder(nn.Module):
                  scale_embedding=False,
                  norm_before_pred=False,
                  norm_after_embedding=False,
+                 use_pos_embedding=True, 
                  pos_need_train=False,
                  n_types=None,
                  use_pooling=False,
@@ -540,6 +595,7 @@ class TransformerEncoder(nn.Module):
                                scale_embedding,
                                norm_before_pred,
                                norm_after_embedding,
+                               use_pos_embedding,
                                pos_need_train,
                                n_types)
 
@@ -615,8 +671,9 @@ class TransformerEncoder(nn.Module):
         """
         """
         enc_self_attn_mask = self.get_attn_mask(x, x)
-
-        enc_outputs = self.encoder(x, enc_self_attn_mask)
+        self_pos_ids = x.ne(self.PAD).cumsum(-1)-1
+ 
+        enc_outputs = self.encoder(x, enc_self_attn_mask, self_pos_ids=self_pos_ids)
         enc_output = enc_outputs[0]
         
         enc_output = torch.tanh(torch.matmul(enc_output, self.W_pool) + self.b_pool)
@@ -632,9 +689,10 @@ class TransformerEncoder(nn.Module):
         x = inputs[0]
 
         enc_self_attn_mask = self.get_attn_mask(x, x)
-
+        self_pos_ids = x.ne(self.PAD).cumsum(-1)-1
         enc_outputs = self.encoder(x, 
-                                   enc_self_attn_mask, 
+                                   enc_self_attn_mask,
+                                   self_pos_ids=self_pos_ids, 
                                    return_states=return_states)
         enc_output = enc_outputs[0]
         
@@ -716,6 +774,7 @@ def build_transformer_model(config):
     scale_embedding = config.get("scale_embedding", False)
     norm_before_pred = config.get("norm_before_pred", False)
     norm_after_embedding = config.get("norm_after_embedding", False)
+    use_pos_embedding = config.get("use_pos_embedding", True)
     pos_need_train = config.get("pos_need_train", False)
     use_output_bias = config.get("use_output_bias", True)
     transformer = Transformer(config["symbol2id"],
@@ -750,6 +809,7 @@ def build_transformer_model(config):
                               scale_embedding,
                               norm_before_pred,
                               norm_after_embedding,
+                              use_pos_embedding,
                               pos_need_train,
                               use_output_bias)
     
@@ -797,6 +857,7 @@ def build_transformer_lm_model(config):
     scale_embedding = config.get("scale_embedding", False)
     norm_before_pred = config.get("norm_before_pred", False)
     norm_after_embedding = config.get("norm_after_embedding", False)
+    use_pos_embedding = config.get("use_pos_embedding", True)
     pos_need_train = config.get("pos_need_train", False)
     use_output_bias = config.get("use_output_bias", True)
     
@@ -828,6 +889,7 @@ def build_transformer_lm_model(config):
                                 scale_embedding,
                                 norm_before_pred,
                                 norm_after_embedding,
+                                use_pos_embedding,
                                 pos_need_train,
                                 use_output_bias)
     
@@ -881,6 +943,7 @@ def build_transformer_encoder_model(config):
     scale_embedding = config.get("scale_embedding", False)
     norm_before_pred = config.get("norm_before_pred", False)
     norm_after_embedding = config.get("norm_after_embedding", False)
+    use_pos_embedding = config.get("use_pos_embedding", True)
     pos_need_train = config.get("pos_need_train", False)
     
     transformer = TransformerEncoder(config["symbol2id"],
@@ -910,6 +973,7 @@ def build_transformer_encoder_model(config):
                                      scale_embedding,
                                      norm_before_pred,
                                      norm_after_embedding,
+                                     use_pos_embedding,
                                      pos_need_train,
                                      n_types,
                                      use_pooling,

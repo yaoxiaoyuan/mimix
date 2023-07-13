@@ -47,6 +47,7 @@ class EncDecGenerator():
         self.src_id2word = {vocab[word]:word for word in vocab}
         
         self.add_cls = config.get("add_cls", False)
+        self.bos_tok = config["symbols"]["BOS_TOK"]
         self.eos_tok = config["symbols"]["EOS_TOK"]
         self.pad_tok = config["symbols"]["PAD_TOK"]
         
@@ -72,7 +73,8 @@ class EncDecGenerator():
                       src_list, 
                       trg_list=None, 
                       add_bos=False, 
-                      add_eos=False):
+                      add_eos=False,
+                      pad_trg_left=False):
         """
         """        
         src_ids = list(map(self.src_tokenizer.tokenize_to_ids, src_list))
@@ -94,7 +96,8 @@ class EncDecGenerator():
             y = cut_and_pad_seq_list(prefix_ids,
                                      self.trg_max_len, 
                                      self.model.PAD,
-                                     True)
+                                     True,
+                                     pad_trg_left)
             
 
         x = torch.tensor(x, dtype=torch.long)
@@ -113,7 +116,7 @@ class EncDecGenerator():
         """
         """    
         self.model.eval()
-        x,y = self.encode_inputs(src_list, prefix_list)
+        x,y = self.encode_inputs(src_list, prefix_list, add_bos=True, pad_trg_left=True)
         
         with torch.no_grad():
             if self.strategy in ["beam_search", "sample"]:
@@ -142,9 +145,10 @@ class EncDecGenerator():
         for i,src in enumerate(src_list):
             tmp = []
             for j in range(i*self.beam_size, (i+1)*self.beam_size):
+                
                 trg = self.trg_tokenizer.detokenize_ids(hypothesis[j])
                 
-                trg = trg.replace(self.pad_tok, "").strip()
+                trg = trg.replace(self.bos_tok, "").replace(self.pad_tok, "").strip()
                 if trg.endswith(self.eos_tok):
                     trg = trg.replace(self.eos_tok, "").strip()
                 else:
@@ -255,7 +259,8 @@ class LMGenerator():
         self.trg_vocab_size = config["trg_vocab_size"]
         self.max_dec_steps = config["max_decode_steps"]
         self.use_cuda = config["use_cuda"]
-
+        
+        self.bos_tok = config["symbols"]["BOS_TOK"]
         self.eos_tok = config["symbols"]["EOS_TOK"]
         self.pad_tok = config["symbols"]["PAD_TOK"]
         
@@ -272,14 +277,15 @@ class LMGenerator():
         self.use_cuda = config["use_cuda"] 
         
 
-    def encode_inputs(self, trg_list, add_bos=False, add_eos=False):
+    def encode_inputs(self, trg_list, add_bos=False, add_eos=False, pad_trg_left=False):
         """
         """
         trg_ids = list(map(self.trg_tokenizer.tokenize_to_ids, trg_list))
         y = cut_and_pad_seq_list(trg_ids,
                                  self.trg_max_len, 
                                  self.model.PAD,
-                                 True)
+                                 True,
+                                 pad_trg_left)
         if add_bos == True:
             y = [[self.model.BOS] + seq for seq in y]
         if add_eos == True:
@@ -295,14 +301,15 @@ class LMGenerator():
         return y
 
     
-    def predict(self, prefix_list):
+    def predict(self, prefix_list, pad_trg_left=True):
         """
         """
+        batch_size = 1
         y = None
         if prefix_list is not None:
             prefix_list = [prefix_list[i] for i in range(len(prefix_list))]
-            y = self.encode_inputs(prefix_list)
-
+            y = self.encode_inputs(prefix_list, add_bos=True, pad_trg_left=True)
+            batch_size = len(prefix_list)
         self.model.eval()
         with torch.no_grad():
             if self.strategy in ["beam_search", "sample"]:
@@ -327,24 +334,27 @@ class LMGenerator():
         hypothesis = hypothesis.cpu().numpy()
         scores = scores.cpu().numpy()
 
-        detokenize_res = []
-        for i,(hyp,score) in enumerate(zip(hypothesis, scores)):
-            trg = self.trg_tokenizer.detokenize_ids(hyp)
-
-            trg = trg.replace(self.pad_tok, "").strip()
-            if trg.endswith(self.eos_tok):
-                trg = trg.replace(self.eos_tok, "").strip()
-            else:
-                trg = trg + " _unfinished_"
-            
-            if self.normalize == "linear":
-                score = score/h_len[i]
-            
-            detokenize_res.append([trg, score])
-        detokenize_res.sort(key=lambda x:x[-1], reverse=True)
-        detokenize_res = [detokenize_res]
+        res = []
+        for i in range(batch_size):
+            tmp = []
+            for j in range(i*self.beam_size, (i+1)*self.beam_size):
+                
+                trg = self.trg_tokenizer.detokenize_ids(hypothesis[j])
+                
+                trg = trg.replace(self.bos_tok, "").replace(self.pad_tok, "").strip()
+                if trg.endswith(self.eos_tok):
+                    trg = trg.replace(self.eos_tok, "").strip()
+                else:
+                    trg = trg + " _unfinished_"
+                score = float(scores[j])
+                
+                if self.normalize == "linear":
+                    score = score/h_len[j]
+                tmp.append([trg, score])
+            tmp.sort(key=lambda x:x[-1], reverse=True)
+            res.append(["" if prefix_list is None else prefix_list[i], tmp])
         
-        return detokenize_res
+        return res
 
 
     def scoring(self, trg_list):

@@ -15,7 +15,7 @@ def init_search(model, batch_size):
 
     log_probs = torch.zeros(batch_size, 1, dtype=torch.float)
     finished = torch.zeros(batch_size, 1, dtype=torch.uint8)
-    hypothesis = torch.ones(batch_size, 0, dtype=torch.long)
+    hypothesis = torch.zeros(batch_size, 1, dtype=torch.long) + model.BOS
     history_probs = torch.zeros(batch_size, 0, dtype=torch.float)
 
     mask_finished = torch.tensor([model.MIN_LOGITS] * vocab_size,
@@ -111,12 +111,14 @@ def search(model,
         cur_beam_size = group_size
     
     while True:
-
+        
         y, log_probs, finished, mask_finished, hypothesis, history_probs = states
-
+        
+        
         logits, cache = model.step(states, cache)  
-
+        
         vocab_size = logits.size(-1)
+        logits = logits.view(-1, vocab_size)
         
         #logits: (B x last_beam_size) x V
         #probs: (B x last_beam_size) x V
