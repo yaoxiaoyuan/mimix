@@ -317,7 +317,13 @@ class LayerNorm(nn.Module):
         return norm
 
 
-def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout=None, pos_key=None, pos_value=None):
+def scaled_dot_product_attention(query, 
+                                 key, 
+                                 value, 
+                                 attn_mask=None, 
+                                 dropout=None, 
+                                 pos_key=None, 
+                                 pos_value=None):
     """
     """
     d = query.size(-1)
@@ -328,7 +334,7 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout=None
     
     if pos_key is not None:
         #p_k:L_q x L_k x d_qk
-        scores += torch.einsum("bqnd,qkd->bnqk", query, pos_key)
+        scores += torch.einsum("bqnd,bqkd->bnqk", query, pos_key)
     
     scores = scores / np.sqrt(d)
     
@@ -346,7 +352,7 @@ def scaled_dot_product_attention(query, key, value, attn_mask=None, dropout=None
     output = torch.einsum("bnqk,bknd->bnqd", attn_scores, value)
     if pos_value is not None:
         #p_v:L_q x L_kv x d_v
-        output += torch.einsum("bnqk,qkd->bnqd", attn_scores, pos_value)
+        output += torch.einsum("bnqk,bqkd->bnqd", attn_scores, pos_value)
     
     return output, attn_scores
 
@@ -435,6 +441,7 @@ class MultiHeadAttention(nn.Module):
         
         self.rel_pos_k_emb = None
         self.rel_pos_v_emb = None
+        self.use_rel_pos_value = use_rel_pos_value
         if max_relative_len > 0:
             self.rel_pos_k_emb = RelativePositionEmbedding(max_relative_len, self.d_qk, rel_pos_need_train)
             if use_rel_pos_value == True:
@@ -484,6 +491,7 @@ class MultiHeadAttention(nn.Module):
             pos_key = self.rel_pos_k_emb(q_pos_ids, kv_pos_ids)
             if self.use_rel_pos_value == True:
                 pos_value = self.rel_pos_k_emb(q_pos_ids, kv_pos_ids)
+                #print("test", q_pos_ids.shape, kv_pos_ids.shape, query.shape, pos_key.shape, pos_value.shape)
 
         output, attn_scores = scaled_dot_product_attention(query, 
                                                            key, 
@@ -598,7 +606,8 @@ class TransformerLayer(nn.Module):
                 enc_values=None,
                 dec_enc_attn_mask=None,
                 self_pos_ids=None,
-                enc_pos_ids=None):
+                enc_pos_ids=None,
+                past_pos_ids=None):
         """
         """
         residual = output
@@ -627,7 +636,7 @@ class TransformerLayer(nn.Module):
                                                        self_attn_mask,
                                                        cached_kv,
                                                        self_pos_ids,
-                                                       self_pos_ids)
+                                                       past_pos_ids)
         
         output = residual + output
         if self.use_pre_norm == False:
@@ -811,7 +820,10 @@ class Encoder(nn.Module):
             else:
                 enc_layer = self.layers[i // self.n_share_across_layers]
             
-            enc_output, enc_attn_scores = enc_layer(enc_output, attn_mask, self_pos_ids=self_pos_ids)
+            enc_output, enc_attn_scores = enc_layer(enc_output, 
+                                                    attn_mask, 
+                                                    self_pos_ids=self_pos_ids, 
+                                                    past_pos_ids=self_pos_ids)
             
             enc_self_attn_list.append(enc_attn_scores)
             enc_states.append(enc_output)
@@ -946,6 +958,7 @@ class Decoder(nn.Module):
                 enc_kv_list=None,
                 self_pos_ids=None,
                 enc_pos_ids=None,
+                past_pos_ids=None,
                 cached_kv=False, 
                 trg_embedding=None,
                 return_states=False):
@@ -970,6 +983,7 @@ class Decoder(nn.Module):
         enc_attn_scores_list = []
         dec_states = [dec_output]
         for i in range(self.n_layers):
+            
             if self.share_layer_params == False:
                 layer = self.layers[i]
             else:
@@ -978,13 +992,14 @@ class Decoder(nn.Module):
             outputs = layer(dec_output,
                             self_attn_mask,
                             cached_kv,
-                            dec_kv_list[i][0] if dec_kv_list else None,
-                            dec_kv_list[i][1] if dec_kv_list else None,
-                            enc_kv_list[i][0] if enc_kv_list else None, 
-                            enc_kv_list[i][1] if enc_kv_list else None, 
+                            dec_kv_list[i][0] if cached_kv else None,
+                            dec_kv_list[i][1] if cached_kv else None,
+                            enc_kv_list[i][0] if cached_kv and self.with_across_attention else enc_kv_list, 
+                            enc_kv_list[i][1] if cached_kv and self.with_across_attention else enc_kv_list, 
                             dec_enc_attn_mask,
                             self_pos_ids,
-                            enc_pos_ids)
+                            enc_pos_ids,
+                            past_pos_ids)
 
             dec_output, self_attn_scores = outputs[:2]
             
@@ -1050,7 +1065,8 @@ class Decoder(nn.Module):
                      enc_kv_list=None, 
                      dec_enc_attn_mask=None, 
                      self_pos_ids=None, 
-                     enc_pos_ids=None, 
+                     enc_pos_ids=None,
+                     past_pos_ids=None,
                      trg_embedding=None):
         """
         """
@@ -1080,11 +1096,12 @@ class Decoder(nn.Module):
                             True,
                             dec_kv_list[i][0],
                             dec_kv_list[i][1],
-                            enc_kv_list[i][0] if enc_kv_list else None,
-                            enc_kv_list[i][1] if enc_kv_list else None,
+                            enc_kv_list[i][0] if self.with_across_attention else None,
+                            enc_kv_list[i][1] if self.with_across_attention else None,
                             dec_enc_attn_mask,
                             self_pos_ids,
-                            enc_pos_ids
+                            enc_pos_ids,
+                            past_pos_ids
                             )
             dec_output = outputs[0]
 

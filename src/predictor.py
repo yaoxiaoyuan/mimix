@@ -156,7 +156,7 @@ class EncDecGenerator():
                 score = float(scores[j])
                 
                 if self.normalize == "linear":
-                    score = score/h_len[j]
+                    score = score/(h_len[j] - 1)
                 tmp.append([trg, score])
             tmp.sort(key=lambda x:x[-1], reverse=True)
             res.append([src, tmp])
@@ -188,7 +188,18 @@ class EncDecGenerator():
             y_len = torch.sum(y.ne(self.model.PAD), -1)
             
             enc_self_attn_mask = self.model.get_attn_mask(x, x)
-            enc_outputs = self.model.encoder(x, enc_self_attn_mask)
+            dec_self_attn_mask = self.model.get_subsequent_mask(y)
+        
+            dec_self_attn_mask = dec_self_attn_mask | self.model.get_attn_mask(y, y)
+            dec_enc_attn_mask = self.model.get_attn_mask(y, x)
+        
+            enc_pos_ids = x.ne(self.model.PAD).cumsum(-1) - 1
+            dec_pos_ids = y.ne(self.model.PAD).cumsum(-1) - 1
+        
+            enc_outputs = self.model.encoder(x, 
+                                             enc_self_attn_mask,
+                                             self_pos_ids=enc_pos_ids)
+        
             enc_output = enc_outputs[0]
             
             enc_output = enc_output[map_ids]
@@ -200,11 +211,14 @@ class EncDecGenerator():
             if self.model.share_src_trg_emb == True:
                 trg_embedding = self.model.encoder.src_embedding
     
-            dec_outputs = self.model.decoder(y,
-                                             dec_self_attn_mask,
-                                             enc_output,
-                                             dec_enc_attn_mask,
-                                             trg_embedding)
+            dec_outputs = self.model.decoder(y, 
+                                             self_attn_mask=dec_self_attn_mask, 
+                                             enc_kv_list=enc_output,
+                                             dec_enc_attn_mask=dec_enc_attn_mask,
+                                             self_pos_ids=dec_pos_ids,
+                                             enc_pos_ids=enc_pos_ids,
+                                             past_pos_ids=dec_pos_ids,
+                                             trg_embedding=trg_embedding)
     
             logits = dec_outputs[0]
             
@@ -349,7 +363,7 @@ class LMGenerator():
                 score = float(scores[j])
                 
                 if self.normalize == "linear":
-                    score = score/h_len[j]
+                    score = score/(h_len[j] - 1)
                 tmp.append([trg, score])
             tmp.sort(key=lambda x:x[-1], reverse=True)
             res.append(["" if prefix_list is None else prefix_list[i], tmp])
@@ -372,8 +386,11 @@ class LMGenerator():
             dec_self_attn_mask = self.model.get_subsequent_mask(y)
             dec_self_attn_mask = dec_self_attn_mask | self.model.get_attn_mask(y, y)
     
-            dec_outputs = self.model.decoder(y,
-                                             dec_self_attn_mask)
+            self_pos_ids = y.ne(self.model.PAD).cumsum(-1) - 1
+            dec_outputs = self.model.decoder(y, 
+                                             self_attn_mask=dec_self_attn_mask,
+                                             self_pos_ids=self_pos_ids,
+                                             past_pos_ids=self_pos_ids)
     
             logits = dec_outputs[0]
             log_probs = -F.nll_loss(F.log_softmax(logits.view(-1, self.trg_vocab_size), -1),

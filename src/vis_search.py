@@ -17,6 +17,7 @@ def get_topk_pred(enc_dec_gen, src_list, trg_list, topk=10):
     """
     """
     x, y = enc_dec_gen.encode_inputs(src_list, trg_list, add_bos=True, add_eos=True)
+
     enc_dec_gen.model.eval()
     with torch.no_grad():
         outputs = enc_dec_gen.model([x,y])
