@@ -241,7 +241,7 @@ def gelu_new(x):
 class FeedForward(nn.Module):
     """
     """
-    def __init__(self, d_model, d_ff, activation="relu", dropout=0, with_bias=True):
+    def __init__(self, d_model, d_ff, activation="relu", dropout=0, use_bias=True):
         """
         """
         super(FeedForward, self).__init__()
@@ -252,11 +252,11 @@ class FeedForward(nn.Module):
         if dropout > 0:
             self.dropout = Dropout(dropout)
         self.W1 = nn.Parameter(torch.Tensor(self.d_ff, self.d_model))
-        self.with_bias = with_bias
-        if self.with_bias == True:
+        self.use_bias = use_bias
+        if self.use_bias == True:
             self.b1 = nn.Parameter(torch.Tensor(self.d_ff))
         self.W2 = nn.Parameter(torch.Tensor(self.d_model, self.d_ff))
-        if self.with_bias == True:
+        if self.use_bias == True:
             self.b2 = nn.Parameter(torch.Tensor(self.d_model))
         self.reset_parameters()
     
@@ -267,7 +267,7 @@ class FeedForward(nn.Module):
         stdv = 1.0 / np.sqrt(self.d_model)
         for weight in [self.W1, self.W2]:
             weight.data.uniform_(-stdv, stdv)
-        if self.with_bias == True:
+        if self.use_bias == True:
             for weight in [self.b1, self.b2]:
                 weight.data.fill_(0)
             
@@ -276,12 +276,12 @@ class FeedForward(nn.Module):
         """
         """
         if self.activation == "relu":
-            if self.with_bias == True:
+            if self.use_bias == True:
                 x = F.linear(F.relu(F.linear(x, self.W1) + self.b1), self.W2) + self.b2
             else:
                 x = F.linear(F.relu(F.linear(x, self.W1)), self.W2)
         elif self.activation == "gelu" or self.activation == "gelu_new":
-            if self.with_bias == True:
+            if self.use_bias == True:
                 x = F.linear(gelu_new(F.linear(x, self.W1) + self.b1), self.W2) + self.b2
             else:
                 x = F.linear(F.relu(F.linear(x, self.W1)), self.W2)
@@ -323,7 +323,8 @@ def scaled_dot_product_attention(query,
                                  attn_mask=None, 
                                  dropout=None, 
                                  pos_key=None, 
-                                 pos_value=None):
+                                 pos_value=None,
+                                 alibi_bias=None):
     """
     """
     d = query.size(-1)
@@ -335,8 +336,11 @@ def scaled_dot_product_attention(query,
     if pos_key is not None:
         #p_k:L_q x L_k x d_qk
         scores += torch.einsum("bqnd,bqkd->bnqk", query, pos_key)
-    
+        
     scores = scores / np.sqrt(d)
+
+    if alibi_bias is not None:        
+        scores += alibi_bias
     
     if attn_mask is not None:
         attn_mask = attn_mask.bool()
@@ -385,10 +389,9 @@ class RelativePositionEmbedding(nn.Module):
         for weight in self.parameters():
             weight.data.uniform_(-stdv, stdv)
         
-    def forward(self, q_pos_ids, kv_pos_ids):
+    def forward(self, relative_dis):
         """
         """
-        relative_dis = q_pos_ids[:,:,None] - kv_pos_ids[:,None,:] 
         relative_dis = torch.clamp(relative_dis, -self.max_relative_len, self.max_relative_len)
         idx = relative_dis + self.max_relative_len
         if self.need_train == False:
@@ -409,10 +412,12 @@ class MultiHeadAttention(nn.Module):
                  d_v, 
                  dropout=0, 
                  attn_dropout=0, 
-                 with_bias=True, 
+                 use_bias=True, 
                  max_relative_len=-1,
                  use_rel_pos_value=False,
-                 rel_pos_need_train=True):
+                 rel_pos_need_train=True,
+                 use_multi_query_attention=False,
+                 use_alibi_bias=False):
         """
         """
         super(MultiHeadAttention, self).__init__()
@@ -429,14 +434,23 @@ class MultiHeadAttention(nn.Module):
         self.d_v = d_v
         self.max_relative_len = max_relative_len
         self.W_q = nn.Parameter(torch.Tensor(n_heads*d_qk, d_model))
-        self.W_k = nn.Parameter(torch.Tensor(n_heads*d_qk, d_model))
-        self.W_v = nn.Parameter(torch.Tensor(n_heads*d_v, d_model))
+        self.use_multi_query_attention = use_multi_query_attention
+        if use_multi_query_attention == True:
+            self.W_k = nn.Parameter(torch.Tensor(d_qk, d_model))
+            self.W_v = nn.Parameter(torch.Tensor(d_v, d_model))            
+        else:
+            self.W_k = nn.Parameter(torch.Tensor(n_heads*d_qk, d_model))
+            self.W_v = nn.Parameter(torch.Tensor(n_heads*d_v, d_model))
         self.W_o = nn.Parameter(torch.Tensor(d_model, n_heads*d_v))
-        self.with_bias = with_bias
-        if self.with_bias == True:
+        self.use_bias = use_bias
+        if self.use_bias == True:
             self.b_q = nn.Parameter(torch.Tensor(n_heads*d_qk))
-            self.b_k = nn.Parameter(torch.Tensor(n_heads*d_qk))
-            self.b_v = nn.Parameter(torch.Tensor(n_heads*d_v))
+            if use_multi_query_attention == True:
+                self.b_k = nn.Parameter(torch.Tensor(d_qk))
+                self.b_v = nn.Parameter(torch.Tensor(d_v))                
+            else:
+                self.b_k = nn.Parameter(torch.Tensor(n_heads*d_qk))
+                self.b_v = nn.Parameter(torch.Tensor(n_heads*d_v))
             self.b_o = nn.Parameter(torch.Tensor(d_model))
         
         self.rel_pos_k_emb = None
@@ -447,6 +461,8 @@ class MultiHeadAttention(nn.Module):
             if use_rel_pos_value == True:
                 self.rel_pos_v_emb = RelativePositionEmbedding(max_relative_len, self.d_v, rel_pos_need_train)
         
+        self.use_alibi_bias = use_alibi_bias
+        
         self.reset_parameters()
         
     
@@ -456,7 +472,7 @@ class MultiHeadAttention(nn.Module):
         stdv = 1.0 / np.sqrt(self.d_model)
         for weight in [self.W_q, self.W_k, self.W_v, self.W_o]:
             weight.data.uniform_(-stdv, stdv)
-        if self.with_bias == True:
+        if self.use_bias == True:
             for weight in [self.b_q, self.b_k, self.b_v, self.b_o]:
                 weight.data.zero_()
     
@@ -466,12 +482,12 @@ class MultiHeadAttention(nn.Module):
         """
         #B x L x d_model -> B x l x (d*n_heads)
         query = F.linear(query, self.W_q)
-        if self.with_bias == True:
+        if self.use_bias == True:
             query = query + self.b_q
         if cached_kv == False:
             key = F.linear(key, self.W_k) 
             value = F.linear(value, self.W_v) 
-            if self.with_bias == True:
+            if self.use_bias == True:
                 key = key + self.b_k
                 value = value + self.b_v
 
@@ -479,34 +495,53 @@ class MultiHeadAttention(nn.Module):
         #B x l x (d*n_heads) -> B x L x n_heads x d_qk
         query = query.view(batch_size, -1, self.n_heads, self.d_qk)
         if cached_kv == False:
-            key = key.view(batch_size, -1, self.n_heads, self.d_qk)
-            value = value.view(batch_size, -1, self.n_heads, self.d_v)
+            if self.use_multi_query_attention == True:
+                key = key.view(batch_size, -1, 1, self.d_qk)
+                value = value.view(batch_size, -1, 1, self.d_v)            
+            else:
+                key = key.view(batch_size, -1, self.n_heads, self.d_qk)
+                value = value.view(batch_size, -1, self.n_heads, self.d_v)
         
         if attn_mask is not None:
             attn_mask = attn_mask.unsqueeze(1).repeat(1, self.n_heads, 1, 1)
         
+        relative_dis = None
+        if self.max_relative_len > 0 or self.use_alibi_bias == True:
+            relative_dis = q_pos_ids[:,:,None] - kv_pos_ids[:,None,:]
+        
         pos_key = None
         pos_value = None
         if self.max_relative_len > 0:
-            pos_key = self.rel_pos_k_emb(q_pos_ids, kv_pos_ids)
+            pos_key = self.rel_pos_k_emb(relative_dis=relative_dis)
             if self.use_rel_pos_value == True:
-                pos_value = self.rel_pos_k_emb(q_pos_ids, kv_pos_ids)
-                #print("test", q_pos_ids.shape, kv_pos_ids.shape, query.shape, pos_key.shape, pos_value.shape)
-
+                pos_value = self.rel_pos_k_emb(relative_dis=relative_dis)
+        
+        alibi_bias = None
+        if self.use_alibi_bias == True:
+            start = (2**(-2**-(math.log2(self.n_heads)-3)))
+            ratio = start
+            #slopes: n_heads
+            #relative_dis : B x L_q x L_k
+            #alibi_bias: B x n_heads x L_q x L_k
+            slopes = torch.tensor([start*ratio**i for i in range(self.n_heads)]).to(query.device)
+            relative_dis[relative_dis<0] = -relative_dis[relative_dis<0]
+            alibi_bias = torch.einsum("bqk,n->bnqk", relative_dis, slopes)
+            
         output, attn_scores = scaled_dot_product_attention(query, 
                                                            key, 
                                                            value, 
                                                            attn_mask,
                                                            self.attn_dropout,
                                                            pos_key,
-                                                           pos_value)
+                                                           pos_value,
+                                                           alibi_bias)
         
         #B x n_heads x L x d -> B x L x n_heads x d -> B x L x d_model
         output = output.transpose(1,2)
         output = output.contiguous().view(batch_size, -1, 
                                   self.n_heads*self.d_v)
         output = F.linear(output, self.W_o)
-        if self.with_bias == True:
+        if self.use_bias == True:
             output = output + self.b_o
             
         if self.attn_dropout is not None:
@@ -522,12 +557,16 @@ class MultiHeadAttention(nn.Module):
         
         key = F.linear(x, self.W_k)
         value = F.linear(x, self.W_v) 
-        if self.with_bias == True:
+        if self.use_bias == True:
             key = key + self.b_k
             value = value + self.b_v
         
-        key = key.view(batch_size, -1, self.n_heads, self.d_qk)
-        value = value.view(batch_size, -1, self.n_heads, self.d_v)
+        if self.use_multi_query_attention == True:
+            key = key.view(batch_size, -1, 1, self.d_qk)
+            value = value.view(batch_size, -1, 1, self.d_v)            
+        else:   
+            key = key.view(batch_size, -1, self.n_heads, self.d_qk)
+            value = value.view(batch_size, -1, self.n_heads, self.d_v)
         
         return [key, value]
 
@@ -549,6 +588,8 @@ class TransformerLayer(nn.Module):
                  use_rms_norm=False,
                  use_attention_bias=True,
                  use_ffn_bias=True,
+                 use_multi_query_attention=False,
+                 use_alibi_bias=False,
                  max_relative_len=-1,
                  use_rel_pos_value=False,
                  rel_pos_need_train=True,
@@ -565,7 +606,9 @@ class TransformerLayer(nn.Module):
                                                  use_attention_bias,
                                                  max_relative_len,
                                                  use_rel_pos_value,
-                                                 rel_pos_need_train)
+                                                 rel_pos_need_train,
+                                                 use_multi_query_attention,
+                                                 use_alibi_bias)
         
         self.norm_1 = LayerNorm(d_model,ln_eps,use_rms_norm)
         
@@ -580,7 +623,9 @@ class TransformerLayer(nn.Module):
                                                     use_attention_bias,
                                                     max_relative_len,
                                                     use_rel_pos_value,
-                                                    rel_pos_need_train)
+                                                    rel_pos_need_train,
+                                                    use_multi_query_attention,
+                                                    False)
         
             self.norm_2 = LayerNorm(d_model,ln_eps,use_rms_norm)
             
@@ -715,6 +760,8 @@ class Encoder(nn.Module):
                  use_rms_norm=False,
                  use_attention_bias=True,
                  use_ffn_bias=True,
+                 use_multi_query_attention=False,
+                 use_alibi_bias=False,
                  max_relative_len=-1,
                  use_rel_pos_value=False,
                  rel_pos_need_train=True,
@@ -781,6 +828,8 @@ class Encoder(nn.Module):
                                  use_rms_norm=use_rms_norm,
                                  use_attention_bias=use_attention_bias,
                                  use_ffn_bias=use_ffn_bias,
+                                 use_multi_query_attention=use_multi_query_attention,
+                                 use_alibi_bias=use_alibi_bias,
                                  max_relative_len=max_relative_len,
                                  use_rel_pos_value=use_rel_pos_value,
                                  rel_pos_need_train=rel_pos_need_train,
@@ -859,6 +908,8 @@ class Decoder(nn.Module):
                  use_rms_norm=False,
                  use_attention_bias=True,
                  use_ffn_bias=True,
+                 use_multi_query_attention=False,
+                 use_alibi_bias=False,
                  max_relative_len=-1,
                  use_rel_pos_value=False,
                  rel_pos_need_train=True,
@@ -921,6 +972,8 @@ class Decoder(nn.Module):
                                  use_rms_norm=use_rms_norm,
                                  use_attention_bias=use_attention_bias,
                                  use_ffn_bias=use_ffn_bias,
+                                 use_multi_query_attention=use_multi_query_attention,
+                                 use_alibi_bias=use_alibi_bias,
                                  max_relative_len=max_relative_len,
                                  use_rel_pos_value=use_rel_pos_value,
                                  rel_pos_need_train=rel_pos_need_train,
@@ -1080,7 +1133,8 @@ class Decoder(nn.Module):
             trg_embedding = self.trg_embedding
         word_embeded = trg_embedding(y)
         if self.use_pos_embedding == True:
-            dec_output = word_embeded + self.pos_embedding(self_pos_ids)
+            word_embeded = word_embeded + self.pos_embedding(self_pos_ids)
+        dec_output = word_embeded
         
         if self.norm_after_embedding == True:
             dec_output = self.norm_emb(dec_output)

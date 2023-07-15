@@ -33,6 +33,8 @@ class TransformerSeq2seq(nn.Module):
                  use_rms_norm=False,
                  use_attention_bias=True,
                  use_ffn_bias=True,
+                 use_multi_query_attention=False,
+                 use_alibi_bias=False,
                  max_relative_len=-1,
                  use_rel_pos_value=False,
                  rel_pos_need_train=True,
@@ -92,6 +94,8 @@ class TransformerSeq2seq(nn.Module):
                                use_rms_norm,
                                use_attention_bias,
                                use_ffn_bias,
+                               use_multi_query_attention,
+                               use_alibi_bias,
                                max_relative_len,
                                use_rel_pos_value,
                                rel_pos_need_train,
@@ -122,6 +126,8 @@ class TransformerSeq2seq(nn.Module):
                                use_rms_norm,
                                use_attention_bias,
                                use_ffn_bias,
+                               use_multi_query_attention,
+                               use_alibi_bias,
                                max_relative_len,
                                use_rel_pos_value,
                                rel_pos_need_train,
@@ -332,6 +338,8 @@ class TransformerLM(nn.Module):
                  use_rms_norm=False,
                  use_attention_bias=True,
                  use_ffn_bias=True,
+                 use_multi_query_attention=False,
+                 use_alibi_bias=False,
                  max_relative_len=-1,
                  use_rel_pos_value=False,
                  rel_pos_need_train=True,
@@ -388,6 +396,8 @@ class TransformerLM(nn.Module):
                                use_rms_norm,
                                use_attention_bias,
                                use_ffn_bias,
+                               use_multi_query_attention,
+                               use_alibi_bias,
                                max_relative_len,
                                use_rel_pos_value,
                                rel_pos_need_train,
@@ -545,6 +555,8 @@ class TransformerEncoder(nn.Module):
                  use_rms_norm=False,
                  use_attention_bias=True,
                  use_ffn_bias=True,
+                 use_multi_query_attention=False,
+                 use_alibi_bias=False,
                  max_relative_len=-1,
                  use_rel_pos_value=False,
                  rel_pos_need_train=True,
@@ -600,6 +612,8 @@ class TransformerEncoder(nn.Module):
                                use_rms_norm,
                                use_attention_bias,
                                use_ffn_bias,
+                               use_multi_query_attention,
+                               use_alibi_bias,
                                max_relative_len,
                                use_rel_pos_value,
                                rel_pos_need_train,
@@ -777,6 +791,8 @@ def build_transformer_model(config):
     use_rms_norm = config.get("use_rms_norm", False)
     use_attention_bias = config.get("use_attention_bias", True)
     use_ffn_bias = config.get("use_ffn_bias", True)
+    use_multi_query_attention = config.get("use_multi_query_attention", False)
+    use_alibi_bias = config.get("use_alibi_bias", False)
     max_relative_len = config.get("max_relative_len", -1)
     use_rel_pos_value = config.get("use_rel_pos_value", False)
     rel_pos_need_train = config.get("rel_pos_need_train", True)
@@ -812,6 +828,8 @@ def build_transformer_model(config):
                                      use_rms_norm,
                                      use_attention_bias,
                                      use_ffn_bias,
+                                     use_multi_query_attention,
+                                     use_alibi_bias,
                                      max_relative_len,
                                      use_rel_pos_value,
                                      rel_pos_need_train,
@@ -861,6 +879,8 @@ def build_transformer_lm_model(config):
     use_rms_norm = config.get("use_rms_norm", False)
     use_attention_bias = config.get("use_attention_bias", True)
     use_ffn_bias = config.get("use_ffn_bias", True)
+    use_multi_query_attention = config.get("use_multi_query_attention", False)
+    use_alibi_bias = config.get("use_alibi_bias", False)
     max_relative_len = config.get("max_relative_len", -1)
     use_rel_pos_value = config.get("use_rel_pos_value", False)
     rel_pos_need_train = config.get("rel_pos_need_train", True)
@@ -893,6 +913,8 @@ def build_transformer_lm_model(config):
                                 use_rms_norm,
                                 use_attention_bias,
                                 use_ffn_bias,
+                                use_multi_query_attention,
+                                use_alibi_bias,
                                 max_relative_len,
                                 use_rel_pos_value,
                                 rel_pos_need_train,
@@ -948,6 +970,8 @@ def build_transformer_encoder_model(config):
     use_rms_norm = config.get("use_rms_norm", False)
     use_attention_bias = config.get("use_attention_bias", True)
     use_ffn_bias = config.get("use_ffn_bias", True)
+    use_multi_query_attention = config.get("use_multi_query_attention", False)
+    use_alibi_bias = config.get("use_alibi_bias", False)
     max_relative_len = config.get("max_relative_len", -1)
     use_rel_pos_value = config.get("use_rel_pos_value", False)
     rel_pos_need_train = config.get("rel_pos_need_train", True)
@@ -978,6 +1002,8 @@ def build_transformer_encoder_model(config):
                                      use_rms_norm,
                                      use_attention_bias,
                                      use_ffn_bias,
+                                     use_multi_query_attention,
+                                     use_alibi_bias,
                                      max_relative_len,
                                      use_rel_pos_value,
                                      rel_pos_need_train,

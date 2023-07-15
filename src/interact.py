@@ -19,7 +19,7 @@ def enc_dec_demo(config):
     """
     """    
     enc_dec_gen = EncDecGenerator(config)
-        
+      
     print("INPUT TEXT:")
     for line in sys.stdin:
         line = line.strip()
