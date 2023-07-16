@@ -737,7 +737,7 @@ class TransformerEncoder(nn.Module):
                 outputs = [enc_output[:,0,:]] + outputs
             
             if self.crf is not None:
-                mask = x.ne(self.PAD).float()
+                mask = x.ne(self.PAD).to(enc_output.dtype)
                 nlg = self.crf(enc_output, inputs[1], mask)
                 outputs = [nlg] + outputs 
         

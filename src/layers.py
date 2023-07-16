@@ -37,7 +37,7 @@ class CRF(nn.Module):
         """
         """
         left_shift_mask = torch.cat([mask[:,1:], torch.zeros_like(mask[:,:1])], 1)
-        end_mask = (mask > left_shift_mask).float() 
+        end_mask = (mask > left_shift_mask).to(mask.dtype)
         return end_mask
     
     
@@ -523,7 +523,8 @@ class MultiHeadAttention(nn.Module):
             #slopes: n_heads
             #relative_dis : B x L_q x L_k
             #alibi_bias: B x n_heads x L_q x L_k
-            slopes = torch.tensor([start*ratio**i for i in range(self.n_heads)]).to(query.device)
+            slopes = torch.tensor([start*ratio**i for i in range(self.n_heads)])
+            slopes.to(query.device, dtype=query.dtype)
             relative_dis[relative_dis<0] = -relative_dis[relative_dis<0]
             alibi_bias = torch.einsum("bqk,n->bnqk", relative_dis, slopes)
             
