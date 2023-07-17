@@ -50,7 +50,12 @@ class TransformerSeq2seq(nn.Module):
                  norm_after_embedding=False,
                  use_pos_embedding=True,
                  pos_need_train=False,
-                 use_output_bias=True):
+                 use_output_bias=True,
+                 use_talking_attention=False,
+                 use_attention_residual=False,
+                 use_glu=False,
+                 use_ln_scale=True,
+                 use_ln_bias=True):
         """
         """
         super(TransformerSeq2seq, self).__init__()
@@ -108,7 +113,13 @@ class TransformerSeq2seq(nn.Module):
                                norm_before_pred,
                                norm_after_embedding,
                                use_pos_embedding,
-                               pos_need_train)
+                               pos_need_train,
+                               None,
+                               use_talking_attention,
+                               use_attention_residual,
+                               use_glu,
+                               use_ln_scale,
+                               use_ln_bias)
         
         self.decoder = Decoder(trg_vocab_size,
                                trg_max_len, 
@@ -143,7 +154,12 @@ class TransformerSeq2seq(nn.Module):
                                norm_after_embedding,
                                use_pos_embedding,
                                pos_need_train,
-                               use_output_bias)
+                               use_output_bias,
+                               use_talking_attention,
+                               use_attention_residual,
+                               use_glu,
+                               use_ln_scale,
+                               use_ln_bias)                    
         
         
     def get_attn_mask(self, seq_query, seq_key):
@@ -354,7 +370,12 @@ class TransformerLM(nn.Module):
                  norm_after_embedding=False,
                  use_pos_embedding=True,
                  pos_need_train=False,
-                 use_output_bias=False):
+                 use_output_bias=False,
+                 use_talking_attention=False,
+                 use_attention_residual=False,
+                 use_glu=False,
+                 use_ln_scale=True,
+                 use_ln_bias=True):
         """
         """
         super(TransformerLM, self).__init__()
@@ -413,7 +434,12 @@ class TransformerLM(nn.Module):
                                norm_after_embedding,
                                use_pos_embedding,
                                pos_need_train,
-                               use_output_bias)
+                               use_output_bias,
+                               use_talking_attention,
+                               use_attention_residual,
+                               use_glu,
+                               use_ln_scale,
+                               use_ln_bias)
     
     def get_attn_mask(self, seq_query, seq_key):
         """
@@ -571,6 +597,11 @@ class TransformerEncoder(nn.Module):
                  use_pos_embedding=True, 
                  pos_need_train=False,
                  n_types=None,
+                 use_talking_attention=False,
+                 use_attention_residual=False,
+                 use_glu=False,
+                 use_ln_scale=True,
+                 use_ln_bias=True,
                  use_pooling=False,
                  out_dim=None,
                  n_class=None,
@@ -627,7 +658,12 @@ class TransformerEncoder(nn.Module):
                                norm_after_embedding,
                                use_pos_embedding,
                                pos_need_train,
-                               n_types)
+                               n_types,
+                               use_talking_attention,
+                               use_attention_residual,
+                               use_glu,
+                               use_ln_scale,
+                               use_ln_bias)
 
         self.n_class = n_class
         self.share_emb_out_proj = share_emb_out_proj
@@ -809,6 +845,12 @@ def build_transformer_model(config):
     use_pos_embedding = config.get("use_pos_embedding", True)
     pos_need_train = config.get("pos_need_train", False)
     use_output_bias = config.get("use_output_bias", True)
+    use_talking_attention = config.get("use_talking_attention", False)
+    use_attention_residual = config.get("use_attention_residual", False)
+    use_glu = config.get("use_glu", False)
+    use_ln_scale = config.get("use_ln_scale", True)
+    use_ln_bias = config.get("use_ln_bias", True)
+    
     transformer = TransformerSeq2seq(config["symbol2id"],
                                      src_vocab_size, 
                                      src_max_len, 
@@ -845,7 +887,12 @@ def build_transformer_model(config):
                                      norm_after_embedding,
                                      use_pos_embedding,
                                      pos_need_train,
-                                     use_output_bias)
+                                     use_output_bias,
+                                     use_talking_attention,
+                                     use_attention_residual,
+                                     use_glu,
+                                     use_ln_scale,
+                                     use_ln_bias)
     
     return transformer
 
@@ -896,6 +943,11 @@ def build_transformer_lm_model(config):
     use_pos_embedding = config.get("use_pos_embedding", True)
     pos_need_train = config.get("pos_need_train", False)
     use_output_bias = config.get("use_output_bias", True)
+    use_talking_attention = config.get("use_talking_attention", False)
+    use_attention_residual = config.get("use_attention_residual", False)
+    use_glu = config.get("use_glu", False)
+    use_ln_scale = config.get("use_ln_scale", True)
+    use_ln_bias = config.get("use_ln_bias", True)
     
     transformer = TransformerLM(config["symbol2id"],
                                 trg_vocab_size, 
@@ -929,7 +981,12 @@ def build_transformer_lm_model(config):
                                 norm_after_embedding,
                                 use_pos_embedding,
                                 pos_need_train,
-                                use_output_bias)
+                                use_output_bias,
+                                use_talking_attention,
+                                use_attention_residual,
+                                use_glu,
+                                use_ln_scale,
+                                use_ln_bias)
     
     return transformer
 
@@ -985,6 +1042,11 @@ def build_transformer_encoder_model(config):
     norm_after_embedding = config.get("norm_after_embedding", False)
     use_pos_embedding = config.get("use_pos_embedding", True)
     pos_need_train = config.get("pos_need_train", False)
+    use_talking_attention = config.get("use_talking_attention", False)
+    use_attention_residual = config.get("use_attention_residual", False)
+    use_glu = config.get("use_glu", False)
+    use_ln_scale = config.get("use_ln_scale", True)
+    use_ln_bias = config.get("use_ln_bias", True)
     
     transformer = TransformerEncoder(config["symbol2id"],
                                      src_vocab_size, 
@@ -1018,6 +1080,11 @@ def build_transformer_encoder_model(config):
                                      use_pos_embedding,
                                      pos_need_train,
                                      n_types,
+                                     use_talking_attention,
+                                     use_attention_residual,
+                                     use_glu,
+                                     use_ln_scale,
+                                     use_ln_bias,
                                      use_pooling,
                                      out_dim,
                                      n_class,
