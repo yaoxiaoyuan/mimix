@@ -19,17 +19,7 @@ def enc_dec_demo(config):
     """
     """    
     enc_dec_gen = EncDecGenerator(config)
-    #src_list = ["综合美国《华盛顿时报》、彭博社等多家外媒报道，美国企业家埃隆·马斯克当地时间12日参加“推特空间”（Twitter Spaces）活动时，谈及人工智能（AI）、中国等话题。他表示，中国有意愿且已准备好与国际社会合作、一同制定AI规则。期间他称自己“有点亲华”，并称“中国人民真的很棒”。",
-    #            "参考消息网7月12日报道据俄罗斯《莫斯科共青团员报》网站7月12日报道，乌克兰总统泽连斯基在北约峰会期间的一场工作会谈中，拒绝与北约秘书长斯托尔滕贝格握手，引发外界的猜想和疑虑。"]
-    #prefix_list = ["美国",
-    #               "乌克兰"]
-    src_list = ["what is the next number of 1 2 3 4 5",
-                "what is the english for 1 2 3 4 5"]
-    prefix_list = ["the next number",
-                   "it is"]
-    search_res = enc_dec_gen.predict(src_list, prefix_list=prefix_list)
-    search_res = [{"src":x, "predict":y} for x,y in search_res]
-    pretty_print(search_res)      
+
     print("INPUT TEXT:")
     for line in sys.stdin:
         line = line.strip()
@@ -58,12 +48,7 @@ def lm_demo(config):
     """
     """
     lm_gen = LMGenerator(config)
-    prefix_list = ["_shi_ _xinyun_ _7jue_ _title_ 梅花",
-                   "_shi_ _xinyun_ _5jue_ _title_ 寒江雪"]
-    #prefix_list = ["李", "张 晓"]
-    search_res = lm_gen.predict(prefix_list=prefix_list) 
-    search_res = [{"src":x, "predict":y} for x,y in search_res]
-    pretty_print(search_res)        
+     
     print("INPUT TEXT:")
     for line in sys.stdin:
         line = line.strip()

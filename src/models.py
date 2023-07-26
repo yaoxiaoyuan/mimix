@@ -8,158 +8,305 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from layers import Encoder,Decoder,CRF,LayerNorm,gelu_new
+from layers import Embedding,Dropout,LayerNorm,gelu_new,PositionEmbedding,CRF
+from layers import TransformerLayer
+
+class Transformer(nn.Module):
+    """
+    """
+    def __init__(self, **kwargs):
+        """
+        """
+        super(Transformer, self).__init__()
+        print(kwargs)
+        self.vocab_size = kwargs.get("vocab_size", None)
+        self.max_len = kwargs.get("max_len", None)
+        self.n_heads = kwargs["n_heads"] 
+        self.d_model = kwargs["d_model"] 
+        self.d_ff = kwargs.get("d_ff", 4 * self.d_model) 
+        self.d_qk = kwargs.get("d_qk", self.d_model//self.n_heads)
+        self.d_v = kwargs.get("d_v", self.d_model//self.n_heads)
+        self.n_layers = kwargs["n_layers"]
+        self.with_across_attention = kwargs.get("with_across_attention", False)
+        self.dropout = kwargs.get("dropout", 0)
+        self.attn_dropout = kwargs.get("attn_dropout", 0)
+        self.emb_dropout = kwargs.get("emb_dropout", 0)
+        self.ln_eps = kwargs.get("ln_eps", 1e-5)
+        self.use_rms_norm = kwargs.get("use_rms_norm", False)
+        self.use_attention_bias = kwargs.get("use_attention_bias", True)
+        self.use_ffn_bias = kwargs.get("use_ffn_bias", True)
+        self.use_multi_query_attention = kwargs.get("use_multi_query_attention", False)
+        self.use_alibi_bias = kwargs.get("use_alibi_bias", False)
+        self.max_relative_len = kwargs.get("max_relative_len", -1)
+        self.use_rel_pos_value = kwargs.get("use_rel_pos_value", False)
+        self.rel_pos_need_train = kwargs.get("rel_pos_need_train", False)
+        self.factorized_size = kwargs.get("factorized_size", None)
+        self.share_layer_params = kwargs.get("share_layer_params", False)
+        self.n_share_across_layers = kwargs.get("n_share_across_layers", 1)
+        self.use_word_embedding = kwargs.get("use_word_embedding", True)
+        self.output_next_word_logits = kwargs.get("output_next_word_logits", False)
+        self.share_emb_out_proj = kwargs.get("share_emb_out_proj", False)
+        self.use_pre_norm = kwargs.get("use_pre_norm", False)
+        self.activation = kwargs.get("activation", "relu")
+        self.scale_embedding = kwargs.get("scale_embedding", False)
+        self.norm_before_pred = kwargs.get("norm_before_pred", False)
+        self.norm_after_embedding = kwargs.get("norm_after_embedding", False)
+        self.use_pos_embedding = kwargs.get("use_pos_embedding", True)
+        self.pos_need_train = kwargs.get("pos_need_train", True)
+        self.use_output_bias = kwargs.get("use_output_bias", False)
+        self.use_talking_attention = kwargs.get("use_talking_attention", False)
+        self.use_attention_residual = kwargs.get("use_attention_residual", False)
+        self.use_glu = kwargs.get("use_glu", False)
+        self.use_ln_scale = kwargs.get("use_ln_scale", True)
+        self.use_ln_bias = kwargs.get("use_ln_bias", True)
+
+        if self.use_word_embedding == True:
+            self.word_embedding = Embedding(self.vocab_size, self.d_model, self.factorized_size)
+            
+        self.emb_dropout = Dropout(self.emb_dropout) if self.emb_dropout else None
+        
+        if self.use_pos_embedding == True:    
+            self.pos_embedding = PositionEmbedding(self.max_len, self.d_model, self.pos_need_train)
+        
+        if self.norm_after_embedding == True:       
+            self.norm_emb = LayerNorm(self.d_model, self.ln_eps, self.use_rms_norm, self.use_ln_scale, self.use_ln_bias)
+        
+        self.layers = nn.ModuleList([TransformerLayer(**kwargs) for i in range(self.n_layers//self.n_share_across_layers)])
+   
+        if self.output_next_word_logits == True:
+            if self.share_emb_out_proj == False: 
+                self.W = nn.Parameter(torch.Tensor(self.vocab_size, self.d_model))
+            if self.use_output_bias == True:
+                self.b = nn.Parameter(torch.Tensor(self.vocab_size))
+
+        if self.norm_before_pred == True:
+            self.norm = LayerNorm(self.d_model, self.ln_eps, self.use_rms_norm, self.use_ln_scale, self.use_ln_bias)
+        
+        self.reset_parameters()
+    
+    
+    def reset_parameters(self):
+        """
+        """
+        stdv = 1.0 / np.sqrt(self.d_model)
+        if self.output_next_word_logits == True:
+            if self.share_emb_out_proj == False: 
+                self.W.data.uniform_(-stdv, stdv)
+            if self.use_output_bias == True:
+                self.b.data.zero_()
+            
+            
+    def forward(self, 
+                y, 
+                self_attn_mask=None,
+                self_kv_list=None, 
+                self_enc_attn_mask=None,
+                enc_kv_list=None,
+                self_pos_ids=None,
+                enc_pos_ids=None,
+                past_pos_ids=None,
+                cached_kv=False, 
+                embedding=None,
+                return_states=False):
+        """
+        """
+        if self.use_word_embedding == True:
+            embedding = self.word_embedding
+
+        embeded = y
+        if embedding is not None:
+            embeded = embedding(y)
+         
+        if self.use_pos_embedding == True:    
+            embeded = embeded + self.pos_embedding(self_pos_ids)
+
+        output = embeded
+
+        if self.norm_after_embedding == True:
+            output = self.norm_emb(output)
+        if self.emb_dropout is not None:
+            output = self.emb_dropout(output)
+        
+        self_attn_scores_list = []
+        enc_attn_scores_list = []
+        states = [output]
+        attention_residual = None
+        enc_attention_residual = None
+        for i in range(self.n_layers):
+            
+            if self.share_layer_params == False:
+                layer = self.layers[i]
+            else:
+                layer = self.layers[i // self.n_share_across_layers]
+                
+            outputs = layer(output,
+                            self_attn_mask,
+                            cached_kv,
+                            self_kv_list[i][0] if cached_kv else None,
+                            self_kv_list[i][1] if cached_kv else None,
+                            enc_kv_list[i][0] if cached_kv and self.with_across_attention else enc_kv_list, 
+                            enc_kv_list[i][1] if cached_kv and self.with_across_attention else enc_kv_list, 
+                            self_enc_attn_mask,
+                            self_pos_ids,
+                            enc_pos_ids,
+                            past_pos_ids,
+                            attention_residual if self.use_attention_residual else None,
+                            enc_attention_residual if self.use_attention_residual else None)
+
+            output, self_attn_scores, attention_residual = outputs[:3]
+            
+            if self.with_across_attention == True:
+                enc_attn_scores,enc_attention_residual = outputs[3:5]
+                
+            self_attn_scores_list.append(self_attn_scores)
+            if self.with_across_attention == True:
+                enc_attn_scores_list.append(enc_attn_scores)
+            states.append(output)
+
+            output = outputs[0]
+
+            if cached_kv == True:
+                self_keys, self_values = outputs[-2:]
+                self_kv_list[i][0] = self_keys
+                self_kv_list[i][1] = self_values
+
+        if self.norm_before_pred == True:
+            output = self.norm(output)
+
+        outputs = [output]
+        if self.output_next_word_logits == True:            
+            if self.share_emb_out_proj == False:
+                W = self.W
+            else:
+                W = embedding.get_embedding()
+            
+            logits = F.linear(output, W)
+            if self.use_output_bias == True:
+                logits = logits + self.b
+        
+            outputs = [logits]
+        if cached_kv == True:
+            outputs += [self_kv_list]
+
+        if return_states == True:
+            outputs = outputs + [embeded, states, self_attn_scores_list, enc_attn_scores_list]
+            
+        return outputs
+
+
+    def cache_enc_kv(self, enc_output):
+        """
+        """
+        kv_list = []
+        for i in range(self.n_layers):
+            if not self.share_layer_params:
+                layer = self.layers[i]
+                cached_kv = layer.cache_enc_kv(enc_output)
+            elif i % self.n_share_across_layers == 0:
+                layer = self.layers[i // self.n_share_across_layers]
+                cached_kv = layer.cache_enc_kv(enc_output)
+            else:
+                cached_kv = kv_list[-1]
+            kv_list.append(cached_kv)
+            
+        return kv_list
+    
+
+    def cache_dec_kv(self, 
+                     y=None, 
+                     self_attn_mask=None, 
+                     enc_kv_list=None, 
+                     self_enc_attn_mask=None, 
+                     self_pos_ids=None, 
+                     enc_pos_ids=None,
+                     past_pos_ids=None,
+                     trg_embedding=None):
+        """
+        """
+        self_kv_list = []
+        for i in range(self.n_layers):
+            self_kv_list.append([None, None])
+        if y is None:
+            return self_kv_list
+        
+        if trg_embedding is None:
+            trg_embedding = self.word_embedding
+        word_embeded = trg_embedding(y)
+        if self.use_pos_embedding == True:
+            word_embeded = word_embeded + self.pos_embedding(self_pos_ids)
+        self_output = word_embeded
+        
+        if self.norm_after_embedding == True:
+            self_output = self.norm_emb(self_output)
+
+        attention_residual = None
+        enc_attention_residual = None
+        for i in range(self.n_layers):
+            if self.share_layer_params == False:
+                layer = self.layers[i]
+            else:
+                layer = self.layers[i // self.n_share_across_layers]
+
+            outputs = layer(self_output,
+                            self_attn_mask,
+                            True,
+                            self_kv_list[i][0],
+                            self_kv_list[i][1],
+                            enc_kv_list[i][0] if self.with_across_attention else None,
+                            enc_kv_list[i][1] if self.with_across_attention else None,
+                            self_enc_attn_mask,
+                            self_pos_ids,
+                            enc_pos_ids,
+                            past_pos_ids,
+                            attention_residual if self.use_attention_residual else None,
+                            enc_attention_residual if self.use_attention_residual else None
+                            )
+            self_output, self_attn_scores, attention_residual = outputs[:3]
+            
+            if self.with_across_attention == True:
+                enc_attn_scores,enc_attention_residual = outputs[3:5]
+
+            self_keys, self_values = outputs[-2:]
+            self_kv_list[i][0] = self_keys
+            self_kv_list[i][1] = self_values
+
+        return self_kv_list
+
 
 class TransformerSeq2seq(nn.Module):
     """
     """
-    def __init__(self, 
-                 symbol2id,
-                 src_vocab_size,
-                 src_max_len, 
-                 trg_vocab_size, 
-                 trg_max_len,
-                 n_heads, 
-                 d_model, 
-                 d_ff, 
-                 d_qk, 
-                 d_v, 
-                 n_enc_layers, 
-                 n_dec_layers,
-                 dropout=0, 
-                 attn_dropout=0,
-                 emb_dropout=0,
-                 ln_eps=1e-5,
-                 use_rms_norm=False,
-                 use_attention_bias=True,
-                 use_ffn_bias=True,
-                 use_multi_query_attention=False,
-                 use_alibi_bias=False,
-                 max_relative_len=-1,
-                 use_rel_pos_value=False,
-                 rel_pos_need_train=True,
-                 share_src_trg_emb=False, 
-                 share_emb_out_proj=False, 
-                 embedding_size=None, 
-                 share_layer_params=False, 
-                 n_share_across_layers=1,
-                 use_pre_norm=True, 
-                 activation="relu", 
-                 scale_embedding=False,
-                 norm_before_pred=False,
-                 norm_after_embedding=False,
-                 use_pos_embedding=True,
-                 pos_need_train=False,
-                 use_output_bias=True,
-                 use_talking_attention=False,
-                 use_attention_residual=False,
-                 use_glu=False,
-                 use_ln_scale=True,
-                 use_ln_bias=True):
+    def __init__(self, **kwargs):
         """
         """
         super(TransformerSeq2seq, self).__init__()
-        self.PAD = symbol2id["_pad_"]
-        self.BOS = symbol2id["_bos_"]
-        self.EOS = symbol2id["_eos_"]
-        self.UNK = symbol2id["_unk_"]
-        self.SEP = symbol2id["_sep_"]
-        self.CLS = symbol2id["_cls_"]
-        self.MASK = symbol2id["_mask_"]
-        
-        self.src_vocab_size = src_vocab_size
-        self.src_max_len = src_max_len
-        self.trg_vocab_size = trg_vocab_size
-        self.trg_max_len = trg_max_len
-        self.n_heads = n_heads
-        self.d_model = d_model
-        self.d_ff = d_ff
-        self.n_enc_layers = n_enc_layers
-        self.n_dec_layers = n_dec_layers
-        self.dropout = dropout
-        self.share_src_trg_emb = share_src_trg_emb
-        self.share_emb_out_proj = share_emb_out_proj
+        self.PAD = kwargs["symbol2id"]["_pad_"]
+        self.BOS = kwargs["symbol2id"]["_bos_"]
+        self.EOS = kwargs["symbol2id"]["_eos_"]
+        self.UNK = kwargs["symbol2id"]["_unk_"]
+        self.SEP = kwargs["symbol2id"]["_sep_"]
+        self.CLS = kwargs["symbol2id"]["_cls_"]
+        self.MASK = kwargs["symbol2id"]["_mask_"]
         self.MAX_LOGITS = 10000.
         self.MIN_LOGITS = -10000.
         
-        self.d = self.d_model // self.n_heads
-
-        self.encoder = Encoder(src_vocab_size, 
-                               src_max_len, 
-                               n_heads,
-                               d_model, 
-                               d_ff, 
-                               d_qk, 
-                               d_v, 
-                               n_enc_layers,
-                               dropout, 
-                               attn_dropout,
-                               emb_dropout,
-                               ln_eps,
-                               use_rms_norm,
-                               use_attention_bias,
-                               use_ffn_bias,
-                               use_multi_query_attention,
-                               use_alibi_bias,
-                               max_relative_len,
-                               use_rel_pos_value,
-                               rel_pos_need_train,
-                               embedding_size,
-                               share_layer_params, 
-                               n_share_across_layers,
-                               use_pre_norm, 
-                               activation, 
-                               scale_embedding,
-                               norm_before_pred,
-                               norm_after_embedding,
-                               use_pos_embedding,
-                               pos_need_train,
-                               None,
-                               use_talking_attention,
-                               use_attention_residual,
-                               use_glu,
-                               use_ln_scale,
-                               use_ln_bias)
-        
-        self.decoder = Decoder(trg_vocab_size,
-                               trg_max_len, 
-                               n_heads, 
-                               d_model, 
-                               d_ff, 
-                               d_qk, 
-                               d_v, 
-                               n_dec_layers,
-                               True,
-                               dropout, 
-                               attn_dropout,
-                               emb_dropout,
-                               ln_eps,
-                               use_rms_norm,
-                               use_attention_bias,
-                               use_ffn_bias,
-                               use_multi_query_attention,
-                               use_alibi_bias,
-                               max_relative_len,
-                               use_rel_pos_value,
-                               rel_pos_need_train,
-                               embedding_size,
-                               share_layer_params, 
-                               n_share_across_layers,
-                               share_src_trg_emb,
-                               share_emb_out_proj,
-                               use_pre_norm, 
-                               activation, 
-                               scale_embedding,
-                               norm_before_pred,
-                               norm_after_embedding,
-                               use_pos_embedding,
-                               pos_need_train,
-                               use_output_bias,
-                               use_talking_attention,
-                               use_attention_residual,
-                               use_glu,
-                               use_ln_scale,
-                               use_ln_bias)                    
+        self.share_src_trg_emb = kwargs["share_src_trg_emb"]
+        self.n_dec_layers = kwargs["n_dec_layers"]
+        self.trg_vocab_size = kwargs["trg_vocab_size"]
+        enc_config = kwargs.copy()
+        enc_config["vocab_size"] = kwargs["src_vocab_size"]
+        enc_config["max_len"] = kwargs["src_max_len"]
+        enc_config["n_layers"] = kwargs["n_enc_layers"]
+        self.encoder = Transformer(**enc_config)
+        dec_config = kwargs.copy()
+        dec_config["vocab_size"] = kwargs["trg_vocab_size"]
+        dec_config["max_len"] = kwargs["trg_max_len"]
+        dec_config["output_next_word_logits"] = True
+        dec_config["with_across_attention"] = True
+        dec_config["n_layers"] = kwargs["n_dec_layers"]
+        if kwargs.get("share_src_trg_emb", False) == True:
+            dec_config["use_word_embedding"] = False
+        self.decoder = Transformer(**dec_config)
         
         
     def get_attn_mask(self, seq_query, seq_key):
@@ -198,24 +345,25 @@ class TransformerSeq2seq(nn.Module):
         dec_pos_ids = y.ne(self.PAD).cumsum(-1) - 1
         
         enc_outputs = self.encoder(x, 
-                                   enc_self_attn_mask,
+                                   self_attn_mask=enc_self_attn_mask,
                                    self_pos_ids=enc_pos_ids,
+                                   past_pos_ids=enc_pos_ids,
                                    return_states=return_states)
         enc_output = enc_outputs[0]
 
         trg_embedding = None
         if self.share_src_trg_emb == True:
-            trg_embedding = self.encoder.src_embedding
+            trg_embedding = self.encoder.word_embedding
 
         dec_outputs = self.decoder(y, 
                                    self_attn_mask=dec_self_attn_mask, 
                                    enc_kv_list=enc_output,
-                                   dec_enc_attn_mask=dec_enc_attn_mask,
+                                   self_enc_attn_mask=dec_enc_attn_mask,
                                    self_pos_ids=dec_pos_ids,
                                    enc_pos_ids=enc_pos_ids,
                                    past_pos_ids=dec_pos_ids,
                                    return_states=return_states,
-                                   trg_embedding=trg_embedding)
+                                   embedding=trg_embedding)
         
         outputs = dec_outputs + enc_outputs
         
@@ -257,7 +405,7 @@ class TransformerSeq2seq(nn.Module):
             
             trg_embedding = None
             if self.share_src_trg_emb == True:
-                trg_embedding = self.encoder.src_embedding
+                trg_embedding = self.encoder.word_embedding
             
             dec_kv_list = self.decoder.cache_dec_kv(y, 
                                                     dec_self_attn_mask, 
@@ -286,7 +434,7 @@ class TransformerSeq2seq(nn.Module):
         
         trg_embedding = None
         if self.share_src_trg_emb == True:
-            trg_embedding = self.encoder.src_embedding
+            trg_embedding = self.encoder.word_embedding
         
         dec_self_attn_mask = self.get_attn_mask(y, states[4]) 
       
@@ -299,7 +447,7 @@ class TransformerSeq2seq(nn.Module):
                                enc_pos_ids=enc_pos_ids,
                                past_pos_ids=past_pos_ids,
                                cached_kv=True,
-                               trg_embedding=trg_embedding)
+                               embedding=trg_embedding)
                 
         logits, dec_kv_list = outputs[:2]
         dec_pos_ids = dec_pos_ids + 1
@@ -337,110 +485,29 @@ class TransformerSeq2seq(nn.Module):
 class TransformerLM(nn.Module):
     """
     """
-    def __init__(self, 
-                 symbol2id, 
-                 trg_vocab_size,
-                 trg_max_len, 
-                 n_heads, 
-                 d_model, 
-                 d_ff,
-                 d_qk, 
-                 d_v, 
-                 n_dec_layers, 
-                 dropout=0, 
-                 attn_dropout=0,
-                 emb_dropout=0,
-                 ln_eps=1e-5,
-                 use_rms_norm=False,
-                 use_attention_bias=True,
-                 use_ffn_bias=True,
-                 use_multi_query_attention=False,
-                 use_alibi_bias=False,
-                 max_relative_len=-1,
-                 use_rel_pos_value=False,
-                 rel_pos_need_train=True,
-                 share_emb_out_proj=False, 
-                 embedding_size=None, 
-                 share_layer_params=False, 
-                 n_share_across_layers=1,
-                 use_pre_norm=True, 
-                 activation="relu", 
-                 scale_embedding=False,
-                 norm_before_pred=False,
-                 norm_after_embedding=False,
-                 use_pos_embedding=True,
-                 pos_need_train=False,
-                 use_output_bias=False,
-                 use_talking_attention=False,
-                 use_attention_residual=False,
-                 use_glu=False,
-                 use_ln_scale=True,
-                 use_ln_bias=True):
+    def __init__(self, **kwargs):
         """
         """
         super(TransformerLM, self).__init__()
-        self.PAD = symbol2id["_pad_"]
-        self.BOS = symbol2id["_bos_"]
-        self.EOS = symbol2id["_eos_"]
-        self.UNK = symbol2id["_unk_"]
-        self.SEP = symbol2id["_sep_"]
-        self.CLS = symbol2id["_cls_"]
-        self.MASK = symbol2id["_mask_"]
-        
-        self.trg_vocab_size = trg_vocab_size
-        self.trg_max_len = trg_max_len
-        self.n_heads = n_heads
-        self.d_model = d_model
-        self.d_ff = d_ff
-        self.n_dec_layers = n_dec_layers
-        self.dropout = dropout
-        self.share_emb_out_proj = share_emb_out_proj
-        
-        self.d = self.d_model // self.n_heads
-        
+        self.PAD = kwargs["symbol2id"]["_pad_"]
+        self.BOS = kwargs["symbol2id"]["_bos_"]
+        self.EOS = kwargs["symbol2id"]["_eos_"]
+        self.UNK = kwargs["symbol2id"]["_unk_"]
+        self.SEP = kwargs["symbol2id"]["_sep_"]
+        self.CLS = kwargs["symbol2id"]["_cls_"]
+        self.MASK = kwargs["symbol2id"]["_mask_"]
         self.MAX_LOGITS = 10000.
         self.MIN_LOGITS = -10000.
-        
-        self.decoder = Decoder(trg_vocab_size, 
-                               trg_max_len, 
-                               n_heads, 
-                               d_model, 
-                               d_ff, 
-                               d_qk, 
-                               d_v,
-                               n_dec_layers,
-                               False,
-                               dropout, 
-                               attn_dropout,
-                               emb_dropout,
-                               ln_eps,
-                               use_rms_norm,
-                               use_attention_bias,
-                               use_ffn_bias,
-                               use_multi_query_attention,
-                               use_alibi_bias,
-                               max_relative_len,
-                               use_rel_pos_value,
-                               rel_pos_need_train,
-                               embedding_size,
-                               share_layer_params, 
-                               n_share_across_layers,
-                               False, 
-                               share_emb_out_proj,
-                               use_pre_norm, 
-                               activation, 
-                               scale_embedding,
-                               norm_before_pred,
-                               norm_after_embedding,
-                               use_pos_embedding,
-                               pos_need_train,
-                               use_output_bias,
-                               use_talking_attention,
-                               use_attention_residual,
-                               use_glu,
-                               use_ln_scale,
-                               use_ln_bias)
-    
+        self.trg_vocab_size = kwargs["trg_vocab_size"]
+        self.n_layers = kwargs["n_dec_layers"]
+        dec_config = kwargs.copy()
+        dec_config["max_len"] = kwargs["trg_max_len"]
+        dec_config["vocab_size"] = kwargs["trg_vocab_size"]
+        dec_config["n_layers"] = kwargs["n_dec_layers"]
+        dec_config["output_next_word_logits"] = True
+        self.decoder = Transformer(**dec_config)   
+
+ 
     def get_attn_mask(self, seq_query, seq_key):
         """
         """
@@ -530,7 +597,7 @@ class TransformerLM(nn.Module):
         dec_self_attn_mask = self.get_attn_mask(y, states[4])
         outputs = self.decoder(y, 
                                self_attn_mask=dec_self_attn_mask, 
-                               dec_kv_list=dec_kv_list,
+                               self_kv_list=dec_kv_list,
                                self_pos_ids=self_pos_ids,
                                past_pos_ids=past_pos_ids,
                                cached_kv=True)
@@ -548,7 +615,7 @@ class TransformerLM(nn.Module):
         """
         dec_kv_list,self_pos_ids,past_pos_ids = cache
 
-        for i in range(self.n_dec_layers):
+        for i in range(self.n_layers):
             
             dec_kv_list[i][0] = dec_kv_list[i][0][beam_id]
             dec_kv_list[i][1] = dec_kv_list[i][1][beam_id]
@@ -564,148 +631,69 @@ class TransformerLM(nn.Module):
 class TransformerEncoder(nn.Module):
     """
     """
-    def __init__(self,
-                 symbol2id,
-                 src_vocab_size, 
-                 src_max_len, 
-                 n_heads, 
-                 d_model,
-                 d_ff, 
-                 d_qk,
-                 d_v, 
-                 n_layers, 
-                 dropout=0, 
-                 attn_dropout=0,
-                 emb_dropout=0,
-                 ln_eps=1e-5,
-                 use_rms_norm=False,
-                 use_attention_bias=True,
-                 use_ffn_bias=True,
-                 use_multi_query_attention=False,
-                 use_alibi_bias=False,
-                 max_relative_len=-1,
-                 use_rel_pos_value=False,
-                 rel_pos_need_train=True,
-                 embedding_size=None,
-                 share_layer_params=False, 
-                 n_share_across_layers=1,
-                 use_pre_norm=True, 
-                 activation="relu", 
-                 scale_embedding=False,
-                 norm_before_pred=False,
-                 norm_after_embedding=False,
-                 use_pos_embedding=True, 
-                 pos_need_train=False,
-                 n_types=None,
-                 use_talking_attention=False,
-                 use_attention_residual=False,
-                 use_glu=False,
-                 use_ln_scale=True,
-                 use_ln_bias=True,
-                 use_pooling=False,
-                 out_dim=None,
-                 n_class=None,
-                 use_crf=False,
-                 with_mlm=False,
-                 share_emb_out_proj=False):
-
+    def __init__(self, **kwargs):
+        """
+        """
         super(TransformerEncoder, self).__init__()
-        self.PAD = symbol2id["_pad_"]
-        self.BOS = symbol2id["_bos_"]
-        self.EOS = symbol2id["_eos_"]
-        self.UNK = symbol2id["_unk_"]
-        self.SEP = symbol2id["_sep_"]
-        self.CLS = symbol2id["_cls_"]
-        self.MASK = symbol2id["_mask_"]
-        
-        self.src_vocab_size = src_vocab_size
-        self.src_max_len = src_max_len
-        self.n_heads = n_heads
-        self.d_model = d_model
-        self.d_ff = d_ff
-        self.n_layers = n_layers
-        self.dropout = dropout
+        self.PAD = kwargs["symbol2id"]["_pad_"]
+        self.BOS = kwargs["symbol2id"]["_bos_"]
+        self.EOS = kwargs["symbol2id"]["_eos_"]
+        self.UNK = kwargs["symbol2id"]["_unk_"]
+        self.SEP = kwargs["symbol2id"]["_sep_"]
+        self.CLS = kwargs["symbol2id"]["_cls_"]
+        self.MASK = kwargs["symbol2id"]["_mask_"]
         self.MAX_LOGITS = 10000.
         self.MIN_LOGITS = -10000.
         
-        self.encoder = Encoder(src_vocab_size, 
-                               src_max_len, 
-                               n_heads,
-                               d_model, 
-                               d_ff, 
-                               d_qk, 
-                               d_v, 
-                               n_layers,
-                               dropout, 
-                               attn_dropout,
-                               emb_dropout,
-                               ln_eps,
-                               use_rms_norm,
-                               use_attention_bias,
-                               use_ffn_bias,
-                               use_multi_query_attention,
-                               use_alibi_bias,
-                               max_relative_len,
-                               use_rel_pos_value,
-                               rel_pos_need_train,
-                               embedding_size,
-                               share_layer_params, 
-                               n_share_across_layers,
-                               use_pre_norm, 
-                               activation, 
-                               scale_embedding,
-                               norm_before_pred,
-                               norm_after_embedding,
-                               use_pos_embedding,
-                               pos_need_train,
-                               n_types,
-                               use_talking_attention,
-                               use_attention_residual,
-                               use_glu,
-                               use_ln_scale,
-                               use_ln_bias)
-
-        self.n_class = n_class
-        self.share_emb_out_proj = share_emb_out_proj
+        self.src_vocab_size = kwargs["src_vocab_size"]
+        self.d_model = kwargs["d_model"]
         
-        self.activation = activation
+        enc_config = kwargs.copy()
+        enc_config["vocab_size"] = kwargs["src_vocab_size"]
+        enc_config["max_len"] = kwargs["src_max_len"] 
+        enc_config["n_layers"] = kwargs["n_enc_layers"] 
+        self.encoder = Transformer(**enc_config)
+
+        self.n_class = kwargs.get("n_class", None)
+        
+        self.activation = kwargs["activation"]
         
         self.W_pool = None
         self.b_pool = None
         self.W_out = None
         self.b_out = None
-        self.use_pooling = use_pooling
-        if use_pooling == True:
-            self.W_pool = nn.Parameter(torch.Tensor(d_model, d_model))
-            self.b_pool = nn.Parameter(torch.zeros(d_model))
+        self.use_pooling = kwargs.get("use_pooling", False)
+        if self.use_pooling == True:
+            self.W_pool = nn.Parameter(torch.Tensor(self.d_model, self.d_model))
+            self.b_pool = nn.Parameter(torch.zeros(self.d_model))
         
         self.W_out = None
         self.b_out = None
         if self.n_class is not None:
-            self.W_out = nn.Parameter(torch.Tensor(d_model, self.n_class))
+            self.W_out = nn.Parameter(torch.Tensor(self.d_model, self.n_class))
             self.b_out = nn.Parameter(torch.zeros(self.n_class))
         
-        self.out_dim = out_dim
-        if out_dim is not None:
-            self.W_out = nn.Parameter(torch.Tensor(d_model, self.out_dim))
+        self.out_dim = kwargs.get("out_dim", None)
+        if self.out_dim is not None:
+            self.W_out = nn.Parameter(torch.Tensor(self.d_model, self.out_dim))
             self.b_out = nn.Parameter(torch.zeros(self.out_dim))
         
         self.crf = None
-        if self.n_class is not None and use_crf == True:
+        if self.n_class is not None and kwargs["use_crf"] == True:
             self.crf = CRF(self.n_class)
         
         self.W_mlm = None
         self.b_mlm = None
         self.W_mlm = None
         self.b_mlm = None
-        self.with_mlm = with_mlm
+        self.with_mlm = kwargs.get("with_mlm", False)
         if self.with_mlm == True:
-            self.b_mlm = nn.Parameter(torch.Tensor(d_model))
+            self.b_mlm = nn.Parameter(torch.Tensor(self.d_model))
             self.norm_mlm = LayerNorm(self.d_model)
-        
-            self.share_emb_out_proj = share_emb_out_proj
-            if share_emb_out_proj == False:
-                self.W_mlm = nn.Parameter(torch.Tensor(d_model, self.src_vocab_size))
+            
+            self.share_emb_out_proj = kwargs.get("share_emb_out_proj", False)
+            if self.share_emb_out_proj == False:
+                self.W_mlm = nn.Parameter(torch.Tensor(self.d_model, self.src_vocab_size))
             self.b_mlm = nn.Parameter(torch.Tensor(self.src_vocab_size))
 
         self.reset_parameters()
@@ -762,6 +750,7 @@ class TransformerEncoder(nn.Module):
                                    return_states=return_states)
         enc_output = enc_outputs[0]
         
+        outputs = []
         if self.use_pooling == True:
             
             enc_output = torch.tanh(torch.matmul(enc_output, self.W_pool) + self.b_pool)
@@ -806,94 +795,34 @@ class TransformerEncoder(nn.Module):
         return outputs        
 
 
+class ViTransformer(nn.Module):
+    """
+    """
+    def __init__(self, **kwargs):
+        """
+        """
+        super(ViTransformerEncoder, self).__init__()
+        enc_config = kwargs.copy()
+        enc_config["vocab_size"] = kwargs["src_vocab_size"]
+        enc_config["max_len"] = kwargs["src_max_len"]
+        self.encoder = Encoder(kwargs)
+        #self.patch_embedding_W = 
+        #self.cls = 
+         
+
+    def forward(self, inputs, return_states=False, targets=None, compute_loss=False):
+        """
+        """
+        #embedding = F.linear(x)
+       
+
+        pass
+
+
 def build_transformer_model(config):
     """
     """
-    src_vocab_size = config["src_vocab_size"]
-    src_max_len = config["src_max_len"]
-    trg_vocab_size = config["trg_vocab_size"]
-    trg_max_len = config["trg_max_len"]
-    n_heads = config["n_heads"]
-    d_model = config["d_model"]
-    d_ff = config["d_ff"]
-    d_qk = config.get("d_qk", d_model//n_heads) 
-    d_v = config.get("d_v", d_model//n_heads) 
-    n_enc_layers = config["n_enc_layers"]
-    n_dec_layers = config["n_dec_layers"]
-    dropout = config.get("dropout", 0)
-    attn_dropout = config.get("attn_dropout", 0)
-    emb_dropout = config.get("emb_dropout", 0)
-    ln_eps = config.get("ln_eps", 1e-5)
-    use_rms_norm = config.get("use_rms_norm", False)
-    use_attention_bias = config.get("use_attention_bias", True)
-    use_ffn_bias = config.get("use_ffn_bias", True)
-    use_multi_query_attention = config.get("use_multi_query_attention", False)
-    use_alibi_bias = config.get("use_alibi_bias", False)
-    max_relative_len = config.get("max_relative_len", -1)
-    use_rel_pos_value = config.get("use_rel_pos_value", False)
-    rel_pos_need_train = config.get("rel_pos_need_train", True)
-    share_src_trg_emb = config["share_src_trg_emb"]
-    share_emb_out_proj = config.get("share_emb_out_proj", False)
-    embedding_size = config.get("embedding_size", None)
-    share_layer_params = config.get("share_layer_params", False)
-    n_share_across_layers = config.get("n_share_across_layers", 1)
-    use_pre_norm = config.get("use_pre_norm", True)
-    activation = config.get("activation", "relu")
-    scale_embedding = config.get("scale_embedding", False)
-    norm_before_pred = config.get("norm_before_pred", False)
-    norm_after_embedding = config.get("norm_after_embedding", False)
-    use_pos_embedding = config.get("use_pos_embedding", True)
-    pos_need_train = config.get("pos_need_train", False)
-    use_output_bias = config.get("use_output_bias", True)
-    use_talking_attention = config.get("use_talking_attention", False)
-    use_attention_residual = config.get("use_attention_residual", False)
-    use_glu = config.get("use_glu", False)
-    use_ln_scale = config.get("use_ln_scale", True)
-    use_ln_bias = config.get("use_ln_bias", True)
-    
-    transformer = TransformerSeq2seq(config["symbol2id"],
-                                     src_vocab_size, 
-                                     src_max_len, 
-                                     trg_vocab_size, 
-                                     trg_max_len, 
-                                     n_heads, 
-                                     d_model, 
-                                     d_ff, 
-                                     d_qk, 
-                                     d_v,
-                                     n_enc_layers,
-                                     n_dec_layers, 
-                                     dropout, 
-                                     attn_dropout, 
-                                     emb_dropout,
-                                     ln_eps,
-                                     use_rms_norm,
-                                     use_attention_bias,
-                                     use_ffn_bias,
-                                     use_multi_query_attention,
-                                     use_alibi_bias,
-                                     max_relative_len,
-                                     use_rel_pos_value,
-                                     rel_pos_need_train,
-                                     share_src_trg_emb, 
-                                     share_emb_out_proj,
-                                     embedding_size,
-                                     share_layer_params, 
-                                     n_share_across_layers,
-                                     use_pre_norm,
-                                     activation,
-                                     scale_embedding,
-                                     norm_before_pred,
-                                     norm_after_embedding,
-                                     use_pos_embedding,
-                                     pos_need_train,
-                                     use_output_bias,
-                                     use_talking_attention,
-                                     use_attention_residual,
-                                     use_glu,
-                                     use_ln_scale,
-                                     use_ln_bias)
-    
+    transformer = TransformerSeq2seq(**config)
     return transformer
 
 
@@ -911,83 +840,7 @@ def build_enc_dec_model(config):
 def build_transformer_lm_model(config):
     """
     """
-    trg_vocab_size = config["trg_vocab_size"]
-    trg_max_len = config["trg_max_len"]
-    n_heads = config["n_heads"]
-    d_model = config["d_model"]
-    d_ff = config["d_ff"]
-    d_qk = config.get("d_qk", d_model//n_heads) 
-    d_v = config.get("d_v", d_model//n_heads) 
-    n_dec_layers = config["n_dec_layers"]
-    dropout = config.get("dropout", 0)
-    attn_dropout = config.get("attn_dropout", 0)
-    emb_dropout = config.get("emb_dropout", 0)
-    ln_eps = config.get("ln_eps", 1e-5)
-    use_rms_norm = config.get("use_rms_norm", False)
-    use_attention_bias = config.get("use_attention_bias", True)
-    use_ffn_bias = config.get("use_ffn_bias", True)
-    use_multi_query_attention = config.get("use_multi_query_attention", False)
-    use_alibi_bias = config.get("use_alibi_bias", False)
-    max_relative_len = config.get("max_relative_len", -1)
-    use_rel_pos_value = config.get("use_rel_pos_value", False)
-    rel_pos_need_train = config.get("rel_pos_need_train", True)
-    share_emb_out_proj = config.get("share_emb_out_proj", False)
-    share_layer_params = config.get("share_layer_params", False)
-    embedding_size = config.get("embedding_size", None)
-    n_share_across_layers = config.get("n_share_across_layers", 1)
-    use_pre_norm = config.get("use_pre_norm", True)
-    activation = config.get("activation", "relu")
-    scale_embedding = config.get("scale_embedding", False)
-    norm_before_pred = config.get("norm_before_pred", False)
-    norm_after_embedding = config.get("norm_after_embedding", False)
-    use_pos_embedding = config.get("use_pos_embedding", True)
-    pos_need_train = config.get("pos_need_train", False)
-    use_output_bias = config.get("use_output_bias", True)
-    use_talking_attention = config.get("use_talking_attention", False)
-    use_attention_residual = config.get("use_attention_residual", False)
-    use_glu = config.get("use_glu", False)
-    use_ln_scale = config.get("use_ln_scale", True)
-    use_ln_bias = config.get("use_ln_bias", True)
-    
-    transformer = TransformerLM(config["symbol2id"],
-                                trg_vocab_size, 
-                                trg_max_len, 
-                                n_heads, 
-                                d_model, 
-                                d_ff,
-                                d_qk,
-                                d_v,
-                                n_dec_layers, 
-                                dropout, 
-                                attn_dropout, 
-                                emb_dropout, 
-                                ln_eps,
-                                use_rms_norm,
-                                use_attention_bias,
-                                use_ffn_bias,
-                                use_multi_query_attention,
-                                use_alibi_bias,
-                                max_relative_len,
-                                use_rel_pos_value,
-                                rel_pos_need_train,
-                                share_emb_out_proj,
-                                embedding_size,
-                                share_layer_params,
-                                n_share_across_layers,
-                                use_pre_norm,
-                                activation,
-                                scale_embedding,
-                                norm_before_pred,
-                                norm_after_embedding,
-                                use_pos_embedding,
-                                pos_need_train,
-                                use_output_bias,
-                                use_talking_attention,
-                                use_attention_residual,
-                                use_glu,
-                                use_ln_scale,
-                                use_ln_bias)
-    
+    transformer = TransformerLM(**config)
     return transformer
 
 
@@ -1005,93 +858,7 @@ def build_lm_model(config):
 def build_transformer_encoder_model(config):
     """
     """
-    src_vocab_size = config["src_vocab_size"]
-    src_max_len = config["src_max_len"]
-    n_heads = config["n_heads"]
-    d_model = config["d_model"]
-    d_ff = config["d_ff"]
-    d_qk = config.get("d_qk", d_model//n_heads) 
-    d_v = config.get("d_v", d_model//n_heads) 
-    n_enc_layers = config["n_enc_layers"]
-    n_types = config.get("n_types", None)
-    use_pooling = config.get("use_pooling", True)
-    out_dim = config.get("out_dim", None)
-    n_class = config.get("n_class", None)
-    use_crf = config.get("use_crf", False)
-    with_mlm = config.get("with_mlm", False)
-    share_emb_out_proj = config.get("share_emb_out_proj", False)
-    dropout = config.get("dropout", 0)
-    attn_dropout = config.get("attn_dropout", 0)
-    emb_dropout = config.get("emb_dropout", 0)
-    ln_eps = config.get("ln_eps", 1e-5)
-    use_rms_norm = config.get("use_rms_norm", False)
-    use_attention_bias = config.get("use_attention_bias", True)
-    use_ffn_bias = config.get("use_ffn_bias", True)
-    use_multi_query_attention = config.get("use_multi_query_attention", False)
-    use_alibi_bias = config.get("use_alibi_bias", False)
-    max_relative_len = config.get("max_relative_len", -1)
-    use_rel_pos_value = config.get("use_rel_pos_value", False)
-    rel_pos_need_train = config.get("rel_pos_need_train", True)
-    share_layer_params = config.get("share_layer_params", False)
-    embedding_size = config.get("embedding_size", None)
-    n_share_across_layers = config.get("n_share_across_layers", 1)
-    use_pre_norm = config.get("use_pre_norm", True)
-    activation = config.get("activation", "relu")
-    scale_embedding = config.get("scale_embedding", False)
-    norm_before_pred = config.get("norm_before_pred", False)
-    norm_after_embedding = config.get("norm_after_embedding", False)
-    use_pos_embedding = config.get("use_pos_embedding", True)
-    pos_need_train = config.get("pos_need_train", False)
-    use_talking_attention = config.get("use_talking_attention", False)
-    use_attention_residual = config.get("use_attention_residual", False)
-    use_glu = config.get("use_glu", False)
-    use_ln_scale = config.get("use_ln_scale", True)
-    use_ln_bias = config.get("use_ln_bias", True)
-    
-    transformer = TransformerEncoder(config["symbol2id"],
-                                     src_vocab_size, 
-                                     src_max_len, 
-                                     n_heads,
-                                     d_model, 
-                                     d_ff, 
-                                     d_qk, 
-                                     d_v,
-                                     n_enc_layers,
-                                     dropout,
-                                     attn_dropout,
-                                     emb_dropout,
-                                     ln_eps,
-                                     use_rms_norm,
-                                     use_attention_bias,
-                                     use_ffn_bias,
-                                     use_multi_query_attention,
-                                     use_alibi_bias,
-                                     max_relative_len,
-                                     use_rel_pos_value,
-                                     rel_pos_need_train,
-                                     embedding_size,
-                                     share_layer_params,
-                                     n_share_across_layers,
-                                     use_pre_norm,
-                                     activation,
-                                     scale_embedding,
-                                     norm_before_pred,
-                                     norm_after_embedding,
-                                     use_pos_embedding,
-                                     pos_need_train,
-                                     n_types,
-                                     use_talking_attention,
-                                     use_attention_residual,
-                                     use_glu,
-                                     use_ln_scale,
-                                     use_ln_bias,
-                                     use_pooling,
-                                     out_dim,
-                                     n_class,
-                                     use_crf,
-                                     with_mlm,
-                                     share_emb_out_proj)
-    
+    transformer = TransformerEncoder(**config)
     return transformer
 
 
@@ -1099,7 +866,7 @@ def build_encoder_model(config):
     """
     """
     if config["model"] == "transformer":
-        model = build_transformer_encoder_model(config)
+        model = build_transformer_encoder_model(**config)
     else:
         raise ValueError("model not correct!")
         

@@ -11,7 +11,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
     
-
 class CRF(nn.Module):
     """
     """
@@ -119,61 +118,39 @@ class CRF(nn.Module):
 class Embedding(nn.Module):
     """
     """
-    def __init__(self, vocab_size, embedding_size, scale_embedding=False):
+    def __init__(self, vocab_size, embedding_size, factorized_size=None):
         super(Embedding, self).__init__()
+        self.vocab_size = vocab_size
         self.embedding_size = embedding_size
-        self.W = nn.Parameter(torch.Tensor(vocab_size, embedding_size))
-        self.scale_embedding = scale_embedding
+        self.factorized_size = factorized_size
+        if self.factorized_size is None:
+            self.W = nn.Parameter(torch.Tensor(vocab_size, embedding_size))
+        else:
+            self.W = nn.Parameter(torch.Tensor(vocab_size, embedding_size))
+            self.We = nn.Parameter(torch.Tensor(factorized_size, embedding_size))             
         self.reset_parameters()
     
     def reset_parameters(self):
         """
         """
-        stdv = 1.0 / np.sqrt(self.embedding_size)
+        #stdv = 1.0 / np.sqrt(self.embedding_size)
+        stdv = np.log(self.vocab_size) / self.embedding_size
         for weight in self.parameters():
             weight.data.uniform_(-stdv, stdv)
-    
+
     def forward(self, x):
         """
         """
-        embeded = self.W[x]
-        if self.scale_embedding == True:
-            embeded = embeded * np.sqrt(self.embedding_size)
-        return embeded
-
-
-    def get_embedding(self):
-        """
-        """
-        return self.W
-
-
-class FactorizedEmbedding(nn.Module):
-    """
-    """
-    def __init__(self, vocab_size, embedding_size, hidden_size):
-        super(FactorizedEmbedding, self).__init__()
-        self.embedding_size = embedding_size
-        self.W = nn.Parameter(torch.Tensor(vocab_size, embedding_size))
-        self.We = nn.Parameter(torch.Tensor(hidden_size, embedding_size))
-        self.reset_parameters()
-    
-    def reset_parameters(self):
-        """
-        """
-        stdv = 1.0 / np.sqrt(self.embedding_size)
-        for weight in self.parameters():
-            weight.data.uniform_(-stdv, stdv)
-    
-    def forward(self, x):
-        """
-        """
+        if self.factorized_size is None:
+            return self.W[x]
         return F.linear(self.W[x], self.We)
 
 
     def get_embedding(self):
         """
         """
+        if self.factorized_size is None:
+            return self.W
         return F.linear(self.W, self.We)
 
 
@@ -636,78 +613,78 @@ class MultiHeadAttention(nn.Module):
 class TransformerLayer(nn.Module):
     """
     """
-    def __init__(self, 
-                 n_heads,
-                 d_model, 
-                 d_ff, 
-                 d_qk, 
-                 d_v, 
-                 dropout=0,
-                 attn_dropout=0,
-                 ln_eps=1e-5,
-                 use_pre_norm=True,
-                 activation="relu",
-                 use_rms_norm=False,
-                 use_attention_bias=True,
-                 use_ffn_bias=True,
-                 use_multi_query_attention=False,
-                 use_alibi_bias=False,
-                 max_relative_len=-1,
-                 use_rel_pos_value=False,
-                 rel_pos_need_train=True,
-                 with_across_attention=True,
-                 use_talking_attention=False,
-                 use_glu=False,
-                 use_ln_scale=True,
-                 use_ln_bias=True):
+    def __init__(self, **kwargs):
         """
         """
         super(TransformerLayer, self).__init__()
-        self.self_attention = MultiHeadAttention(n_heads,
-                                                 d_model, 
-                                                 d_qk, 
-                                                 d_v, 
-                                                 dropout,
-                                                 attn_dropout,
-                                                 use_attention_bias,
-                                                 max_relative_len,
-                                                 use_rel_pos_value,
-                                                 rel_pos_need_train,
-                                                 use_multi_query_attention,
-                                                 use_alibi_bias,
-                                                 use_talking_attention)
         
-        self.norm_1 = LayerNorm(d_model,ln_eps,use_rms_norm)
+        self.n_heads = kwargs["n_heads"]
+        self.d_model = kwargs["d_model"]
+        self.d_ff = kwargs.get("d_ff", 4 * self.d_model) 
+        self.d_qk = kwargs.get("d_qk", self.d_model//self.n_heads)
+        self.d_v = kwargs.get("d_v", self.d_model//self.n_heads)
+        self.dropout = kwargs.get("dropout", 0)
+        self.attn_dropout = kwargs.get("attn_dropout", 0)
+        self.ln_eps = kwargs.get("ln_eps", 1e-5)
+        self.use_pre_norm = kwargs.get("use_pre_norm", False)
+        self.activation = kwargs.get("activation", "relu")
+        self.use_rms_norm = kwargs.get("use_rms_norm", False)
+        self.use_attention_bias = kwargs.get("use_attention_bias", True)
+        self.use_ffn_bias = kwargs.get("use_ffn_bias", True)
+        self.use_multi_query_attention = kwargs.get("use_multi_query_attention", False)
+        self.use_alibi_bias = kwargs.get("use_alibi_bias", False)
+        self.max_relative_len = kwargs.get("max_relative_len", -1)
+        self.use_rel_pos_value = kwargs.get("use_rel_pos_value", False)
+        self.rel_pos_need_train = kwargs.get("rel_pos_need_train", False)
+        self.with_across_attention = kwargs.get("with_across_attention", False)
+        self.use_talking_attention = kwargs.get("use_talking_attention", False)
+        self.use_glu = kwargs.get("use_glu", False)
+        self.use_ln_scale = kwargs.get("use_ln_scale", True)
+        self.use_ln_bias = kwargs.get("use_ln_bias", True)
         
-        self.with_across_attention = with_across_attention
+        self.self_attention = MultiHeadAttention(self.n_heads,
+                                                 self.d_model, 
+                                                 self.d_qk, 
+                                                 self.d_v, 
+                                                 self.dropout,
+                                                 self.attn_dropout,
+                                                 self.use_attention_bias,
+                                                 self.max_relative_len,
+                                                 self.use_rel_pos_value,
+                                                 self.rel_pos_need_train,
+                                                 self.use_multi_query_attention,
+                                                 self.use_alibi_bias,
+                                                 self.use_talking_attention)
+        
+        self.norm_1 = LayerNorm(self.d_model,self.ln_eps,self.use_rms_norm,self.use_ln_scale,self.use_ln_bias)
+        
         if self.with_across_attention == True:
-            self.enc_attention = MultiHeadAttention(n_heads,
-                                                    d_model, 
-                                                    d_qk, 
-                                                    d_v, 
-                                                    dropout,
-                                                    attn_dropout,
-                                                    use_attention_bias,
-                                                    max_relative_len,
-                                                    use_rel_pos_value,
-                                                    rel_pos_need_train,
-                                                    use_multi_query_attention,
+            self.enc_attention = MultiHeadAttention(self.n_heads,
+                                                    self.d_model, 
+                                                    self.d_qk, 
+                                                    self.d_v, 
+                                                    self.dropout,
+                                                    self.attn_dropout,
+                                                    self.use_attention_bias,
+                                                    self.max_relative_len,
+                                                    self.use_rel_pos_value,
+                                                    self.rel_pos_need_train,
+                                                    self.use_multi_query_attention,
                                                     False,
-                                                    use_talking_attention)
+                                                    self.use_talking_attention)
         
-            self.norm_2 = LayerNorm(d_model,ln_eps,use_rms_norm,use_ln_scale,use_ln_bias)
+            self.norm_2 = LayerNorm(self.d_model,self.ln_eps,self.use_rms_norm,self.use_ln_scale,self.use_ln_bias)
             
-        self.ffn = FeedForward(d_model, 
-                               d_ff, 
-                               activation, 
-                               dropout,
-                               use_ffn_bias,
-                               use_glu)
+        self.ffn = FeedForward(self.d_model, 
+                               self.d_ff, 
+                               self.activation, 
+                               self.dropout,
+                               self.use_ffn_bias,
+                               self.use_glu)
         if self.with_across_attention == True:
-            self.norm_3 = LayerNorm(d_model,ln_eps,use_rms_norm,use_ln_scale,use_ln_bias)
+            self.norm_3 = LayerNorm(self.d_model,self.ln_eps,self.use_rms_norm,self.use_ln_scale,self.use_ln_bias)
         else:
-            self.norm_2 = LayerNorm(d_model,ln_eps,use_rms_norm,use_ln_scale,use_ln_bias)
-        self.use_pre_norm = use_pre_norm
+            self.norm_2 = LayerNorm(self.d_model,self.ln_eps,self.use_rms_norm,self.use_ln_scale,self.use_ln_bias)
         
         
     def forward(self, 
@@ -745,7 +722,7 @@ class TransformerLayer(nn.Module):
         else:
             self_keys = output
             self_values = output
-
+        
         output, self_attn_scores, self_scores = self.self_attention(output, 
                                                                     self_keys, 
                                                                     self_values, 
@@ -814,462 +791,3 @@ class TransformerLayer(nn.Module):
         return self.self_attention.cache_kv(dec_output)
 
 
-class Encoder(nn.Module):
-    """
-    """
-    def __init__(self, 
-                 src_vocab_size, 
-                 src_max_len, 
-                 n_heads, 
-                 d_model,
-                 d_ff, 
-                 d_qk,
-                 d_v, 
-                 n_layers, 
-                 dropout=0, 
-                 attn_dropout=0,
-                 emb_dropout=0,
-                 ln_eps=1e-5,
-                 use_rms_norm=False,
-                 use_attention_bias=True,
-                 use_ffn_bias=True,
-                 use_multi_query_attention=False,
-                 use_alibi_bias=False,
-                 max_relative_len=-1,
-                 use_rel_pos_value=False,
-                 rel_pos_need_train=True,
-                 embedding_size=None,
-                 share_layer_params=False, 
-                 n_share_across_layers=1,
-                 use_pre_norm=True, 
-                 activation="relu", 
-                 scale_embedding=False,
-                 norm_before_pred=False,
-                 norm_after_embedding=False,
-                 use_pos_embeding=True,
-                 pos_need_train=False,
-                 n_types=None,
-                 use_talking_attention=False,
-                 use_attention_residual=False,
-                 use_glu=False,
-                 use_ln_scale=True,
-                 use_ln_bias=True):
-        """
-        """
-        super(Encoder, self).__init__()
-        self.n_heads = n_heads
-        self.d_model = d_model
-        self.n_layers = n_layers
-        self.share_layer_params = share_layer_params
-        self.n_share_across_layers = n_share_across_layers
-        self.scale_embedding = scale_embedding
-        self.norm_before_pred = norm_before_pred
-        self.norm_after_embedding = norm_after_embedding
-        self.use_attention_residual = use_attention_residual
-        
-        if embedding_size is None:
-            self.src_embedding = Embedding(src_vocab_size, 
-                                           d_model, 
-                                           scale_embedding)
-        else:
-            self.src_embedding = FactorizedEmbedding(src_vocab_size, 
-                                                     embedding_size,
-                                                     d_model)
-
-        self.use_pos_embeding = use_pos_embeding
-        if use_pos_embeding:
-            self.pos_embedding = PositionEmbedding(src_max_len, 
-                                                   d_model, 
-                                                   pos_need_train)
-        
-        self.n_types = n_types
-        if self.n_types is not None:
-            self.type_embedding = Embedding(self.n_types, self.d_model)
-        
-        if self.norm_after_embedding == True:
-            self.norm_emb = LayerNorm(self.d_model, ln_eps, use_rms_norm)
-        
-        self.emb_dropout = None
-        if emb_dropout > 0:
-            self.emb_dropout = Dropout(dropout)
-            
-        self.layers = nn.ModuleList([
-                TransformerLayer(n_heads, 
-                                 d_model, 
-                                 d_ff, 
-                                 d_qk, 
-                                 d_v,
-                                 dropout=dropout,
-                                 attn_dropout=attn_dropout,
-                                 ln_eps=ln_eps,
-                                 use_pre_norm=use_pre_norm,
-                                 activation=activation,
-                                 use_rms_norm=use_rms_norm,
-                                 use_attention_bias=use_attention_bias,
-                                 use_ffn_bias=use_ffn_bias,
-                                 use_multi_query_attention=use_multi_query_attention,
-                                 use_alibi_bias=use_alibi_bias,
-                                 max_relative_len=max_relative_len,
-                                 use_rel_pos_value=use_rel_pos_value,
-                                 rel_pos_need_train=rel_pos_need_train,
-                                 with_across_attention=False,
-                                 use_talking_attention=use_talking_attention,
-                                 use_glu=use_glu,
-                                 use_ln_scale=use_ln_scale,
-                                 use_ln_bias=use_ln_bias)
-                    for i in range(n_layers//n_share_across_layers)])
-    
-        if self.norm_before_pred == True:
-            self.norm = LayerNorm(self.d_model, ln_eps, use_rms_norm)
-            
-    
-    def forward(self, x, attn_mask, self_pos_ids=None, x_type=None, return_states=False):
-        """
-        """
-        enc_self_attn_list = []
-        
-        word_embeded = self.src_embedding(x)
-        
-        embeded = word_embeded
-        if self.use_pos_embeding == True:
-           embeded += self.pos_embedding(self_pos_ids)
-        
-        if self.n_types is not None:
-            embeded += self.type_embedding(x_type)
-        enc_output = embeded
-           
-        if self.norm_after_embedding == True:
-            enc_output = self.norm_emb(enc_output)
-        
-        if self.emb_dropout is not None:
-            enc_output = self.emb_dropout(enc_output)
-        
-        enc_states = [enc_output]
-        
-        attention_residual = None
-        for i in range(self.n_layers):
-            if self.share_layer_params == False:
-                enc_layer = self.layers[i]
-            else:
-                enc_layer = self.layers[i // self.n_share_across_layers]
-            
-            enc_output, enc_attn_scores, attention_residual = enc_layer(enc_output, 
-                                                                        attn_mask, 
-                                                                        self_pos_ids=self_pos_ids, 
-                                                                        past_pos_ids=self_pos_ids,
-                                                                        attention_residual=attention_residual if self.use_attention_residual else None)
-            
-            enc_self_attn_list.append(enc_attn_scores)
-            enc_states.append(enc_output)
-        
-        if self.norm_before_pred == True:
-            enc_output = self.norm(enc_output)
-
-        outputs = [enc_output]
-                
-        if return_states == True:
-            outputs = outputs + [embeded, enc_states, enc_self_attn_list]
-        
-        return outputs
-
-
-class Decoder(nn.Module):
-    """
-    """
-    def __init__(self, 
-                 trg_vocab_size, 
-                 trg_max_len, 
-                 n_heads, 
-                 d_model, 
-                 d_ff, 
-                 d_qk,
-                 d_v, 
-                 n_layers, 
-                 with_across_attention=True,
-                 dropout=0, 
-                 attn_dropout=0,
-                 emb_dropout=0,
-                 ln_eps=1e-5,
-                 use_rms_norm=False,
-                 use_attention_bias=True,
-                 use_ffn_bias=True,
-                 use_multi_query_attention=False,
-                 use_alibi_bias=False,
-                 max_relative_len=-1,
-                 use_rel_pos_value=False,
-                 rel_pos_need_train=True,
-                 embedding_size=None,
-                 share_layer_params=False, 
-                 n_share_across_layers=1,
-                 share_src_trg_emb=False, 
-                 share_emb_out_proj=False,
-                 use_pre_norm=True, 
-                 activation="relu", 
-                 scale_embedding=False,
-                 norm_before_pred=False,
-                 norm_after_embedding=False,
-                 use_pos_embedding=True,
-                 pos_need_train=False,
-                 use_output_bias=False,
-                 use_talking_attention=False,
-                 use_attention_residual=False,
-                 use_glu=False,
-                 use_ln_scale=True,
-                 use_ln_bias=True):
-        """
-        """
-        super(Decoder, self).__init__()
-        self.trg_vocab_size = trg_vocab_size
-        self.n_heads = n_heads
-        self.d_model = d_model
-        self.n_layers = n_layers
-        self.with_across_attention = with_across_attention
-        self.share_layer_params = share_layer_params
-        self.n_share_across_layers = n_share_across_layers
-        self.scale_embedding = scale_embedding
-        self.norm_before_pred = norm_before_pred
-        self.norm_after_embedding = norm_after_embedding
-        self.use_attention_residual = use_attention_residual
-        if share_src_trg_emb == False:
-            self.trg_embedding = Embedding(trg_vocab_size, 
-                                           d_model, 
-                                           scale_embedding)
-            
-        self.emb_dropout = None
-        if emb_dropout > 0:
-            self.emb_dropout = Dropout(dropout)
-        
-        self.use_pos_embedding = use_pos_embedding
-        if use_pos_embedding == True:    
-            self.pos_embedding = PositionEmbedding(trg_max_len, 
-                                                   d_model, 
-                                                   pos_need_train)
-        
-        if self.norm_after_embedding == True:
-            self.norm_emb = LayerNorm(self.d_model, ln_eps, use_rms_norm)
-        
-        self.layers = nn.ModuleList([
-                TransformerLayer(n_heads, 
-                                 d_model, 
-                                 d_ff, 
-                                 d_qk, 
-                                 d_v,
-                                 dropout=dropout,
-                                 attn_dropout=attn_dropout,
-                                 ln_eps=ln_eps,
-                                 use_pre_norm=use_pre_norm,
-                                 activation=activation,
-                                 use_rms_norm=use_rms_norm,
-                                 use_attention_bias=use_attention_bias,
-                                 use_ffn_bias=use_ffn_bias,
-                                 use_multi_query_attention=use_multi_query_attention,
-                                 use_alibi_bias=use_alibi_bias,
-                                 max_relative_len=max_relative_len,
-                                 use_rel_pos_value=use_rel_pos_value,
-                                 rel_pos_need_train=rel_pos_need_train,
-                                 with_across_attention=with_across_attention,
-                                 use_talking_attention=use_talking_attention,
-                                 use_glu=use_glu,
-                                 use_ln_scale=use_ln_scale,
-                                 use_ln_bias=use_ln_bias)
-                    for i in range(n_layers//n_share_across_layers)])
-    
-        self.share_emb_out_proj = share_emb_out_proj
-        if share_emb_out_proj == False: 
-            self.W = nn.Parameter(torch.Tensor(trg_vocab_size, d_model))
-        self.use_output_bias = use_output_bias
-        if use_output_bias == True:
-            self.b = nn.Parameter(torch.Tensor(trg_vocab_size))
-
-        if self.norm_before_pred == True:
-            self.norm = LayerNorm(self.d_model, ln_eps, use_rms_norm)
-        
-        self.reset_parameters()
-    
-    
-    def reset_parameters(self):
-        """
-        """
-        stdv = 1.0 / np.sqrt(self.d_model)
-        if self.share_emb_out_proj == False: 
-            self.W.data.uniform_(-stdv, stdv)
-        if self.use_output_bias == True:
-            self.b.data.zero_()
-            
-            
-    def forward(self, 
-                y, 
-                self_attn_mask=None,
-                dec_kv_list=None, 
-                dec_enc_attn_mask=None,
-                enc_kv_list=None,
-                self_pos_ids=None,
-                enc_pos_ids=None,
-                past_pos_ids=None,
-                cached_kv=False, 
-                trg_embedding=None,
-                return_states=False):
-        """
-        """
-        if trg_embedding is None:
-            trg_embedding = self.trg_embedding
-
-        embeded = trg_embedding(y)
-        
-        if self.use_pos_embedding == True:    
-            embeded = embeded + self.pos_embedding(self_pos_ids)
-
-        dec_output = embeded
-
-        if self.norm_after_embedding == True:
-            dec_output = self.norm_emb(dec_output)
-        if self.emb_dropout is not None:
-            dec_output = self.emb_dropout(dec_output)
-        
-        self_attn_scores_list = []
-        enc_attn_scores_list = []
-        dec_states = [dec_output]
-        attention_residual = None
-        enc_attention_residual = None
-        for i in range(self.n_layers):
-            
-            if self.share_layer_params == False:
-                layer = self.layers[i]
-            else:
-                layer = self.layers[i // self.n_share_across_layers]
-                
-            outputs = layer(dec_output,
-                            self_attn_mask,
-                            cached_kv,
-                            dec_kv_list[i][0] if cached_kv else None,
-                            dec_kv_list[i][1] if cached_kv else None,
-                            enc_kv_list[i][0] if cached_kv and self.with_across_attention else enc_kv_list, 
-                            enc_kv_list[i][1] if cached_kv and self.with_across_attention else enc_kv_list, 
-                            dec_enc_attn_mask,
-                            self_pos_ids,
-                            enc_pos_ids,
-                            past_pos_ids,
-                            attention_residual if self.use_attention_residual else None,
-                            enc_attention_residual if self.use_attention_residual else None)
-
-            dec_output, self_attn_scores, attention_residual = outputs[:3]
-            
-            if self.with_across_attention == True:
-                enc_attn_scores,enc_attention_residual = outputs[3:5]
-                
-            self_attn_scores_list.append(self_attn_scores)
-            if self.with_across_attention == True:
-                enc_attn_scores_list.append(enc_attn_scores)
-            dec_states.append(dec_output)
-
-            dec_output = outputs[0]
-
-            if cached_kv == True:
-                dec_keys, dec_values = outputs[-2:]
-                dec_kv_list[i][0] = dec_keys
-                dec_kv_list[i][1] = dec_values
-
-        if self.norm_before_pred == True:
-            dec_output = self.norm(dec_output)
-            
-        if self.share_emb_out_proj == False:
-            W = self.W
-        else:
-            W = trg_embedding.get_embedding()
-            
-        logits = F.linear(dec_output, W)
-        if self.use_output_bias == True:
-            logits = logits + self.b
-        
-        outputs = [logits]
-        if cached_kv == True:
-            outputs += [dec_kv_list]
-
-        if return_states == True:
-            outputs = outputs + \
-            [embeded, dec_states, self_attn_scores_list, enc_attn_scores_list]
-            
-        return outputs
-
-
-    def cache_enc_kv(self, enc_output):
-        """
-        """
-        kv_list = []
-        for i in range(self.n_layers):
-            if not self.share_layer_params:
-                layer = self.layers[i]
-                cached_kv = layer.cache_enc_kv(enc_output)
-            elif i % self.n_share_across_layers == 0:
-                layer = self.layers[i // self.n_share_across_layers]
-                cached_kv = layer.cache_enc_kv(enc_output)
-            else:
-                cached_kv = kv_list[-1]
-            kv_list.append(cached_kv)
-            
-        return kv_list
-    
-
-    def cache_dec_kv(self, 
-                     y=None, 
-                     self_attn_mask=None, 
-                     enc_kv_list=None, 
-                     dec_enc_attn_mask=None, 
-                     self_pos_ids=None, 
-                     enc_pos_ids=None,
-                     past_pos_ids=None,
-                     trg_embedding=None):
-        """
-        """
-        dec_kv_list = []
-        for i in range(self.n_layers):
-            dec_kv_list.append([None, None])
-        if y is None:
-            return dec_kv_list
-        
-        if trg_embedding is None:
-            trg_embedding = self.trg_embedding
-        word_embeded = trg_embedding(y)
-        if self.use_pos_embedding == True:
-            word_embeded = word_embeded + self.pos_embedding(self_pos_ids)
-        dec_output = word_embeded
-        
-        if self.norm_after_embedding == True:
-            dec_output = self.norm_emb(dec_output)
-
-        attention_residual = None
-        enc_attention_residual = None
-        for i in range(self.n_layers):
-            if self.share_layer_params == False:
-                layer = self.layers[i]
-            else:
-                layer = self.layers[i // self.n_share_across_layers]
-
-            outputs = layer(dec_output,
-                            self_attn_mask,
-                            True,
-                            dec_kv_list[i][0],
-                            dec_kv_list[i][1],
-                            enc_kv_list[i][0] if self.with_across_attention else None,
-                            enc_kv_list[i][1] if self.with_across_attention else None,
-                            dec_enc_attn_mask,
-                            self_pos_ids,
-                            enc_pos_ids,
-                            past_pos_ids,
-                            attention_residual if self.use_attention_residual else None,
-                            enc_attention_residual if self.use_attention_residual else None
-                            )
-            dec_output, self_attn_scores, attention_residual = outputs[:3]
-            
-            if self.with_across_attention == True:
-                enc_attn_scores,enc_attention_residual = outputs[3:5]
-
-            dec_keys, dec_values = outputs[-2:]
-            dec_kv_list[i][0] = dec_keys
-            dec_kv_list[i][1] = dec_values
-
-        return dec_kv_list
-
-
-if __name__ == "__main__":
-    pass

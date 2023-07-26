@@ -209,16 +209,16 @@ class EncDecGenerator():
             
             trg_embedding = None
             if self.model.share_src_trg_emb == True:
-                trg_embedding = self.model.encoder.src_embedding
+                trg_embedding = self.model.encoder.word_embedding
     
             dec_outputs = self.model.decoder(y, 
                                              self_attn_mask=dec_self_attn_mask, 
                                              enc_kv_list=enc_output,
-                                             dec_enc_attn_mask=dec_enc_attn_mask,
+                                             self_enc_attn_mask=dec_enc_attn_mask,
                                              self_pos_ids=dec_pos_ids,
                                              enc_pos_ids=enc_pos_ids,
                                              past_pos_ids=dec_pos_ids,
-                                             trg_embedding=trg_embedding)
+                                             embedding=trg_embedding)
     
             logits = dec_outputs[0]
             
