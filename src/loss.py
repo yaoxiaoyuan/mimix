@@ -45,7 +45,7 @@ def contrastive_loss(vec, target, sim_alpha):
     """
     norm_vec = F.normalize(vec, p=2, dim=1)
     sim = torch.mm(norm_vec, norm_vec.T)
-    sim = torch.masked_fill(sim, torch.eye(sim.shape[0], device=sim.device).bool(), -10000)
+    sim = torch.masked_fill(sim, torch.eye(sim.shape[0], device=sim.device).bool(), -1000)
     loss = F.cross_entropy(sim_alpha * sim, target)
 
     return loss
@@ -90,52 +90,3 @@ def gaussian_kld(recog_mu, recog_logvar, prior_mu, prior_logvar):
                 1)
     return kld
 
-
-def build_lm_loss(model_config, train_config):
-    """
-    """
-    eps = train_config.get("eps", 0)
-    pad = model_config["symbol2id"]["_pad_"]
-    return lambda x,y:seq_cross_entropy(x[0], y[0], eps, pad)
- 
-
-def build_classify_loss(model_config, train_config):
-    """
-    """
-    eps = train_config.get("eps", 0)
-    return lambda x,y:classify_loss(x[0], y[0], eps)
-
-                
-def build_sequence_labeling_loss(model_config, train_config):
-    """
-    """
-    eps = train_config.get("eps", 0)
-    pad = model_config["symbol2id"]["_pad_"]
-    if model_config["use_crf"] == True:
-        return lambda x,y:x[0]
-    else:
-        return lambda x,y:seq_cross_entropy(x[1], y[0], eps, pad)
-
-
-def build_match_loss(model_config, train_config):
-    """
-    """
-    return lambda x,y:contrastive_loss(x[0], y[0], train_config["sim_alpha"])
-
-
-loss_builder_dict = {
-     "enc_dec": build_lm_loss,
-     "lm": build_lm_loss,
-     "bi_lm": build_lm_loss,
-     "sequence_labeling": build_sequence_labeling_loss,
-     "classify": build_classify_loss,
-     "match": build_match_loss
-}
-
-def build_loss_fn(model_config, train_config):
-    """
-    """
-    if model_config["task"] in loss_builder_dict:
-        return loss_builder_dict[model_config["task"]](model_config, train_config)
-    else:
-        raise ValueError("model not correct!")

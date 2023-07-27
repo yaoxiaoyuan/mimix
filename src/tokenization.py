@@ -7,7 +7,7 @@ Created on Fri Nov 20 17:40:07 2020
 import re
 from abc import abstractmethod
 from utils import load_vocab
-import bert_tokenizer
+import bert
 
 def is_alphabet(ch):
     """
@@ -74,18 +74,14 @@ def is_space(ch):
 class Tokenizer():
     """
     """
-    def __init__(self, vocab_file, pre_tokenized, pre_vectorized):
+    def __init__(self, vocab_file):
         """
         """
         self.vocab = None
         self.id2word = None
         
-        if pre_vectorized == False:
-            self.vocab = load_vocab(vocab_file)
-            self.id2word = {self.vocab[w]:w for w in self.vocab}
-            
-        self.pre_tokenized = pre_tokenized
-        self.pre_vectorized = pre_vectorized
+        self.vocab = load_vocab(vocab_file)
+        self.id2word = {self.vocab[w]:w for w in self.vocab}
     
     
     @abstractmethod
@@ -120,15 +116,8 @@ class Tokenizer():
     def tokenize_to_ids(self, text):
         """
         """
-        if self.pre_vectorized == False:
-            if self.pre_tokenized == False:
-                tokens = self.tokenize(text)
-            else:
-                tokens = text.split()
-            word_ids = self.convert_tokens_to_ids(tokens)
-        else:
-            tokens = text.split()
-            word_ids = [int(word) for word in tokens]
+        tokens = self.tokenize(text)
+        word_ids = self.convert_tokens_to_ids(tokens)
         
         return word_ids
     
@@ -136,14 +125,8 @@ class Tokenizer():
     def detokenize_ids(self, word_ids):
         """
         """
-        if self.pre_vectorized == False:
-            tokens = self.convert_ids_to_tokens(word_ids)
-            if self.pre_tokenized == False:
-                text = self.detokenize(tokens)
-            else:
-                text = " ".join(tokens)
-        else:
-            text = " ".join([str(word) for word in word_ids])
+        tokens = self.convert_ids_to_tokens(word_ids)
+        text = self.detokenize(tokens)
         
         return text
 
@@ -151,11 +134,10 @@ class Tokenizer():
 class SpaceTokenizer(Tokenizer):
     """
     """
-    def __init__(self, vocab_file, pre_tokenized, pre_vectorized):
+    def __init__(self, vocab_file):
         """
         """
-        super(SpaceTokenizer,self).__init__(
-                vocab_file, pre_tokenized, pre_vectorized)
+        super(SpaceTokenizer,self).__init__(vocab_file)
     
     
     def tokenize(self, text):
@@ -177,21 +159,19 @@ class SpaceTokenizer(Tokenizer):
 class MimixTokenizer(Tokenizer):
     """
     """
-    def __init__(self, vocab_file, pre_tokenized, pre_vectorized):
+    def __init__(self, vocab_file):
         """
         """
-        super(MimixTokenizer,self).__init__(
-                vocab_file, pre_tokenized, pre_vectorized)
+        super(MimixTokenizer,self).__init__(vocab_file)
         
-        if pre_vectorized == False:
-            zh_words = [ww for ww in self.vocab if all([is_cjk(ch) for ch in ww])]
-            self.tri_tree = self.build_tri_tree(zh_words)
+        zh_words = [ww for ww in self.vocab if all([is_cjk(ch) for ch in ww])]
+        self.tri_tree = self.build_tri_tree(zh_words)
 
-            self.symbols = set()
-            for word in self.vocab:
-                if re.search("^_[0-9a-z]+_$", word):
-                    self.symbols.add(word)
-            self.symbols_tri_tree = self.build_tri_tree(self.symbols)
+        self.symbols = set()
+        for word in self.vocab:
+            if re.search("^_[0-9a-z]+_$", word):
+                self.symbols.add(word)
+        self.symbols_tri_tree = self.build_tri_tree(self.symbols)
 
 
     def build_tri_tree(self, keywords):
@@ -415,7 +395,7 @@ class BertTokenizer(Tokenizer):
         """
         super(BertTokenizer,self).__init__(
                 vocab_file, pre_tokenized, pre_vectorized)
-        self.tokenizer = bert_tokenizer.FullTokenizer(vocab_file)
+        self.tokenizer = bert.FullTokenizer(vocab_file)
         
         
     def tokenize(self, text):
@@ -434,17 +414,11 @@ def build_tokenizer(**args):
     """
     """
     if args["tokenizer"] == "default":
-        tokenizer = SpaceTokenizer(vocab_file=args["vocab_file"], 
-                                   pre_tokenized=args["pre_tokenized"], 
-                                   pre_vectorized=args["pre_vectorized"])
+        tokenizer = SpaceTokenizer(vocab_file=args["vocab_file"])
     elif args["tokenizer"] == "mimix":
-        tokenizer = MimixTokenizer(vocab_file=args["vocab_file"], 
-                                   pre_tokenized=args["pre_tokenized"], 
-                                   pre_vectorized=args["pre_vectorized"])
+        tokenizer = MimixTokenizer(vocab_file=args["vocab_file"])
     elif args["tokenizer"] == "bert":
-        tokenizer = BertTokenizer(vocab_file=args["vocab_file"], 
-                                  pre_tokenized=args["pre_tokenized"], 
-                                  pre_vectorized=args["pre_vectorized"])
+        tokenizer = BertTokenizer(vocab_file=args["vocab_file"])
     else:
         raise ValueError("tokenizer not correct!")
         

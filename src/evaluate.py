@@ -1,9 +1,84 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Aug 16 21:50:35 2022
+Created on Mon Nov 18 15:17:36 2019
 
 @author: Xiaoyuan Yao
+"""
+import numpy as np
+import torch
+import torch.nn.functional as F
+from decoding import crf_model_decoding
 
+def eval_acc(trainer, dataset="val"):
+    """
+    """
+    trainer.model.eval()
+    with torch.no_grad():
+        shot_count = 0
+        total_count = 0
+        for inputs,targets in trainer.val_dataset():
+            outputs = trainer.model(inputs)
+            pred = outputs[0]
+            shot = torch.sum(pred.argmax(1) == targets[0].view(-1))
+                
+            shot_count = shot_count + shot.item()
+            total_count = total_count + targets[0].size(0)
+        
+    acc = shot_count / total_count
+    trainer.logger.info("acc:%f" % acc)
+    return acc
+
+
+def eval_perplexity(trainer, dataset="val"):
+    """
+    """
+    trainer.model.eval()
+    with torch.no_grad():
+        sum_log_p = 0
+        sum_len = 0
+        for inputs,targets in trainer.val_dataset():          
+            outputs = trainer.model(inputs)
+            logits = outputs[0]
+
+            log_probs = torch.gather(F.log_softmax(logits, 2), 
+                                     2, 
+                                     targets[0].unsqueeze(-1))
+            
+            mask = (inputs[0] != trainer.model.PAD).float()
+            seq_len = torch.sum(mask)
+            log_probs = torch.sum(mask * log_probs.squeeze(-1))
+            sum_log_p = sum_log_p + log_probs.item()
+            sum_len = sum_len + seq_len.item()
+
+    perplexity = np.exp(-sum_log_p / sum_len)
+    trainer.logger.info("ppl:%f" % perplexity)
+    return perplexity
+
+
+def eval_sequence_labeling_acc(trainer, dataset="val"):
+    """
+    """
+    trainer.model.eval()
+    with torch.no_grad():
+        shot_count = 0
+        total_count = 0
+        for inputs,targets in trainer.val_dataset():
+            x = inputs[0]
+            if trainer.model.crf is not None:
+                pred = crf_model_decoding(trainer.model, x)
+            else:
+                pred = trainer.model(inputs, return_states=True)[1].argmax(-1)
+            
+            shot = torch.sum((pred == targets[0]) * (x != trainer.model.PAD))
+            
+            shot_count = shot_count + shot.item()
+            total_count = total_count + torch.sum(x != trainer.model.PAD).item()
+        
+    acc = shot_count / total_count
+    trainer.logger.info("acc:%f" % acc)
+    return acc
+
+"""
 This is a modified version of tensor2tensor bleu and rouge
 See https://github.com/tensorflow/tensor2tensor/blob/master/tensor2tensor/utils/bleu_hook.py
 See https://github.com/tensorflow/tensor2tensor/blob/master/tensor2tensor/utils/rouge.py
@@ -14,7 +89,6 @@ import unicodedata
 import collections
 import math
 import sys
-import numpy as np
 
 def _count_ngrams(segment, max_order):
     """Extracts all n-grams up to a given maximum order from an input segment.
@@ -328,30 +402,3 @@ def rouge_n(eval_sentences, ref_sentences, n=2):
     # return overlapping_count / reference_count
     return np.mean(f1_scores, dtype=np.float32)
 
-
-def run_generation_evaluation(ref_file, hyp_file):
-    """
-    """
-    res = {}
-    
-    ref_tokens = []
-    hyp_tokens = []
-    for line in open(ref_file, "r", encoding="utf-8"):
-        src,trg = line.strip().split("\t")[0:2]
-        ref_tokens.append([src.split()])
-    for line in open(hyp_file, "r", encoding="utf-8"):
-        src,trg = line.strip().split("\t")[0:2]
-        hyp_tokens.append(trg.split())
-    
-    assert len(ref_tokens) == len(hyp_tokens)
-
-    res["bleu_4"] = compute_bleu(ref_tokens, hyp_tokens, 4)
-    res["rouge-1"] = rouge_n(hyp_tokens, ref_tokens,  n=1)
-    res["rouge-2"] = rouge_n(hyp_tokens, ref_tokens, n=2)
-    res["rouge-L"] = rouge_l_sentence_level(hyp_tokens, ref_tokens, n=2)
-    return res
-
-if __name__ == "__main__":
-    ref_file, hyp_file = sys.argv[1], sys.argv[2]
-    print(run_generation_evaluation(ref_file, hyp_file))
-    

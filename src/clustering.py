@@ -4,17 +4,24 @@ Created on Thu Aug 25 19:52:32 2022
 
 @author: Xiaoyuan Yao
 """
-
+from optparse import OptionParser
+import sys
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn import manifold,datasets
+from pylab import *
+mpl.rcParams['font.sans-serif'] = ['SimHei']
+mpl.rcParams['axes.unicode_minus'] = False
 import json
 from collections import Counter
 from annoy import AnnoyIndex
-from predictor import TextMatcher
-from utils import real_path, parse_test_args, load_model_config
+from predictor import TextEncoder
+from utils import real_path, load_model_config
 
 def encode_texts(config, fi_path, fo_path):
     """
     """
-    encoder = TextMatcher(config)
+    encoder = TextEncoder(config)
     cache = []
     fo = open(fo_path, "w", encoding="utf-8")
 
@@ -104,13 +111,9 @@ def ann_clustering(fi_path, fo_path, dim, n, threshold, min_size):
     fo.close()
             
 
-def text_clustering(config):
+def text_clustering(config, fi_path, fo_path):
     """
-    """
-    fi_path = real_path(config["test_in"])
-
-    fo_path = real_path(config["test_out"])
-    
+    """    
     print("encode text to vector...")
     encode_texts(config, fi_path, fo_path + ".vec")
     
@@ -122,17 +125,73 @@ def text_clustering(config):
                    config.get("clu_ann_threshold", 0.8),
                    config.get("clu_min_size", 3)
                    )
- 
+
+    print("vis clustering...")
+    vis_clusters(fo_path + ".clu", fo_path + ".png",)
+
+
+def vis_clusters(fi_path, fig_path):
+    """
+    """
+    X = []
+    y = []
+    labels = []
+    n = 0
+    for i,line in enumerate(open(fi_path, "r", encoding="utf-8")):
+        if i >= 10:
+            break
+        data = json.loads(line)
+        for d in data:
+            X.append(d["vec"])
+            y.append(i)
+            labels.append(d["text"])
+        n += 1
+
+    tsne = manifold.TSNE(n_components=2, init='pca', random_state=501)
+    X_tsne = tsne.fit_transform(X)
+
+    x_min, x_max = X_tsne.min(0), X_tsne.max(0)
+    X_norm = (X_tsne - x_min) / (x_max - x_min)
+    plt.figure(figsize=(8, 8))
+
+    X_trans = [[[], [], []] for i in range(n)]
+    for i,j in enumerate(y):
+        X_trans[j][0].append(X_norm[i, 0])
+        X_trans[j][1].append(X_norm[i, 1])
+        X_trans[j][2].append(labels[i])
+
+    for i, (x, y, label) in enumerate(X_trans):
+        plt.scatter(x, y, s=50, color=plt.cm.Set3(i), marker="x", label=label[0])
+    plt.legend(loc='best')
+
+    plt.savefig(fig_path, dpi=300, bbox_inches = 'tight')
+    #plt.show()
+    plt.close()
+
 
 def run_clustering():
     """
     """
     usage = "usage: run_clustering.py --model_conf <file>"
-    options = parse_test_args(usage)
+    parser = OptionParser(usage)
+
+    parser.add_option("--model_conf", action="store", type="string",
+                      dest="model_config")
+    parser.add_option("--input_path", action="store", type="string",
+                      dest="fi")
+    parser.add_option("--output_path", action="store", type="string",
+                      dest="fo")    
+    
+    (options, args) = parser.parse_args(sys.argv)
+
+    if not options.model_config:
+        print(usage)
+        sys.exit(0)
+
     conf_file = options.model_config
     config = load_model_config(real_path(conf_file))
     
-    text_clustering(config)
+    text_clustering(config, real_path(options.fi), real_path(options.fo))
 
 
 if __name__ == "__main__":

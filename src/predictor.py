@@ -4,14 +4,40 @@ Created on Thu Aug 29 10:34:48 2019
 
 @author: Xiaoyuan Yao
 """
-import random
+import numpy as np
 import torch
 import torch.nn.functional as F
+from torch.distributions import Categorical
 from tokenization import build_tokenizer
 from decoding import search
 from decoding import crf_model_decoding
-from utils import load_model, load_vocab, real_path, invert_dict
-from utils import cut_and_pad_seq_list
+from utils import load_vocab, real_path, invert_dict, cut_and_pad_seq_list
+from models import build_enc_dec_model, build_lm_model, build_encoder_model
+
+def load_model_weights(model, config):
+    """
+    """
+    model_path = real_path(config["load_model"])
+    state_dict = torch.load(model_path,
+                            map_location=lambda storage, loc: storage)
+
+    param_dict = {}
+    for k,v in model.named_parameters():
+        if k in state_dict:
+            param_dict[k] = state_dict[k] 
+        else:
+            print("warn: weight %s not found in model file" % k)
+
+    model.load_state_dict(param_dict, False)
+
+    use_cuda = config.get("use_cuda", False)
+    
+    if use_cuda == True:
+        device = torch.device('cuda:%s' % config.get("device_id", "0"))
+        model = model.to(device)
+    
+    return model
+
 
 class EncDecGenerator():
     """
@@ -19,7 +45,7 @@ class EncDecGenerator():
     def __init__(self, config):
         """
         """
-        self.model = load_model(config)
+        self.model = load_model_weights(build_enc_dec_model(config), config)
 
         self.use_cuda = config.get("use_cuda", False)
         self.device = torch.device('cpu')
@@ -247,13 +273,61 @@ class EncDecGenerator():
         return res
 
 
+    def get_topk_pred(self, src_list, trg_list, topk=10):
+        """
+        """
+        x, y = self.encode_inputs(src_list, trg_list, add_bos=True, add_eos=True)
+    
+        self.model.eval()
+        with torch.no_grad():
+            outputs = self.model([x,y])
+                
+            logits = outputs[0]
+            logits = logits.view(-1, self.trg_vocab_size)
+            
+            probs = F.softmax(logits, -1)
+            probs = probs.view(y.size(0), y.size(1), -1)
+            
+            top_probs, top_ids = probs.topk(topk, -1)
+            
+            y_len = torch.sum(y.ne(self.model.PAD), -1)
+            
+            entropy = Categorical(probs=probs).entropy()
+            
+            history = torch.gather(probs[:,:-1,:], -1, y[:,1:].unsqueeze(-1))
+            
+        y = y.cpu().numpy()
+        top_ids = top_ids.cpu().numpy()
+        top_probs = np.round(top_probs.cpu().numpy(), 3)
+        y_len = y_len.cpu().numpy()
+        history = np.round(history.squeeze(-1).cpu().numpy(), 3)
+        entropy = np.round(entropy.cpu().numpy(), 3)
+    
+        res = []
+        for i,(src,trg) in enumerate(zip(src_list, trg_list)):
+            words = [self.trg_id2word.get(w, "_unk_") for w in  y[i][1:]]
+            topk_pairs = []
+            for j in range(y_len[i].item() - 1):
+    
+                top_words = [self.trg_id2word.get(w, "_unk_") for w in top_ids[i][j]]
+                pairs = tuple(zip(top_words, top_probs[i][j]))
+                topk_pairs.append(pairs)
+            
+            history_probs = list(history[i][:y_len[i]])
+            sum_log_probs = sum(np.log(history[i][:y_len[i]]))
+            
+            res.append([words, topk_pairs, history_probs, sum_log_probs, list(entropy[i])])
+            
+        return res
+
+
 class LMGenerator():
     """
     """
     def __init__(self, config):
         """
         """
-        self.model = load_model(config)
+        self.model = load_model_weights(build_lm_model(config), config)
 
         self.use_cuda = config.get("use_cuda", False)
         self.device = torch.device("cpu")
@@ -415,13 +489,13 @@ class LMGenerator():
         return res        
 
 
-class BiLMGenerator():
+class TextEncoder():
     """
     """
     def __init__(self, config):
         """
         """
-        self.model = load_model(config)
+        self.model = load_model_weights(build_encoder_model(config), config)
         
         self.use_cuda = config.get("use_cuda", False)
         self.device = torch.device('cpu')
@@ -444,6 +518,13 @@ class BiLMGenerator():
         self.src_vocab_size = config["src_vocab_size"]
         self.use_cuda = config["use_cuda"]
         self.src_max_len = config["src_max_len"]
+
+        self.label2id = None
+        self.id2label = None
+        if "label2id" in config:
+            self.label2id = load_vocab(real_path(config["label2id"]))
+            self.id2label = invert_dict(self.label2id)
+        self.num_class = config.get("n_class", None)
     
     
     def encode_inputs(self, src_list):
@@ -468,7 +549,19 @@ class BiLMGenerator():
         return y
 
 
-    def predict(self, src_list, top_k=-1, top_p=-1, return_k=10):
+    def encode_texts(self, src_list):
+        """
+        """
+        y = self.encode_inputs(src_list)
+        
+        self.model.eval()
+        with torch.no_grad():
+            outputs = self.model([y])
+        
+        return outputs[0]
+
+
+    def predict_mlm(self, src_list, top_k=-1, top_p=-1, return_k=10):
         """
         """
         y = self.encode_inputs(src_list)
@@ -491,78 +584,15 @@ class BiLMGenerator():
                 if ww == self.mask_id:
                     pred = []
                     for k in range(return_k):
-                        pred.append([self.src_id2word[indice[i][j][k]], score[i][j][k]])
+                        pair = [self.src_id2word[indice[i][j][k]], score[i][j][k]]
+                        pred.append(pair)
 
                     res[-1][1].append(pred)
         
         return res
-        
-
-class TextMatcher():
-    """
-    """
-    def __init__(self, config):
-        """
-        """
-        self.model = load_model(config)
-        
-        self.use_cuda = config.get("use_cuda", False)
-        self.device = torch.device('cpu')
-        if self.use_cuda == True:
-            device_id = config.get("device_id", "0")
-            self.device = torch.device('cuda:%s' % device_id)
-        
-        self.src_word2id = load_vocab(real_path(config["src_vocab"]))
-        self.src_id2word = invert_dict(self.src_word2id)
-        
-        self.src_tokenizer = build_tokenizer(
-                tokenizer=config["src_tokenizer"],
-                vocab_file=config["src_vocab"], 
-                pre_tokenized=config.get("pre_tokenized", False),  
-                pre_vectorized=config.get("pre_vectorized", False))
-        
-        self.add_cls = config.get("add_cls", False)
-        self.cls_id = config["symbol2id"][config["symbols"]["CLS_TOK"]]
-        
-        self.src_vocab_size = config["src_vocab_size"]
-        self.use_cuda = config["use_cuda"]
-        self.src_max_len = config["src_max_len"]
-    
-    
-    def encode_inputs(self, src_list):
-        """
-        """        
-        src_ids = list(map(self.src_tokenizer.tokenize_to_ids, src_list))
-        y = cut_and_pad_seq_list(src_ids,
-                                 self.src_max_len-1, 
-                                 self.model.PAD,
-                                 True)
-        if self.add_cls == True:
-            y = [[self.cls_id] + yy[:self.src_max_len-1] for yy in y]
-
-        if y is not None:
-            y = torch.tensor(y, dtype=torch.long)
-
-        if self.use_cuda == True:
-            if y is not None:
-                y = y.to(self.device)
-        
-        return y
 
 
-    def encode_texts(self, src_list):
-        """
-        """
-        y = self.encode_inputs(src_list)
-        
-        self.model.eval()
-        with torch.no_grad():
-            outputs = self.model([y])
-        
-        return outputs[0]
-
-
-    def predict(self, src_list):
+    def predict_sim(self, src_list):
         """
         """
         vec = self.encode_texts(src_list)
@@ -572,56 +602,7 @@ class TextMatcher():
         return sim
 
 
-class TextClassifier():
-    """
-    """
-    def __init__(self, config):
-        """
-        """
-        self.model = load_model(config)
-
-        self.use_cuda = config.get("use_cuda", False)
-        self.device = torch.device('cpu')
-        if self.use_cuda == True:
-            device_id = config.get("device_id", "0")
-            self.device = torch.device('cuda:%s' % device_id)
-
-        self.label2id = None
-        self.id2label = None
-        if "label2id" in config:
-            self.label2id = load_vocab(real_path(config["label2id"]))
-            self.id2label = invert_dict(self.label2id)
-        
-        self.src_tokenizer = build_tokenizer(
-                tokenizer=config["src_tokenizer"],
-                vocab_file=config["src_vocab"], 
-                pre_tokenized=config.get("pre_tokenized", False),  
-                pre_vectorized=config.get("pre_vectorized", False))
-
-        self.src_max_len = config["src_max_len"]
-        self.num_class = config["n_class"]
-        
-        self.use_cuda = config["use_cuda"]
-    
-
-    def encode_inputs(self, src_list):
-        """
-        """        
-        src_ids = list(map(self.src_tokenizer.tokenize_to_ids, src_list))
-        x = cut_and_pad_seq_list(src_ids,
-                                 self.src_max_len-1, 
-                                 self.model.PAD,
-                                 True)        
-        x = [[self.model.CLS] + xx[:self.src_max_len-1] for xx in x]
-
-        x = torch.tensor(x, dtype=torch.long)
-        if self.use_cuda == True:
-            x = x.to(self.device)
-        
-        return x        
-
-
-    def predict(self, src_list):
+    def predict_cls(self, src_list):
         """
         """
         x = self.encode_inputs(src_list)
@@ -650,53 +631,7 @@ class TextClassifier():
         return res
 
 
-class SequenceLabeler():
-    """
-    """
-    def __init__(self, config):
-        """
-        """
-        self.model = load_model(config)
-
-        self.use_cuda = config.get("use_cuda", False)
-        self.device = torch.device('cpu')
-        if self.use_cuda == True:
-            device_id = config.get("device_id", "0")
-            self.device = torch.device('cuda:%s' % device_id)
-
-        self.label2id = load_vocab(real_path(config["label2id"]))
-        self.id2label = invert_dict(self.label2id)
-        
-        self.src_tokenizer = build_tokenizer(
-                tokenizer=config["src_tokenizer"],
-                vocab_file=config["src_vocab"], 
-                pre_tokenized=config.get("pre_tokenized", False),  
-                pre_vectorized=config.get("pre_vectorized", False))
-
-        self.src_max_len = config["src_max_len"]
-        self.n_class = config["n_class"]
-        
-        self.use_cuda = config["use_cuda"]
-    
-
-    def encode_inputs(self, src_list):
-        """
-        """        
-        src_ids = list(map(self.src_tokenizer.tokenize_to_ids, src_list))
-        x = cut_and_pad_seq_list(src_ids,
-                                 self.src_max_len, 
-                                 self.model.PAD,
-                                 True)        
-            
-        x = torch.tensor(x, dtype=torch.long)
-
-        if self.use_cuda == True:
-            x = x.to(self.device)
-        
-        return x        
-
-
-    def predict(self, src_list):
+    def predict_seq(self, src_list):
         """
         """
         x = self.encode_inputs(src_list)

@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from layers import Embedding,Dropout,LayerNorm,gelu_new,PositionEmbedding,CRF
 from layers import TransformerLayer
 
+
 class Transformer(nn.Module):
     """
     """
@@ -866,27 +867,9 @@ def build_encoder_model(config):
     """
     """
     if config["model"] == "transformer":
-        model = build_transformer_encoder_model(**config)
+        model = build_transformer_encoder_model(config)
     else:
         raise ValueError("model not correct!")
         
     return model
 
- 
-model_builder_dict = {
-            "enc_dec": build_enc_dec_model,
-            "lm": build_lm_model,
-            "classify": build_transformer_encoder_model,
-            "bi_lm": build_transformer_encoder_model,
-            "sequence_labeling": build_transformer_encoder_model,
-            "match": build_transformer_encoder_model,
-        }
-
-
-def build_model(config):
-    """
-    """
-    if config["task"] in model_builder_dict:
-        return model_builder_dict[config["task"]](config)
-    else:
-        raise ValueError("model not correct!")

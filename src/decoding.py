@@ -5,9 +5,8 @@ Created on Fri Aug 23 10:59:36 2019
 @author: Xiaoyuan Yao
 """
 import torch
-from utils import nested_to_cuda
 
-def init_search(model, batch_size):
+def init_search(model, batch_size, use_cuda):
     """
     """
     vocab_size = model.trg_vocab_size
@@ -25,14 +24,21 @@ def init_search(model, batch_size):
     mask_unk = torch.tensor([model.MIN_LOGITS] * vocab_size,
                                  dtype=torch.float)
     mask_unk[model.UNK] = model.MAX_LOGITS
-
-    states = [y,
-              log_probs,
-              finished,
-              mask_finished,
-              hypothesis,
-              history_probs]
-
+    
+    if use_cuda == False:
+        states = [y,
+                  log_probs,
+                  finished,
+                  mask_finished,
+                  hypothesis,
+                  history_probs]
+    else:
+        states = [y.cuda(),
+                  log_probs.cuda(),
+                  finished.cuda(),
+                  mask_finished.cuda(),
+                  hypothesis.cuda(),
+                  history_probs.cuda()]        
     return states
 
 
@@ -96,10 +102,8 @@ def search(model,
     batch_size = 1
     if len(inputs) > 0 and inputs[0] is not None:
         batch_size = inputs[0].size(0)
-
-    states = init_search(model, batch_size)
-    if use_cuda == True:
-        states = nested_to_cuda(states, "cuda")
+    
+    states = init_search(model, batch_size, use_cuda)
 
     states, cache = model.init_search(states, inputs)
     

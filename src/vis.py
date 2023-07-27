@@ -8,13 +8,14 @@ import os
 import sys
 import torch
 import numpy as np
+from optparse import OptionParser
 import matplotlib
 matplotlib.rcParams['font.sans-serif'] = ['KaiTi']
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from pylab import mpl
 from predictor import EncDecGenerator
-from utils import parse_test_args,load_model_config,real_path
+from utils import load_model_config,real_path
 
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
@@ -117,8 +118,18 @@ def visualize_enc_dec(config):
 def run_visualize():
     """
     """
-    usage = "usage: visualize_attn.py --model_conf <file>"
-    options = parse_test_args(usage)
+    usage = "usage: vis_attn.py --model_conf <file>"
+    parser = OptionParser(usage)
+
+    parser.add_option("--model_conf", action="store", type="string",
+                      dest="model_config")
+    
+    (options, args) = parser.parse_args(sys.argv)
+
+    if not options.model_config:
+        print(usage)
+        sys.exit(0)
+
     conf_file = options.model_config
     config = load_model_config(real_path(conf_file))
         

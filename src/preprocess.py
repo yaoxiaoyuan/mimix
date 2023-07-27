@@ -455,3 +455,58 @@ def build_data_processor(train_config, model_config):
         raise ValueError("model not correct!")
 
 
+def shuffle_data(data_dir, 
+                 dest_dir, 
+                 fast_shuffle=False, 
+                 num_shards=20, 
+                 data_preprocessor=None,
+                 sort_key_fn=None):
+    """
+    Shuffle data
+    """
+    if fast_shuffle == False:
+        data_files = [f for f in os.listdir(data_dir)]
+
+        fo_list = []
+        for f in range(num_shards):
+            fo_list.append(open(os.path.join(dest_dir, str(f)), "w", encoding="utf-8"))
+    
+        for fi in data_files:
+            for line in open(os.path.join(data_dir, fi), "r", encoding="utf-8"):
+                fo = random.choice(fo_list)
+                if data_preprocessor is not None:
+                    data = data_preprocessor(line)
+                    line = json.dumps(data, ensure_ascii=False) + "\n"
+                fo.write(line)
+
+        for fo in fo_list:
+            fo.close()
+
+    for f in range(num_shards):
+        lines = [line for line in open(os.path.join(dest_dir, str(f)), "r", encoding="utf-8")]
+        random.shuffle(lines)
+        if sort_key_fn is not None:
+            lines = [[line, sort_key_fn(json.loads(line))] for line in lines]
+            lines.sort(key=lambda x:x[1])
+            lines = [x[0] for x in lines]
+        fo = open(os.path.join(dest_dir, str(f)), "w", encoding="utf-8")
+        for line in lines:
+            fo.write(line)
+        fo.close()
+
+
+def preprocess_data(data_dir, 
+                    dest_dir, 
+                    data_preprocessor
+        ):
+    """
+    """
+    data_files = [f for f in os.listdir(data_dir)]
+    for fi in data_files:
+        fo = open(os.path.join(dest_dir, str(fi)), "w", encoding="utf-8")
+        for line in open(os.path.join(data_dir, fi), "r", encoding="utf-8"):
+            if data_preprocessor is not None:
+                data = data_preprocessor(line)
+                line = json.dumps(data, ensure_ascii=False) + "\n"
+            fo.write(line)
+        fo.close()

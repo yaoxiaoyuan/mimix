@@ -4,12 +4,12 @@ Created on Fri Aug 30 15:16:38 2019
 
 @author: Xiaoyuan Yao
 """
+
 import os
 from datetime import datetime
 import logging
 import torch
-import torch.distributed as dist
-from utils import shuffle_data, real_path, parse_train_args, load_config, load_model_config
+from utils import shuffle_data, real_path
 from process_data import build_data_processor
 from dataset import build_train_dataset, build_val_dataset, build_test_dataset
 from models import build_model
@@ -24,17 +24,21 @@ LOG_DIR = "../logger"
 if not os.path.exists(real_path(LOG_DIR)):
     os.mkdir(real_path(LOG_DIR))
 
-local_rank = int(os.environ['LOCAL_RANK'])
-world_size = int(os.environ['WORLD_SIZE'])
-rank = int(os.environ['RANK'])
-       
-format_str = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-filename = datetime.today().strftime('../logger/%Y-%m-%d-%H-%M-%S.log')
-logging.basicConfig(filename=real_path(filename),
-                    level=logging.INFO,
-                    format=format_str)
 
-dist.init_process_group('nccl',world_size=world_size, rank=rank)
+def nested_to_cuda(nested_tensor, device):
+    """
+    """
+    res = nested_tensor
+    if isinstance(nested_tensor, list) == True:
+        res = []
+        for elem in nested_tensor:
+            res.append(nested_to_cuda(elem, device))
+    elif isinstance(nested_tensor, torch.Tensor) == True:
+        res = nested_tensor.to(device)
+    
+    return res
+
+
 
 class Trainer():
     """
@@ -57,9 +61,14 @@ class Trainer():
         self.train_config = train_config
         self.model_dir = real_path(train_config["model_dir"])
         self.model_name = train_config["model_name"]
+
+        self.use_cuda = train_config["use_cuda"]
+        self.device = torch.device("cpu")
         
-        self.device = torch.device('cuda:%s' % local_rank)
-        
+        if self.use_cuda == True:
+            device_id = train_config.get("device_id", "0")
+            self.device = torch.device('cuda:%s' % device_id)
+
         self.num_shards = train_config["num_shards"]
         
         self.logger = self.build_logger()
@@ -72,6 +81,7 @@ class Trainer():
         
         self.max_epoch = train_config["max_epoch"] + 1
         
+        self.print_every_n_steps = train_config.get("print_every_n_steps", 100)  
         self.save_steps = train_config.get("save_steps", 100000)  
         self.tmp_save_steps = train_config.get("tmp_save_steps", 10000) 
         self.reload = train_config.get("reload", False)
@@ -83,7 +93,7 @@ class Trainer():
         
         self.eval_model = train_config.get("eval_model", False)
         
-        self.model_config = model_config
+        self.model_config = model_config 
         
         self.raw_train_dir = real_path(train_config.get("raw_train_dir"))
         self.raw_val_dir = real_path(train_config.get("raw_val_dir"))
@@ -98,7 +108,7 @@ class Trainer():
         if self.test_dir:
             self.test_dir = os.path.join(real_path(train_config.get("tmp_dir")),
                                       "test")       
-        
+
         self.train_config["train_dir"] = self.train_dir
         self.train_config["val_dir"] = self.val_dir
         self.train_config["test_dir"] = self.test_dir
@@ -107,7 +117,9 @@ class Trainer():
         self.test_batch_size = train_config.get("test_batch_size", 1)
         
         self.grad_clip = train_config.get("grad_clip", None)
-
+        
+        self.use_amp = train_config.get("use_amp", False)
+        
         self.build_all(
                 model=model,
                 optimizer=optimizer,
@@ -123,17 +135,21 @@ class Trainer():
         
         self.make_all_dir()
         
-
+        
     def build_logger(self):
         """
         """
         format_str = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        filename = datetime.today().strftime('../logger/%Y-%m-%d-%H-%M-%S.log')
+        logging.basicConfig(filename=real_path(filename), 
+                            level=logging.INFO,
+                            format=format_str)
         console = logging.StreamHandler()
         console.setLevel(logging.INFO)
         
         formatter = logging.Formatter(format_str, "%Y-%m-%d %H:%M:%S")
         console.setFormatter(formatter)
-        logging.getLogger(__name__).addHandler(console)
+        logging.getLogger('').addHandler(console)
         logger = logging.getLogger(__name__)
         
         return logger
@@ -155,27 +171,32 @@ class Trainer():
             self.model = build_model(self.model_config)
 
         self.model = self.model.to(self.device)
+            
+        self.optimizer = optimizer
+        if optimizer is None:
+            self.optimizer = build_optimizer(self.model, 
+                                             self.train_config["optimizer"],
+                                             self.train_config["lr"])
+        
+        self.lr_scheduler = lr_scheduler
+        if lr_scheduler is None:
+            self.lr_scheduler = build_lr_scheduler(self.train_config, 
+                                                   self.optimizer)
         
         self.train_dataset = train_dataset
         if train_dataset is None:
             self.train_dataset = build_train_dataset(self.train_config,
-                                                     self.model_config,
-                                                     rank,
-                                                     world_size)
+                                                     self.model_config)
         
         self.val_dataset = val_dataset
         if val_dataset is None and self.val_dir is not None:
             self.val_dataset = build_val_dataset(self.train_config,
-                                                 self.model_config,
-                                                 rank,
-                                                 world_size)
+                                                 self.model_config)
 
         self.test_dataset = test_dataset
         if test_dataset is None and self.test_dir is not None:
             self.test_dataset = build_test_dataset(self.train_config,
-                                                   self.model_config,
-                                                   rank,
-                                                   world_size)
+                                                   self.model_config)
        
         self.model.loss_fn = loss_fn
         if loss_fn is None:
@@ -186,24 +207,6 @@ class Trainer():
         if self.eval_fn is None:
             self.eval_fn = build_eval_fn(self.model_config)
 
-        if self.reload == True:
-            self.reload_model_weights()
-        
-        self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[local_rank], output_device=local_rank, find_unused_parameters=True)
-        self.optimizer = optimizer 
-        
-        if optimizer is None:
-            self.optimizer = build_optimizer(self.model,
-                                             self.train_config["optimizer"],
-                                             self.train_config["lr"])
-
-        if self.reload == True:
-            self.reload_optimizer_weights()
-
-        self.lr_scheduler = lr_scheduler
-        if lr_scheduler is None:
-            self.lr_scheduler = build_lr_scheduler(self.train_config,
-                                                   self.optimizer)
 
     def make_all_dir(self):
         """
@@ -221,38 +224,37 @@ class Trainer():
                     self.logger.info("Change %s to current dir." % _name)
             else:
                 self.logger.info("%s already exists!" % _name)
-        
+
     
     def save_model(self, model_name=None):
         """
         """
-        if rank == 0:
-            if model_name is None:
-                model_name = "%d.%d.%d.%s" % (self.epoch, 
-                                              self.steps,
-                                              self.total_steps,
-                                              self.model_name)
+        if model_name is None:
+            model_name = "%d.%d.%d.%s" % (self.epoch, 
+                                          self.steps,
+                                          self.total_steps,
+                                          self.model_name)
         
-            model_path = real_path(os.path.join(self.model_dir, model_name))
+        model_path = real_path(os.path.join(self.model_dir, model_name))
         
-            self.logger.info("Save model to %s" % model_path)
+        self.logger.info("Save model to %s" % model_path)
         
-            torch.save(self.model.module.state_dict(), 
-                       model_path, 
-                       _use_new_zipfile_serialization=False)
+        torch.save(self.model.state_dict(), 
+                   model_path, 
+                   _use_new_zipfile_serialization=False)
         
-            train_state_dict = {
+        train_state_dict = {
                     "optimizer": self.optimizer.state_dict(),
                     "epoch":self.epoch,
                     "steps":self.steps,
                     "total_steps": self.total_steps
                 }
             
-            torch.save(train_state_dict, 
-                       model_path + ".optimizer", 
-                       _use_new_zipfile_serialization=False)
+        torch.save(train_state_dict, 
+                   model_path + ".optimizer", 
+                   _use_new_zipfile_serialization=False)
             
-            self.logger.info("Save model complete")
+        self.logger.info("Save model complete")
 
     
     def get_sort_key_fn(self):
@@ -276,60 +278,56 @@ class Trainer():
     def shuffle_data(self, fast_shuffle=False):
         """
         """
-        if rank == 0:
-            self.logger.info("Shuffle train data...")
-            sort_key_fn = None
-            if self.sort_data == True:
-                sort_key_fn = self.get_sort_key_fn()
-            shuffle_data(self.raw_train_dir, 
-                         self.train_dir,
-                         fast_shuffle=fast_shuffle,
-                         num_shards=self.num_shards,
-                        sort_key_fn=sort_key_fn)
-            self.logger.info("Shuffle train data completed!")
-        dist.barrier()
-
+        self.logger.info("Shuffle train data...")
+        sort_key_fn = None
+        if self.sort_data == True:
+            sort_key_fn = self.get_sort_key_fn()
+        shuffle_data(self.raw_train_dir, 
+                     self.train_dir,
+                     fast_shuffle=fast_shuffle,
+                     num_shards=self.num_shards,
+                     sort_key_fn=sort_key_fn)
+        self.logger.info("Shuffle train data completed!")
+    
 
     def pre_shuffle_data(self):
         """
         """
-        if rank == 0:
-            if self.pre_shuffle == True and self.epoch == 1 and self.steps == 1:
-                self.logger.info("Pre Shuffle train data...")
-                data_preprocessor = None
-                if self.need_preprocess == True:
-                    data_preprocessor = build_data_processor(self.train_config, self.model_config)
-                    data_preprocessor.custom_parse_fn = self.custom_parse_fn
-                sort_key_fn = None
-                if self.sort_data == True:
-                    sort_key_fn = self.get_sort_key_fn()
+        if self.pre_shuffle == True and self.epoch == 1 and self.steps == 1:
+            self.logger.info("Pre Shuffle train data...")
+            data_preprocessor = None
+            if self.need_preprocess == True:
+                data_preprocessor = build_data_processor(self.train_config, self.model_config)
+                data_preprocessor.custom_parse_fn = self.custom_parse_fn
+            sort_key_fn = None
+            if self.sort_data == True:
+                sort_key_fn = self.get_sort_key_fn()
             
-                shuffle_data(self.raw_train_dir,
-                             self.train_dir, 
-                             fast_shuffle=False,
-                             num_shards=self.num_shards,
-                             data_preprocessor=data_preprocessor,
-                             sort_key_fn=sort_key_fn)
-
+            shuffle_data(self.raw_train_dir, 
+                         self.train_dir,
+                         fast_shuffle=False,
+                         num_shards=self.num_shards,
+                         data_preprocessor=data_preprocessor,
+                         sort_key_fn=sort_key_fn)
+            
             if self.eval_model == True and self.eval_fn is not None:
                 if self.val_dir is not None:
                     preprocess_data(self.raw_val_dir, self.val_dir, data_preprocessor)
                 if self.test_dir is not None:
                     preprocess_data(self.raw_test_dir, self.test_dir, data_preprocessor)
             
-                self.logger.info("Pre Shuffle train data completed!")
-        dist.barrier()
+            self.logger.info("Pre Shuffle train data completed!")
 
 
     def print_model_info(self):
         """
         """
-        if rank == 0:
-            self.logger.info("%s" % self.model)
-            total_params = sum(p.numel() for p in self.model.parameters())
-            self.logger.info("Total Model Params:%s" % total_params)
-            total_train_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad==True)
-            self.logger.info("Trainable Model Params:%s" % total_train_params)        
+        self.logger.info("%s" % self.model)
+        total_params = sum(p.numel() for p in self.model.parameters())
+        self.logger.info("Total Model Params:%s" % total_params)
+        total_train_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad==True)
+        self.logger.info("Trainable Model Params:%s" % total_train_params)
+        
     
     def reload_model_weights(self):
         """
@@ -353,7 +351,6 @@ class Trainer():
     def reload_optimizer_weights(self):
         """
         """
-        return 
         self.logger.info("Reload optimizer weights.")
         try:
             train_state_dict = torch.load(
@@ -383,12 +380,16 @@ class Trainer():
     def train(self):
         """
         """
+        if self.use_amp:
+            scaler = torch.cuda.amp.GradScaler()
+            
         self.print_model_info()
     
+        self.reload_model_and_optimizer()
+                    
         self.pre_shuffle_data()
-       
-        if rank == 0:
-            self.logger.info("Train Start!")
+        
+        self.logger.info("Train Start!")
 
         history_loss = []
         
@@ -399,25 +400,35 @@ class Trainer():
 
                 inputs = nested_to_cuda(inputs, self.device)
                 targets = nested_to_cuda(targets, self.device)
-                 
-                outputs = self.model(inputs, targets=targets, compute_loss=True)
-        
-                loss = outputs[0]
-        
-                history_loss = history_loss[-999:] + [loss.item()]
-                ma_loss = sum(history_loss) / len(history_loss)
-       
-                if rank == 1:
-                    self.logger.info(
-                            "%d epoch %d step total %d steps loss: %.3f" % 
-                            (self.epoch, 
-                            self.steps, 
-                            self.total_steps,
-                            ma_loss)
-                            )
                 
-                loss.backward()
-            
+                if self.use_amp == True:
+                    with torch.cuda.amp.autocast():
+                        outputs = self.model(inputs, targets=targets, compute_loss=True)
+                        loss = outputs[0]        
+                        history_loss = history_loss[-999:] + [loss.item()]
+                        loss = loss / self.accumulate_steps
+                else:
+                    outputs = self.model(inputs, targets=targets, compute_loss=True)                    
+                    loss = outputs[0]        
+                    history_loss = history_loss[-999:] + [loss.item()]
+                    loss = loss / self.accumulate_steps
+                    
+                if self.total_steps % self.print_every_n_steps == 0:
+                    ma_loss = sum(history_loss) / len(history_loss)
+                    self.logger.info(
+                        "%d epoch %d step total %d steps loss: %.3f" % 
+                        (self.epoch, 
+                         self.steps, 
+                         self.total_steps,
+                         ma_loss)
+                        )
+                
+
+                if self.use_amp == True:
+                    scaler.scale(loss).backward()
+                else:
+                    loss.backward()
+                    
                 self.lr_scheduler.step()
 
                 self.total_steps += 1
@@ -437,8 +448,15 @@ class Trainer():
                             self.model.parameters(), 
                             self.grad_clip
                             )
-                self.optimizer.step()
-                self.optimizer.zero_grad()
+                
+                if self.total_steps % self.accumulate_steps == 0:
+                    if self.use_amp == True:
+                        scaler.step(self.optimizer)
+                        self.optimizer.zero_grad()
+                        scaler.update()
+                    else:
+                        self.optimizer.step()
+                        self.optimizer.zero_grad()
             
             self.shuffle_data(fast_shuffle=True)
             
@@ -446,31 +464,12 @@ class Trainer():
             self.steps = 0
             self.save_model()
             
-            if rank == 0:
-                if self.eval_model == True and self.eval_fn is not None:
-                    if self.val_dir is not None:
-                        self.logger.info("Eval val now...")
-                        self.eval_fn(trainer=self)
-                    if self.test_dir is not None:
-                        self.logger.info("Eval test now...")
-                        self.eval_fn(trainer=self)
-        if rank == 0:    
-            self.logger.info("Train Completed!")
-
-
-def run_train():
-    """
-    """
-    usage = "usage: run_train.py --model_conf <file> --train_conf <file>"
-
-    options = parse_train_args(usage)
-
-    train_config = load_config(real_path(options.train_config))
-    model_config = load_model_config(real_path(options.model_config))
-
-    trainer = Trainer(train_config, model_config)
-    trainer.train()
-
-
-if __name__ == "__main__":
-    run_train()
+            if self.eval_model == True and self.eval_fn is not None:
+                if self.val_dir is not None:
+                    self.logger.info("Eval val now...")
+                    self.eval_fn(trainer=self)
+                if self.test_dir is not None:
+                    self.logger.info("Eval test now...")
+                    self.eval_fn(trainer=self)
+                            
+        self.logger.info("Train Completed!")

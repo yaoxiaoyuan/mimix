@@ -10,7 +10,25 @@ import random
 import numpy as np
 from abc import ABC, abstractmethod
 import torch
-from utils import real_path, load_vocab
+from utils import real_path
+
+
+def word_dropout(word_list, rate, replace_token):
+    """
+    """
+    if rate > 0:
+        tmp = []
+        
+        for word in word_list:
+            if random.random() < rate:
+                tmp.append(replace_token)
+            else:
+                tmp.append(word)
+        
+        word_list = tmp
+        
+    return word_list
+
 
 class Dataset(ABC):
     """

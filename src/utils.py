@@ -7,14 +7,27 @@ Created on Tue Aug 13 11:39:56 2019
 import sys
 import os
 import configparser
-from optparse import OptionParser
 import random
-import torch
-import json
-from constants import symbols, symbol2id
-from models import build_model
 
 home_dir = os.path.dirname(os.path.abspath(__file__))
+
+
+SYMBOLS = {"PAD_TOK" : "_pad_",
+           "BOS_TOK" : "_bos_",
+           "EOS_TOK" : "_eos_",
+           "UNK_TOK" : "_unk_",
+           "SEP_TOK" : "_sep_",
+           "CLS_TOK" : "_cls_",
+           "MASK_TOK" : "_mask_"}
+           
+SYMBOL2ID = {"_pad_":0,
+             "_bos_":1,
+             "_eos_":2,
+             "_unk_":3,
+             "_sep_":4,
+             "_cls_":5,
+             "_mask_":6}
+
 
 def real_path(path, base_dir=None):
     """
@@ -27,46 +40,6 @@ def real_path(path, base_dir=None):
     if base_dir is None:
         base_dir = home_dir
     return os.path.join(base_dir, path)
-
-
-def parse_train_args(usage):
-    """
-    parse arguments
-    """
-    parser = OptionParser(usage)
-
-    parser.add_option("--local_rank", action="store", type="int",
-                      dest="local_rank")
-
-    parser.add_option("--train_conf", action="store", type="string",
-                      dest="train_config")
-
-    parser.add_option("--model_conf", action="store", type="string", 
-                      dest="model_config")
-
-    (options, args) = parser.parse_args(sys.argv)
-
-    if not options.train_config or not options.model_config:
-        print(usage)
-        sys.exit(0)
-    return options
-
-
-def parse_test_args(usage):
-    """
-    parse arguments
-    """
-    parser = OptionParser(usage)
-
-    parser.add_option("--model_conf", action="store", type="string",
-                      dest="model_config")
-
-    (options, args) = parser.parse_args(sys.argv)
-
-    if not options.model_config:
-        print(usage)
-        sys.exit(0)
-    return options
 
 
 def load_config(config_file):
@@ -86,12 +59,20 @@ def load_config(config_file):
     loaded_config = {}
     
     for dtype in config.sections():
+        if dtype not in ["str", "int", "float", "bool"]:
+            continue
         for k,v in config.items(dtype):
-            if dtype == "bool":
-                loaded_config[k] = eval(v)
-            else:
-                loaded_config[k] = eval(dtype + '("' + v + '")')  
-
+            if dtype == "str":
+                loaded_config[k] = str(v)
+            elif dtype == "int":
+                loaded_config[k] = int(v)
+            elif dtype == "float":
+                loaded_config[k] = float(v)                 
+            elif dtype == "bool":
+                if v.lower() == "false":
+                    loaded_config[k] = False
+                elif v.lower() == "true":
+                    loaded_config[k] = True
     return loaded_config
 
 
@@ -101,110 +82,18 @@ def load_model_config(config_file):
     """
     loaded_config = load_config(config_file)
     
+    loaded_config["symbols"] = SYMBOLS
+    loaded_config["symbol2id"] = SYMBOL2ID
     
-    loaded_config["symbols"] = symbols
-    loaded_config["symbol2id"] = symbol2id
-    
-    for symbol in symbols:
+    for symbol in SYMBOLS:
         if symbol + "2tok" in loaded_config:
             loaded_config["symbols"][symbol] = loaded_config[symbol + "2tok"]
     
-    for symbol in symbol2id:
+    for symbol in SYMBOL2ID:
         if symbol + "2id" in loaded_config:
             loaded_config["symbol2id"][symbol] = loaded_config[symbol + "2id"]   
 
     return loaded_config
-
-
-def shuffle_data(data_dir, 
-                 dest_dir, 
-                 fast_shuffle=False, 
-                 num_shards=20, 
-                 data_preprocessor=None,
-                 sort_key_fn=None):
-    """
-    Shuffle data
-    """
-    if fast_shuffle == False:
-        data_files = [f for f in os.listdir(data_dir)]
-
-        fo_list = []
-        for f in range(num_shards):
-            fo_list.append(open(os.path.join(dest_dir, str(f)), "w", encoding="utf-8"))
-    
-        for fi in data_files:
-            for line in open(os.path.join(data_dir, fi), "r", encoding="utf-8"):
-                fo = random.choice(fo_list)
-                if data_preprocessor is not None:
-                    data = data_preprocessor(line)
-                    line = json.dumps(data, ensure_ascii=False) + "\n"
-                fo.write(line)
-
-        for fo in fo_list:
-            fo.close()
-
-    for f in range(num_shards):
-        lines = [line for line in open(os.path.join(dest_dir, str(f)), "r", encoding="utf-8")]
-        random.shuffle(lines)
-        if sort_key_fn is not None:
-            lines = [[line, sort_key_fn(json.loads(line))] for line in lines]
-            lines.sort(key=lambda x:x[1])
-            lines = [x[0] for x in lines]
-        fo = open(os.path.join(dest_dir, str(f)), "w", encoding="utf-8")
-        for line in lines:
-            fo.write(line)
-        fo.close()
-
-
-def preprocess_data(data_dir, 
-                    dest_dir, 
-                    data_preprocessor
-        ):
-    """
-    """
-    data_files = [f for f in os.listdir(data_dir)]
-    for fi in data_files:
-        fo = open(os.path.join(dest_dir, str(fi)), "w", encoding="utf-8")
-        for line in open(os.path.join(data_dir, fi), "r", encoding="utf-8"):
-            if data_preprocessor is not None:
-                data = data_preprocessor(line)
-                line = json.dumps(data, ensure_ascii=False) + "\n"
-            fo.write(line)
-        fo.close()
-
-
-def pretty_print(res):
-    """
-    Assume res = [{k1:v1,k2:v2,...,kn:[[s1, score1], [s2, score2]]}, {}, ... ]
-    """
-    for dic in res:
-        info = [[k,dic[k]] for k in dic if not isinstance(dic[k], list)]
-        info = " ".join("%s:%s" % (k,v) for k,v in info)
-        if len(info) > 0:
-            print(info)
-        print("--------------------")
-        for k in dic:
-            if isinstance(dic[k], list):
-                for a in dic[k]:
-                    info = " ".join([str(x) for x in a])
-                    print(info)
-
-
-def word_dropout(word_list, rate, replace_token):
-    """
-    """
-    if rate > 0:
-        tmp = []
-        
-        for word in word_list:
-            if random.random() < rate:
-                tmp.append(replace_token)
-            else:
-                tmp.append(word)
-        
-        word_list = tmp
-        
-    return word_list
 
 
 def load_vocab(vocab_path):
@@ -226,56 +115,6 @@ def invert_dict(dic):
     """
     """
     return {dic[k]:k for k in dic}
-
-
-def convert_conf_file(conf_file, json_file):
-    """
-    """
-    config = load_config(conf_file)
-    fo = open(json_file, "w")
-    config_str = json.dumps(config, indent=2)
-    fo.write(config_str)
-    fo.close()
-
-
-def load_model(config):
-    """
-    """
-    model = build_model(config)
-    
-    model_path = real_path(config["load_model"])
-    state_dict = torch.load(model_path,
-                            map_location=lambda storage, loc: storage)
-
-    param_dict = {}
-    for k,v in model.named_parameters():
-        if k in state_dict:
-            param_dict[k] = state_dict[k] 
-        else:
-            print("warn: weight %s not found in model file" % k)
-
-    model.load_state_dict(param_dict, False)
-
-    use_cuda = config.get("use_cuda", False)
-    if use_cuda == True:
-        device = torch.device('cuda:%s' % config.get("device_id", "0"))
-        model = model.to(device)
-    
-    return model
-
-
-def nested_to_cuda(nested_tensor, device):
-    """
-    """
-    res = nested_tensor
-    if isinstance(nested_tensor, list) == True:
-        res = []
-        for elem in nested_tensor:
-            res.append(nested_to_cuda(elem, device))
-    elif isinstance(nested_tensor, torch.Tensor) == True:
-        res = nested_tensor.to(device)
-    
-    return res
 
 
 def cut_and_pad_seq(seq, max_len, pad, left=False):
