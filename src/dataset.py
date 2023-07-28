@@ -30,14 +30,29 @@ def word_dropout(word_list, rate, replace_token):
     return word_list
 
 
+def nested_to_device(nested_tensor, device):
+    """
+    """
+    res = nested_tensor
+    if isinstance(nested_tensor, list) == True or isinstance(nested_tensor, tuple) == True:
+        res = []
+        for elem in nested_tensor:
+            res.append(nested_to_device(elem, device))
+    elif isinstance(nested_tensor, torch.Tensor) == True:
+        res = nested_tensor.to(device)
+    return res
+
+
 class Dataset(ABC):
     """
     """
-    def __init__(self, rank=0, world_size=1):
+    def __init__(self, device="cpu", rank=0, world_size=1):
         """
         """
         self.rank = rank
         self.world_size = world_size
+        self.device = device
+        self.sort_key_fn = None
     
 
     @abstractmethod
@@ -46,6 +61,22 @@ class Dataset(ABC):
         """
         pass
 
+    
+    def local_shuffle(self):
+        """
+        """
+        for f in os.listdir(self.data_dir):
+            lines = [line for line in open(os.path.join(self.data_dir, f), "r", encoding="utf-8")]
+            random.shuffle(lines)
+            if self.sort_key_fn is not None:
+                lines = [[line, self.sort_key_fn(json.loads(line))] for line in lines]
+                lines.sort(key=lambda x:x[1])
+                lines = [x[0] for x in lines]
+            fo = open(os.path.join(self.data_dir, f), "w", encoding="utf-8")
+            for line in lines:
+                fo.write(line)
+            fo.close()
+    
     
     def __call__(self, start_steps=0):
         """
@@ -67,11 +98,11 @@ class Dataset(ABC):
                 if len(data) % (20 * self.batch_size) == 0:
                     batch_data = data[:self.batch_size]
                     data = data[self.batch_size:]
-                    yield self.vectorize(batch_data)
+                    yield nested_to_device(self.vectorize(batch_data), self.device)
                 
         while len(data) > 0:
             batch_data = data[:self.batch_size]
-            yield self.vectorize(batch_data)              
+            yield nested_to_device(self.vectorize(batch_data), self.device)           
             data = data[self.batch_size:]
 
 
@@ -82,6 +113,7 @@ class S2SDataset(Dataset):
                  data_dir,
                  batch_size,
                  symbol2id,
+                 device="cpu",
                  rank=0,
                  world_size=1):
         """
@@ -95,6 +127,7 @@ class S2SDataset(Dataset):
         self.SEP = symbol2id["_sep_"]
         self.CLS = symbol2id["_cls_"]
         self.MASK = symbol2id["_mask_"]
+        self.device = device
         self.rank = rank
         self.world_size = world_size        
         
@@ -130,6 +163,7 @@ class LMDataset(Dataset):
                  data_dir,
                  batch_size, 
                  symbol2id,
+                 device="cpu",
                  rank=0,
                  world_size=1):
         """
@@ -143,6 +177,7 @@ class LMDataset(Dataset):
         self.SEP = symbol2id["_sep_"]
         self.CLS = symbol2id["_cls_"]
         self.MASK = symbol2id["_mask_"]
+        self.device = device
         self.rank = rank
         self.world_size = world_size        
         
@@ -174,6 +209,7 @@ class ClassifyDataset(Dataset):
                  data_dir,
                  batch_size,
                  symbol2id,
+                 device="cpu",
                  rank=0,
                  world_size=1):
         """
@@ -187,6 +223,7 @@ class ClassifyDataset(Dataset):
         self.SEP = symbol2id["_sep_"]
         self.CLS = symbol2id["_cls_"]
         self.MASK = symbol2id["_mask_"]
+        self.device = device
         self.rank = rank
         self.world_size = world_size        
                 
@@ -218,6 +255,7 @@ class SequenceLabelingDataset(Dataset):
                  data_dir,
                  batch_size,
                  symbol2id,
+                 device="cpu",
                  rank=0,
                  world_size=1):
         """
@@ -231,6 +269,7 @@ class SequenceLabelingDataset(Dataset):
         self.SEP = symbol2id["_sep_"]
         self.CLS = symbol2id["_cls_"]
         self.MASK = symbol2id["_mask_"]
+        self.device = device
         self.rank = rank
         self.world_size = world_size        
         
@@ -244,7 +283,7 @@ class SequenceLabelingDataset(Dataset):
         y = self.PAD + np.zeros((batch_size, src_max_len), dtype=np.long)
         
         for i, d in enumerate(batch_data):
-            xx,yy = d["src"],d["label"]
+            xx,yy = d["src"],d["seq_label"]
             x[i, :len(xx)] = xx
             y[i, :len(yy)] = yy
         
@@ -262,6 +301,7 @@ class BiLMDataset(Dataset):
                  batch_size,
                  symbol2id, 
                  mask_rate,
+                 device="cpu",
                  rank=0,
                  world_size=1):
         """
@@ -275,6 +315,7 @@ class BiLMDataset(Dataset):
         self.SEP = symbol2id["_sep_"]
         self.CLS = symbol2id["_cls_"]
         self.MASK = symbol2id["_mask_"]
+        self.device = device
         self.mask_rate = mask_rate
         self.rank = rank
         self.world_size = world_size        
@@ -284,13 +325,13 @@ class BiLMDataset(Dataset):
         """
         """
         batch_size = len(batch_data)
-        trg_max_len = max(len(x["trg"]) for x in batch_data)
+        trg_max_len = max(len(x["src"]) for x in batch_data)
         y = self.PAD + np.zeros((batch_size, trg_max_len), dtype=np.long)
         y_target = self.PAD + np.zeros((batch_size, trg_max_len), 
                                        dtype=np.long)
         
         for i, d in enumerate(batch_data):
-            yy = d["trg"]
+            yy = d["src"]
             for j, w in enumerate(yy):
                 if random.random() < self.mask_rate:
                     y[i, j] = self.MASK
@@ -315,6 +356,7 @@ class MatchDataset(Dataset):
                  data_dir,
                  batch_size,
                  symbol2id,
+                 device="cpu",
                  rank=0,
                  world_size=1):
         """
@@ -328,6 +370,7 @@ class MatchDataset(Dataset):
         self.SEP = symbol2id["_sep_"]
         self.CLS = symbol2id["_cls_"]
         self.MASK = symbol2id["_mask_"]
+        self.device = device
         self.rank = rank
         self.world_size = world_size        
         
@@ -349,125 +392,3 @@ class MatchDataset(Dataset):
         y_target = torch.tensor(y_target, dtype=torch.long)
 
         return [y], [y_target]
-
-
-def build_enc_dec_dataset(data_dir, batch_size, symbo2id, train_config, rank, world_size):
-    """
-    """
-    return S2SDataset(
-                real_path(data_dir), 
-                batch_size, 
-                symbo2id,
-                rank, 
-                world_size)
-
-
-def build_lm_dataset(data_dir, batch_size, symbol2id, train_config, rank, world_size):
-    """
-    """
-    return LMDataset(
-                real_path(data_dir),
-                batch_size,
-                symbol2id,
-                rank, 
-                world_size)
-
-
-def build_classify_dataset(data_dir, batch_size, symbol2id, train_config, rank, world_size):
-    """
-    """
-    return ClassifyDataset(
-                real_path(data_dir),
-                batch_size,
-                symbol2id,
-                rank, 
-                world_size)
-
- 
-def build_bi_lm_dataset(data_dir, batch_size, symbol2id, train_config, rank, world_size):
-    """
-    """
-    return BiLMDataset(
-                real_path(data_dir),
-                batch_size,
-                symbol2id,
-                train_config["mask_rate"],
-                rank, 
-                world_size)
-
-
-def build_sequence_labeling_dataset(data_dir, batch_size, symbol2id, train_config, rank, world_size):
-    """
-    """
-    return SequenceLabelingDataset(
-                real_path(data_dir),
-                batch_size,
-                symbol2id,
-                rank, 
-                world_size)
-
-
-def build_match_dataset(data_dir, batch_size, symbol2id, train_config, rank, world_size):
-    """
-    """
-    return MatchDataset(
-                real_path(data_dir),
-                batch_size,
-                symbol2id,
-                rank, 
-                world_size)
-
-
-dataset_builder_dict = {
-        "enc_dec": build_enc_dec_dataset,
-        "lm": build_lm_dataset,
-        "classify": build_classify_dataset,
-        "bi_lm": build_bi_lm_dataset,
-        "sequence_labeling": build_sequence_labeling_dataset,
-        "match": build_match_dataset,
-}
-
-
-def build_dataset(train_config, model_config, dataset="train", rank=0, world_size=1):
-    """
-    """
-    if dataset == "train":
-        data_dir = train_config["train_dir"]
-        batch_size = train_config["batch_size"]
-    elif dataset == "val":
-        data_dir = train_config["val_dir"]
-        batch_size = train_config["test_batch_size"]
-    elif dataset == "test":
-        data_dir = train_config["test_dir"]
-        batch_size = train_config["test_batch_size"]
-
-    if model_config["task"] in dataset_builder_dict:
-        dataset_builder_fn = dataset_builder_dict[model_config["task"]]
-        return dataset_builder_fn(data_dir, 
-                                  batch_size, 
-                                  model_config["symbol2id"],
-                                  train_config,
-                                  rank, 
-                                  world_size)
-    else:
-        raise ValueError("model not correct!")
-
-
-def build_train_dataset(train_config, model_config, rank=0, world_size=1):
-    """
-    """
-    return build_dataset(train_config, model_config, "train", rank, world_size)
-
-
-def build_val_dataset(train_config, model_config, rank=0, world_size=1):
-    """
-    """
-    return build_dataset(train_config, model_config, "val", rank, world_size)
-
-
-def build_test_dataset(train_config, model_config, rank=0, world_size=1):
-    """
-    """
-    return build_dataset(train_config, model_config, "test", rank, world_size)
-
-

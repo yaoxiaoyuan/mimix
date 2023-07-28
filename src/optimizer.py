@@ -9,7 +9,8 @@ from torch import optim
 def build_optimizer(model, optimizer, lr):
     """
     """
-    optimizer = optim.Adam(
-                filter(lambda p: p.requires_grad, model.parameters()), 
-                lr, amsgrad=True)
+    if optimizer == "adamW":
+        optimizer = optim.AdamW(
+                    filter(lambda p: p.requires_grad, model.parameters()), 
+                    lr, amsgrad=True)
     return optimizer

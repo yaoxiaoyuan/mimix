@@ -19,7 +19,6 @@ class Transformer(nn.Module):
         """
         """
         super(Transformer, self).__init__()
-        print(kwargs)
         self.vocab_size = kwargs.get("vocab_size", None)
         self.max_len = kwargs.get("max_len", None)
         self.n_heads = kwargs["n_heads"] 

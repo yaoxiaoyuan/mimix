@@ -23,7 +23,7 @@ class ConstantScheduler():
             param_group['lr'] = self.lr
 
 
-def build_lr_scheduler(train_config, optimizer):
+def build_scheduler(train_config, optimizer):
     """
     """
     if "scheduler" not in train_config:

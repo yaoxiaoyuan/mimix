@@ -4,483 +4,127 @@ Created on Sun Aug 18 10:39:14 2019
 
 @author: Xiaoyuan Yao
 """
-import abc
+import sys
+from optparse import OptionParser
+import json
 import os
 import random
-import numpy as np
-import torch
 from tokenization import build_tokenizer
-from utils import real_path, load_vocab
+from utils import real_path, load_vocab, load_config, load_model_config
 
-class DataProcessor():
+class TextProcessor():
     """
     """
-    def __init__(self):
+    def __init__(self, **kwargs):
         """
         """
-        self.custom_parse_fn = None
+        self.src_max_len = kwargs.get("src_max_len", None)
+        self.trg_max_len = kwargs.get("trg_max_len", None)
+        self.PAD = kwargs["symbol2id"]["_pad_"]
+        self.BOS = kwargs["symbol2id"]["_bos_"]
+        self.EOS = kwargs["symbol2id"]["_eos_"]
+        self.UNK = kwargs["symbol2id"]["_unk_"]
+        self.SEP = kwargs["symbol2id"]["_sep_"]
+        self.CLS = kwargs["symbol2id"]["_cls_"]
+        self.MASK = kwargs["symbol2id"]["_mask_"]
+        self.src_tokenizer = None
+        self.src_tokenizer = build_tokenizer(
+                tokenizer=kwargs["src_tokenizer"],
+                vocab_file=real_path(kwargs["src_vocab"])) 
+        self.trg_tokenizer = None
+        self.trg_tokenizer = build_tokenizer(
+                tokenizer=kwargs["trg_tokenizer"],
+                vocab_file=real_path(kwargs["trg_vocab"])) 
+        self.label2id = None
+        if kwargs.get("label2id", None) is not None:
+            load_vocab(real_path(kwargs["label2id"]))
+        self.task = kwargs["task"]
         
-    @abc.abstractmethod
-    def parse(line):
+        
+    def parse(self, line):
         """
-        """
-        return None
+        """        
+        try:
+            data = json.loads(line)
+            return data
+        except:
+            return None
+        
 
-    @abc.abstractmethod
-    def preprocess(line):
+    def preprocess(self, data):
         """
-        """
-        return None
+        """        
+        src = data.get("src", None)
+        trg = data.get("trg", None)
+        label = data.get("label", None)
+        seq_label = data.get("seq_label", None)
+        
+        data = {}
+        if src:
+            src = self.src_tokenizer.tokenize_to_ids(src)
+            src = src[:self.src_max_len]
+            if self.task == "classify" or self.task == "match":
+                src = [self.CLS] + src[:self.src_max_len - 1]  
+            data["src"] = src
+        
+        if trg:
+            trg = self.trg_tokenizer.tokenize_to_ids(trg)
+            trg = trg[:self.trg_max_len - 1]
+            trg = [self.BOS] + trg + [self.EOS]
+            data["trg"] = trg
 
-    
+        if label:
+            if self.label2id is not None:
+                label = self.label2id[label]
+            else:
+                label = int(label)
+            data["label"] = label
+
+        if seq_label:
+            if self.label2id is not None:
+                seq_label = [self.label2id[s] for s in seq_label]
+            else:
+                seq_label = [int(s) for s in seq_label]
+            data["seq_label"] = seq_label
+            
+        return data
+
+
     def __call__(self, line):
         """
         """
-        if self.custom_parse_fn is None:
-            parsed = self.parse(line)
-        else:
-            parsed = self.custom_parse_fn(line)
-        
+        parsed = self.parse(line)
         processed = None
         if parsed is not None:
             processed = self.preprocess(parsed)
-        
+
         return processed
 
 
-class S2SDataProcessor(DataProcessor):
-    """
-    """
-    def __init__(self, 
-                 src_max_len, 
-                 trg_max_len, 
-                 src_tokenizer, 
-                 trg_tokenizer, 
-                 symbol2id):
-        """
-        """
-        self.src_max_len = src_max_len
-        self.trg_max_len = trg_max_len
-        self.PAD = symbol2id["_pad_"]
-        self.BOS = symbol2id["_bos_"]
-        self.EOS = symbol2id["_eos_"]
-        self.UNK = symbol2id["_unk_"]
-        self.SEP = symbol2id["_sep_"]
-        self.CLS = symbol2id["_cls_"]
-        self.MASK = symbol2id["_mask_"]
-        
-        self.src_tokenizer = src_tokenizer 
-        self.trg_tokenizer = trg_tokenizer 
-        
-        self.custom_parse_fn = None
-        
-        
-    def parse(self, line):
-        """
-        """        
-        try:
-            arr = line.strip().split("\t")
-            src,trg = arr[0],arr[1]
-        except:
-            return None
-        
-        return [src, trg]
-
-
-    def preprocess(self, data):
-        """
-        """        
-        src,trg = data
-        x = self.src_tokenizer.tokenize_to_ids(src)
-        y = self.trg_tokenizer.tokenize_to_ids(trg)
-
-        x = x[:self.src_max_len]
-        y = y[:self.trg_max_len - 1]
-                        
-        y = [self.BOS] + y + [self.EOS]
-            
-        return {"src":x, "trg":y}
-
-    
-class LMDataProcessor(DataProcessor):
-    """
-    """
-    def __init__(self, 
-                 trg_max_len, 
-                 trg_tokenizer, 
-                 symbol2id):
-        """
-        """
-        self.trg_max_len = trg_max_len
-        self.PAD = symbol2id["_pad_"]
-        self.BOS = symbol2id["_bos_"]
-        self.EOS = symbol2id["_eos_"]
-        self.UNK = symbol2id["_unk_"]
-        self.SEP = symbol2id["_sep_"]
-        self.CLS = symbol2id["_cls_"]
-        self.MASK = symbol2id["_mask_"]
-        
-        self.trg_tokenizer = trg_tokenizer
-        self.custom_parse_fn = None
-        
-
-    def parse(self, line):
-        """
-        """
-        trg = line.strip()
-        if len(trg) == 0:
-            return None
-        return [trg]
-
-
-    def preprocess(self, data):
-        """
-        """
-        trg = data[0]
-        y = self.trg_tokenizer.tokenize_to_ids(trg)
-            
-        y = y[:self.trg_max_len - 1]
-        y = [self.BOS] + y + [self.EOS]
-        
-        return {"trg":y}
-
-
-class ClassifyDataProcessor(DataProcessor):
-    """
-    """
-    def __init__(self, 
-                 src_max_len, 
-                 label2id, 
-                 n_class, 
-                 symbol2id, 
-                 src_tokenizer):
-        """
-        """
-        self.src_max_len = src_max_len
-        self.label2id = label2id
-        self.num_class = n_class
-        self.PAD = symbol2id["_pad_"]
-        self.BOS = symbol2id["_bos_"]
-        self.EOS = symbol2id["_eos_"]
-        self.UNK = symbol2id["_unk_"]
-        self.SEP = symbol2id["_sep_"]
-        self.CLS = symbol2id["_cls_"]
-        self.MASK = symbol2id["_mask_"]
-        self.src_tokenizer = src_tokenizer
-        self.custom_parse_fn = None
-        
-
-    def parse(self, line):
-        """
-        """
-        try:
-            src,label = line.strip().split("\t")[:2]
-        except:
-            return None
-        
-        return [src, label]
-
-
-    def preprocess(self, data):
-        """
-        """        
-        src,label = data
-        x = self.src_tokenizer.tokenize_to_ids(src)
-
-        x = [self.CLS] + x[:self.src_max_len - 1]
-        if self.label2id is not None:
-            y = self.label2id[label]
-        else:
-            y = int(label)
-        
-        return {"src":x, "label":y}
-
-
-class SequenceLabelingDataProcessor(DataProcessor):
-    """
-    """
-    def __init__(self, 
-                 src_max_len, 
-                 label2id, 
-                 n_labels, 
-                 symbol2id, 
-                 src_tokenizer):
-        """
-        """
-        self.src_max_len = src_max_len
-        self.label2id = label2id
-        self.n_labels = n_labels
-        self.PAD = symbol2id["_pad_"]
-        self.BOS = symbol2id["_bos_"]
-        self.EOS = symbol2id["_eos_"]
-        self.UNK = symbol2id["_unk_"]
-        self.SEP = symbol2id["_sep_"]
-        self.CLS = symbol2id["_cls_"]
-        self.MASK = symbol2id["_mask_"]
-        self.src_tokenizer = src_tokenizer
-        self.custom_parse_fn = None
-        
- 
-    def parse(self, line):
-        """
-        """
-        try:
-            src,label = line.strip().split("\t")[:2]
-        except:
-            return None
-        return [src, label]
-
-
-    def preprocess(self, data):
-        """
-        """        
-        src, label = data
-        x = self.src_tokenizer.tokenize_to_ids(src)
-
-        x = x[:self.src_max_len]
-        y = [self.label2id[s] for s in label.split()][:self.src_max_len]
-        
-        return {"src":x, "label":y}
-        
-    
-class BiLMDataProcessor(DataProcessor):
-    """
-    """
-    def __init__(self, 
-                 trg_max_len, 
-                 symbol2id, 
-                 trg_tokenizer, 
-                 mask_rate):
-        """
-        """
-        self.trg_max_len = trg_max_len
-        self.PAD = symbol2id["_pad_"]
-        self.BOS = symbol2id["_bos_"]
-        self.EOS = symbol2id["_eos_"]
-        self.UNK = symbol2id["_unk_"]
-        self.SEP = symbol2id["_sep_"]
-        self.CLS = symbol2id["_cls_"]
-        self.MASK = symbol2id["_mask_"]
-        self.mask_rate = mask_rate
-        self.trg_tokenizer = trg_tokenizer
-        self.custom_parse_fn = None
-        
-
-    def parse(self, line):
-        """
-        """
-        trg = line.strip()
-        if len(trg) == 0:
-            return None
-        return [trg]
-
-
-    def preprocess(self, data):
-        """
-        """
-        trg = data[0]
-        
-        y = self.trg_tokenizer.tokenize_to_ids(trg)
-        
-        return {"trg":y}
-
-
-class MatchDataProcessor(DataProcessor):
-    """
-    """
-    def __init__(self,
-                 src_max_len,
-                 src_tokenizer,
-                 symbol2id):
-        """
-        """
-        self.src_max_len = src_max_len
-        self.PAD = symbol2id["_pad_"]
-        self.BOS = symbol2id["_bos_"]
-        self.EOS = symbol2id["_eos_"]
-        self.UNK = symbol2id["_unk_"]
-        self.SEP = symbol2id["_sep_"]
-        self.CLS = symbol2id["_cls_"]
-        self.MASK = symbol2id["_mask_"]
-
-        self.src_tokenizer = src_tokenizer
-        self.custom_parse_fn = None
-
-
-    def parse(self, line):
-        """
-        """
-        return line.strip().split("\t")
-
-
-    def preprocess(self, data):
-        """
-        """
-        src_list = []
-        for src in data:
-            x = self.src_tokenizer.tokenize_to_ids(src)
-
-            x = x[:self.src_max_len - 1]
-            x = [self.CLS] + x
-
-            src_list.append(x)
-
-        return {"src_list":src_list}
-
-
-def build_enc_dec_processor(train_config, model_config):
-    """
-    """
-    src_tokenizer = build_tokenizer(
-                tokenizer=model_config["src_tokenizer"],
-                vocab_file=real_path(model_config["src_vocab"]), 
-                pre_tokenized=train_config.get("pre_tokenized",False),  
-                pre_vectorized=train_config.get("pre_vectorized",False))
-    trg_tokenizer = build_tokenizer(
-                tokenizer=model_config["trg_tokenizer"],
-                vocab_file=real_path(model_config["trg_vocab"]), 
-                pre_tokenized=train_config.get("pre_tokenized",False),  
-                pre_vectorized=train_config.get("pre_vectorized",False))
-        
-    return S2SDataProcessor(
-                model_config["src_max_len"], 
-                model_config["trg_max_len"], 
-                src_tokenizer, 
-                trg_tokenizer,
-                model_config["symbol2id"])
-
-
-def build_lm_processor(train_config, model_config):
-    """
-    """
-    trg_tokenizer = build_tokenizer(
-                tokenizer=model_config["trg_tokenizer"],
-                vocab_file=real_path(model_config["trg_vocab"]), 
-                pre_tokenized=train_config.get("pre_tokenized",False),  
-                pre_vectorized=train_config.get("pre_vectorized",False))
-        
-    return LMDataProcessor(
-                model_config["trg_max_len"], 
-                trg_tokenizer,
-                model_config["symbol2id"])
-
-
-def build_classify_processor(train_config, model_config):
-    """
-    """
-    src_tokenizer = build_tokenizer(
-                tokenizer=model_config["src_tokenizer"],
-                vocab_file=real_path(model_config["src_vocab"]), 
-                pre_tokenized=train_config.get("pre_tokenized",False),  
-                pre_vectorized=train_config.get("pre_vectorized",False))
-        
-    label2id = None
-    if "label2id" in model_config:
-        label2id = load_vocab(real_path(model_config["label2id"]))
-        
-    return ClassifyDataProcessor(
-                model_config["src_max_len"], 
-                label2id, 
-                model_config["n_class"],
-                model_config["symbol2id"], 
-                src_tokenizer)
-
-
-def build_bi_lm_processor(train_config, model_config):
-    """
-    """
-    trg_tokenizer = build_tokenizer(
-                tokenizer=model_config["trg_tokenizer"],
-                vocab_file=real_path(model_config["trg_vocab"]), 
-                pre_tokenized=train_config.get("pre_tokenized",False),  
-                pre_vectorized=train_config.get("pre_vectorized",False))
-        
-    return BiLMDataProcessor(
-                model_config["trg_max_len"], 
-                trg_tokenizer, 
-                model_config["symbol2id"], 
-                model_config["mask_rate"])
-
-
-def build_sequence_labeling_processor(train_config, model_config):
-    """
-    """
-    src_tokenizer = build_tokenizer(
-                tokenizer=model_config["src_tokenizer"],
-                vocab_file=real_path(model_config["src_vocab"]), 
-                pre_tokenized=train_config.get("pre_tokenized",False),  
-                pre_vectorized=train_config.get("pre_vectorized",False))
-
-    label2id = load_vocab(real_path(model_config["label2id"]))
-        
-    return SequenceLabelingDataProcessor(
-                model_config["src_max_len"], 
-                label2id, 
-                model_config["n_class"],
-                model_config["symbol2id"], 
-                src_tokenizer)
-
-
-def build_match_processor(train_config, model_config):
-    """
-    """
-    src_tokenizer = build_tokenizer(
-                tokenizer=model_config["src_tokenizer"],
-                vocab_file=real_path(model_config["src_vocab"]),
-                pre_tokenized=train_config.get("pre_tokenized",False),
-                pre_vectorized=train_config.get("pre_vectorized",False))
-
-    return MatchDataProcessor(
-                model_config["src_max_len"],
-                src_tokenizer,
-                model_config["symbol2id"])
-
-
-data_processor_builder_dict = {
-        "enc_dec": build_enc_dec_processor,
-        "lm": build_lm_processor,
-        "classify": build_classify_processor,
-        "bi_lm": build_bi_lm_processor,
-        "sequence_labeling": build_sequence_labeling_processor,
-        "match": build_match_processor,
-}
-
-def build_data_processor(train_config, model_config):
-    """
-    """
-    if model_config["task"] in data_processor_builder_dict:
-        data_processor_builder_fn = data_processor_builder_dict[model_config["task"]]
-        return data_processor_builder_fn(train_config, model_config)
-    else:
-        raise ValueError("model not correct!")
-
-
-def shuffle_data(data_dir, 
-                 dest_dir, 
-                 fast_shuffle=False, 
-                 num_shards=20, 
-                 data_preprocessor=None,
-                 sort_key_fn=None):
+def preprocess(data_dir, 
+               dest_dir, 
+               num_shards=1, 
+               data_preprocessor=None,
+               sort_key_fn=None):
     """
     Shuffle data
     """
-    if fast_shuffle == False:
-        data_files = [f for f in os.listdir(data_dir)]
+    data_files = [f for f in os.listdir(data_dir)]
+ 
+    fo_list = []
+    for f in range(num_shards):
+        fo_list.append(open(os.path.join(dest_dir, str(f)), "w", encoding="utf-8"))
 
-        fo_list = []
-        for f in range(num_shards):
-            fo_list.append(open(os.path.join(dest_dir, str(f)), "w", encoding="utf-8"))
-    
-        for fi in data_files:
-            for line in open(os.path.join(data_dir, fi), "r", encoding="utf-8"):
-                fo = random.choice(fo_list)
-                if data_preprocessor is not None:
-                    data = data_preprocessor(line)
-                    line = json.dumps(data, ensure_ascii=False) + "\n"
-                fo.write(line)
+    for fi in data_files:
+        for line in open(os.path.join(data_dir, fi), "r", encoding="utf-8"):
+            fo = random.choice(fo_list)
+            if data_preprocessor is not None:
+                data = data_preprocessor(line)
+                line = json.dumps(data, ensure_ascii=False) + "\n"
+            fo.write(line)
 
-        for fo in fo_list:
-            fo.close()
+    for fo in fo_list:
+        fo.close()
 
     for f in range(num_shards):
         lines = [line for line in open(os.path.join(dest_dir, str(f)), "r", encoding="utf-8")]
@@ -495,18 +139,52 @@ def shuffle_data(data_dir,
         fo.close()
 
 
-def preprocess_data(data_dir, 
-                    dest_dir, 
-                    data_preprocessor
-        ):
+def run_preprocess():
     """
     """
-    data_files = [f for f in os.listdir(data_dir)]
-    for fi in data_files:
-        fo = open(os.path.join(dest_dir, str(fi)), "w", encoding="utf-8")
-        for line in open(os.path.join(data_dir, fi), "r", encoding="utf-8"):
-            if data_preprocessor is not None:
-                data = data_preprocessor(line)
-                line = json.dumps(data, ensure_ascii=False) + "\n"
-            fo.write(line)
-        fo.close()
+    usage = "usage: preprocess.py --model_conf <file>"
+    
+    parser = OptionParser(usage)
+
+    parser.add_option("--train_conf", action="store", type="string",
+                      dest="train_config")
+
+    parser.add_option("--model_conf", action="store", type="string", 
+                      dest="model_config")
+
+    (options, args) = parser.parse_args(sys.argv)
+
+    if not options.train_config or not options.model_config:
+        print(usage)
+        sys.exit(0)
+    
+    model_config = load_model_config(real_path(options.model_config))
+    train_config = load_config(real_path(options.train_config))
+    
+    processor = TextProcessor(**model_config)
+    
+    preprocess(train_config["train_dir"], 
+                 os.path.join(real_path(train_config["tmp_dir"]), "train"), 
+                 num_shards=train_config.get("num_shards", 1), 
+                 data_preprocessor=processor,
+                 sort_key_fn=None)
+    if train_config.get("val_dir", None) is not None:
+        preprocess(train_config["val_dir"], 
+                     os.path.join(real_path(train_config["tmp_dir"]), "val"), 
+                     num_shards=1, 
+                     data_preprocessor=processor,
+                     sort_key_fn=None)
+    if train_config.get("test_dir", None) is not None:
+        preprocess(train_config["test_dir"], 
+                     os.path.join(real_path(train_config["tmp_dir"]), "test"), 
+                     num_shards=1, 
+                     data_preprocessor=processor,
+                     sort_key_fn=None)    
+        
+if __name__ == "__main__":
+    run_preprocess()
+
+
+
+
+

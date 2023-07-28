@@ -9,15 +9,15 @@ import torch
 import torch.nn.functional as F
 from decoding import crf_model_decoding
 
-def eval_acc(trainer, dataset="val"):
+def eval_acc(model, dataset):
     """
     """
-    trainer.model.eval()
+    model.eval()
     with torch.no_grad():
         shot_count = 0
         total_count = 0
-        for inputs,targets in trainer.val_dataset():
-            outputs = trainer.model(inputs)
+        for inputs,targets in dataset():
+            outputs = model(inputs)
             pred = outputs[0]
             shot = torch.sum(pred.argmax(1) == targets[0].view(-1))
                 
@@ -25,58 +25,55 @@ def eval_acc(trainer, dataset="val"):
             total_count = total_count + targets[0].size(0)
         
     acc = shot_count / total_count
-    trainer.logger.info("acc:%f" % acc)
-    return acc
+    return {"acc":acc}
 
 
-def eval_perplexity(trainer, dataset="val"):
+def eval_perplexity(model, dataset):
     """
     """
-    trainer.model.eval()
+    model.eval()
     with torch.no_grad():
         sum_log_p = 0
         sum_len = 0
-        for inputs,targets in trainer.val_dataset():          
-            outputs = trainer.model(inputs)
+        for inputs,targets in dataset():          
+            outputs = model(inputs)
             logits = outputs[0]
 
             log_probs = torch.gather(F.log_softmax(logits, 2), 
                                      2, 
                                      targets[0].unsqueeze(-1))
             
-            mask = (inputs[0] != trainer.model.PAD).float()
+            mask = (inputs[0] != model.PAD).float()
             seq_len = torch.sum(mask)
             log_probs = torch.sum(mask * log_probs.squeeze(-1))
             sum_log_p = sum_log_p + log_probs.item()
             sum_len = sum_len + seq_len.item()
 
     perplexity = np.exp(-sum_log_p / sum_len)
-    trainer.logger.info("ppl:%f" % perplexity)
-    return perplexity
+    return {"ppl":perplexity}
 
 
-def eval_sequence_labeling_acc(trainer, dataset="val"):
+def eval_sequence_labeling_acc(model, dataset):
     """
     """
-    trainer.model.eval()
+    model.eval()
     with torch.no_grad():
         shot_count = 0
         total_count = 0
-        for inputs,targets in trainer.val_dataset():
+        for inputs,targets in dataset():
             x = inputs[0]
-            if trainer.model.crf is not None:
-                pred = crf_model_decoding(trainer.model, x)
+            if model.crf is not None:
+                pred = crf_model_decoding(model, x)
             else:
-                pred = trainer.model(inputs, return_states=True)[1].argmax(-1)
+                pred = model(inputs, return_states=True)[1].argmax(-1)
             
-            shot = torch.sum((pred == targets[0]) * (x != trainer.model.PAD))
+            shot = torch.sum((pred == targets[0]) * (x != model.PAD))
             
             shot_count = shot_count + shot.item()
-            total_count = total_count + torch.sum(x != trainer.model.PAD).item()
+            total_count = total_count + torch.sum(x != model.PAD).item()
         
     acc = shot_count / total_count
-    trainer.logger.info("acc:%f" % acc)
-    return acc
+    return {"acc":acc}
 
 """
 This is a modified version of tensor2tensor bleu and rouge
