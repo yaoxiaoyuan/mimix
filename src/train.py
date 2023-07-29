@@ -131,10 +131,10 @@ def train(model,
             steps += 1
     
             if total_steps % save_steps == 0:
-                save_model(model_path % ("%d.%d.%d" % epoch, steps, total_steps))
+                save_model(model, optimizer, model_path % ("%d.%d.%d" % epoch, steps, total_steps))
     
             if total_steps % tmp_save_steps == 0:
-                save_model(model_path % "tmp")
+                save_model(model, optimizer, model_path % "tmp")
             
             if grad_clip is not None:
                 torch.nn.utils.clip_grad_norm_(
@@ -167,4 +167,5 @@ def train(model,
                 for eval_fn in eval_fn_list:
                     eval_res = eval_fn(model, test_dataset)
                     logger.info("Result: %s" % eval_res)
+    save_model(model, optimizer, model_path % ("%d.%d.%d" % epoch, steps, total_steps))
     logger.info("Train Completed!")

@@ -1,0 +1,27 @@
+[int]
+trg_max_len = xx
+n_heads = xx
+d_model = xx
+d_ff = xx
+n_dec_layers = xx
+trg_vocab_size = xx
+max_decode_steps = xx
+
+[float]
+dropout = xx
+
+[str]
+trg_vocab = /path/to/trg/vocab
+load_model = /path/to/load/for/predict
+search_strategy = sample
+trg_tokenizer = default
+model = transformer
+task = lm
+
+[bool]
+use_cuda = False
+share_emb_out_proj = True
+use_pre_norm = True
+norm_after_embedding = False
+norm_before_pred = True
+use_pos_embedding = True

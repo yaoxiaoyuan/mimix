@@ -1,0 +1,17 @@
+[int]
+max_epoch = xx
+batch_size = xx
+
+[float]
+lr = xx
+
+[str]
+tmp_dir = path/to/processed/data
+train_dir = path/to/raw/train/data
+model_dir = path/to/save/model
+model_name = name
+reload_model = path/to/pretrain/model/for/train
+optimizer = adamW
+
+[bool]
+use_cuda = True

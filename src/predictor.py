@@ -14,10 +14,10 @@ from decoding import crf_model_decoding
 from utils import load_vocab, real_path, invert_dict, cut_and_pad_seq_list
 from models import build_enc_dec_model, build_lm_model, build_encoder_model
 
-def load_model_weights(model, config):
+def load_model_weights(model, weights_path):
     """
     """
-    model_path = real_path(config["load_model"])
+    model_path = real_path(weights_path)
     state_dict = torch.load(model_path,
                             map_location=lambda storage, loc: storage)
 
@@ -29,12 +29,6 @@ def load_model_weights(model, config):
             print("warn: weight %s not found in model file" % k)
 
     model.load_state_dict(param_dict, False)
-
-    use_cuda = config.get("use_cuda", False)
-    
-    if use_cuda == True:
-        device = torch.device('cuda:%s' % config.get("device_id", "0"))
-        model = model.to(device)
     
     return model
 
@@ -45,7 +39,7 @@ class EncDecGenerator():
     def __init__(self, config):
         """
         """
-        self.model = load_model_weights(build_enc_dec_model(config), config)
+        self.model = load_model_weights(build_enc_dec_model(config), config["load_model"])
 
         self.use_cuda = config.get("use_cuda", False)
         self.device = torch.device('cpu')
@@ -327,7 +321,7 @@ class LMGenerator():
     def __init__(self, config):
         """
         """
-        self.model = load_model_weights(build_lm_model(config), config)
+        self.model = load_model_weights(build_lm_model(config), config["load_model"])
 
         self.use_cuda = config.get("use_cuda", False)
         self.device = torch.device("cpu")
@@ -342,7 +336,7 @@ class LMGenerator():
                 pre_tokenized=config.get("pre_tokenized", False),  
                 pre_vectorized=config.get("pre_vectorized", False))
         self.use_cuda = config.get("use_cuda", False)
-        self.gamma = float(config["gamma"])
+        self.gamma = float(config.get("gamma", 1))
         self.trg_max_len = config["trg_max_len"]
         self.trg_vocab_size = config["trg_vocab_size"]
         self.max_dec_steps = config["max_decode_steps"]
@@ -495,7 +489,7 @@ class TextEncoder():
     def __init__(self, config):
         """
         """
-        self.model = load_model_weights(build_encoder_model(config), config)
+        self.model = load_model_weights(build_encoder_model(config), config["load_model"])
         
         self.use_cuda = config.get("use_cuda", False)
         self.device = torch.device('cpu')

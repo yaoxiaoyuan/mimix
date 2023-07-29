@@ -1,0 +1,34 @@
+[int]
+src_max_len = xx
+trg_max_len = xx
+n_heads = xx
+d_model = xx
+d_ff = xx
+n_enc_layers = xx
+n_dec_layers = xx
+src_vocab_size = xx
+trg_vocab_size = xx
+beam_size = xx
+max_decode_steps = xx
+
+[float]
+dropout = xx
+
+[str]
+src_vocab = /path/to/src/vocab
+trg_vocab = /path/to/trg/vocab
+load_model = /path/to/load/for/predict
+search_strategy = beam_search
+src_tokenizer = default
+trg_tokenizer = default
+model = transformer
+task = enc_dec
+activation = relu
+
+[bool]
+use_cuda = True
+share_src_trg_emb = True
+share_emb_out_proj = True
+use_pre_norm = True
+norm_after_embedding = False
+norm_before_pred = True

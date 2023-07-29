@@ -130,6 +130,7 @@ class S2SDataset(Dataset):
         self.device = device
         self.rank = rank
         self.world_size = world_size        
+        self.sort_key_fn = None
         
     
     def vectorize(self, batch_data):
@@ -180,7 +181,8 @@ class LMDataset(Dataset):
         self.device = device
         self.rank = rank
         self.world_size = world_size        
-        
+        self.sort_key_fn = None
+                
         
     def vectorize(self, batch_data):
         """
@@ -226,7 +228,8 @@ class ClassifyDataset(Dataset):
         self.device = device
         self.rank = rank
         self.world_size = world_size        
-                
+        self.sort_key_fn = None
+                        
         
     def vectorize(self, batch_data):
         """
@@ -272,7 +275,8 @@ class SequenceLabelingDataset(Dataset):
         self.device = device
         self.rank = rank
         self.world_size = world_size        
-        
+        self.sort_key_fn = None
+                
        
     def vectorize(self, batch_data):
         """
@@ -319,7 +323,8 @@ class BiLMDataset(Dataset):
         self.mask_rate = mask_rate
         self.rank = rank
         self.world_size = world_size        
-        
+        self.sort_key_fn = None
+                
         
     def vectorize(self, batch_data):
         """
@@ -373,7 +378,8 @@ class MatchDataset(Dataset):
         self.device = device
         self.rank = rank
         self.world_size = world_size        
-        
+        self.sort_key_fn = None
+                
 
     def vectorize(self, batch_data):
         """
