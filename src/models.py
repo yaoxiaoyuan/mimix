@@ -27,6 +27,7 @@ class Transformer(nn.Module):
         self.d_qk = kwargs.get("d_qk", self.d_model//self.n_heads)
         self.d_v = kwargs.get("d_v", self.d_model//self.n_heads)
         self.n_layers = kwargs["n_layers"]
+        self.n_types = kwargs.get("n_types", None)
         self.with_across_attention = kwargs.get("with_across_attention", False)
         self.dropout = kwargs.get("dropout", 0)
         self.attn_dropout = kwargs.get("attn_dropout", 0)
@@ -67,6 +68,9 @@ class Transformer(nn.Module):
         
         if self.use_pos_embedding == True:    
             self.pos_embedding = PositionEmbedding(self.max_len, self.d_model, self.pos_need_train)
+
+        if self.n_types is not None:    
+            self.type_embedding = Embedding(self.n_types, self.d_model, self.factorized_size)
         
         if self.norm_after_embedding == True:       
             self.norm_emb = LayerNorm(self.d_model, self.ln_eps, self.use_rms_norm, self.use_ln_scale, self.use_ln_bias)
@@ -107,7 +111,8 @@ class Transformer(nn.Module):
                 past_pos_ids=None,
                 cached_kv=False, 
                 embedding=None,
-                return_states=False):
+                return_states=False,
+                type_ids=None):
         """
         """
         if self.use_word_embedding == True:
@@ -119,6 +124,9 @@ class Transformer(nn.Module):
          
         if self.use_pos_embedding == True:    
             embeded = embeded + self.pos_embedding(self_pos_ids)
+
+        if type_ids is not None:
+            embeded = embeded + self.type_embedding(type_ids)
 
         output = embeded
 
@@ -290,7 +298,7 @@ class TransformerSeq2seq(nn.Module):
         self.MAX_LOGITS = 10000.
         self.MIN_LOGITS = -10000.
         
-        self.share_src_trg_emb = kwargs["share_src_trg_emb"]
+        self.share_src_trg_emb = kwargs.get("share_src_trg_emb", False)
         self.n_dec_layers = kwargs["n_dec_layers"]
         self.trg_vocab_size = kwargs["trg_vocab_size"]
         enc_config = kwargs.copy()
