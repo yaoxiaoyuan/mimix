@@ -74,6 +74,9 @@ def train(model,
           lr_scheduler=None):
     """
     """
+    if os.path.exists(real_path(train_config["model_dir"])) == False:
+        os.mkdir(real_path(train_config["model_dir"]))
+        
     use_amp = train_config.get("use_amp", False)
     if use_amp:
         scaler = torch.cuda.amp.GradScaler()
@@ -81,10 +84,10 @@ def train(model,
     print_model_info(model)
     
     logger.info("Train Start!")
-
+    
     accumulate_steps = train_config.get("accumulate_steps", 1)
     print_every_n_steps = train_config.get("print_every_n_steps", 100)
-    model_path = real_path(os.path.join(train_config["model_dir"], "%s." + train_config["model_name"]))
+    model_path = real_path(os.path.join(real_path(train_config["model_dir"]), "%s." + train_config["model_name"]))
     save_steps = train_config.get("save_steps", 100000)
     tmp_save_steps = train_config.get("tmp_save_steps", 10000)
     grad_clip = train_config.get("grad_clip", None)
@@ -131,7 +134,7 @@ def train(model,
             steps += 1
     
             if total_steps % save_steps == 0:
-                save_model(model, optimizer, model_path % ("%d.%d.%d" % epoch, steps, total_steps))
+                save_model(model, optimizer, model_path % ("%d.%d.%d" % (epoch, steps, total_steps)))
     
             if total_steps % tmp_save_steps == 0:
                 save_model(model, optimizer, model_path % "tmp")
@@ -167,5 +170,5 @@ def train(model,
                 for eval_fn in eval_fn_list:
                     eval_res = eval_fn(model, test_dataset)
                     logger.info("Result: %s" % eval_res)
-    save_model(model, optimizer, model_path % ("%d.%d.%d" % epoch, steps, total_steps))
+    save_model(model, optimizer, model_path % ("%d.%d.%d" % (epoch, steps, total_steps)))
     logger.info("Train Completed!")

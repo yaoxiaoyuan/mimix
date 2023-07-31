@@ -241,7 +241,7 @@ class Dropout(nn.Module):
 
     def forward(self, x):
         if self.training and self.p > 0:
-            mask = torch.rand_like(x, device = x.device) > self.p
+            mask = torch.rand_like(x, device = x.device) < self.p
             x = torch.masked_fill(x, mask, 0)
             scale = (1.0/(1-self.p))
             return x * scale

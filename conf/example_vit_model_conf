@@ -1,0 +1,26 @@
+[int]
+src_max_len = 50
+n_heads = 4
+d_model = 128
+d_ff = 1024
+n_layers = 6
+n_class = 10
+img_h = 28
+img_w = 28
+patch_h = 4
+patch_w = 4
+n_channels = 1
+
+[float]
+dropout = 0.1
+
+[str]
+load_model = ../model/vit
+model = vit
+task = v_classify
+activation = relu
+
+[bool]
+use_cuda = True
+use_pre_norm = True
+norm_before_pred = True

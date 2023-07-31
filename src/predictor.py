@@ -40,12 +40,13 @@ class EncDecGenerator():
         """
         """
         self.model = load_model_weights(build_enc_dec_model(config), config["load_model"])
-
+        
         self.use_cuda = config.get("use_cuda", False)
         self.device = torch.device('cpu')
         if self.use_cuda == True:
             device_id = config.get("device_id", "0")
             self.device = torch.device('cuda:%s' % device_id)
+            self.model = self.model.to(self.device)
             
         self.src_tokenizer = build_tokenizer(
                 tokenizer=config["src_tokenizer"],
@@ -496,6 +497,7 @@ class TextEncoder():
         if self.use_cuda == True:
             device_id = config.get("device_id", "0")
             self.device = torch.device('cuda:%s' % device_id)
+            self.model = self.model.to(self.device)
         
         self.src_word2id = load_vocab(real_path(config["src_vocab"]))
         self.src_id2word = invert_dict(self.src_word2id)

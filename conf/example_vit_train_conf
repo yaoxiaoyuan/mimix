@@ -1,0 +1,14 @@
+[int]
+max_epoch = 100
+batch_size = 1024
+
+[float]
+lr = 0.001
+
+[str]
+model_dir = ../model/vit
+model_name = mnist
+optimizer = adamW
+
+[bool]
+use_cuda = True

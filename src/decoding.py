@@ -20,11 +20,7 @@ def init_search(model, batch_size, use_cuda):
     mask_finished = torch.tensor([model.MIN_LOGITS] * vocab_size,
                                  dtype=torch.float)
     mask_finished[model.PAD] = 0
-                 
-    mask_unk = torch.tensor([model.MIN_LOGITS] * vocab_size,
-                                 dtype=torch.float)
-    mask_unk[model.UNK] = model.MAX_LOGITS
-    
+                     
     if use_cuda == False:
         states = [y,
                   log_probs,
@@ -45,6 +41,9 @@ def init_search(model, batch_size, use_cuda):
 def process_logits(model, logits, states):
     """ 
     """
+    mask_unk = torch.zeros_like(logits)
+    mask_unk[:,model.UNK] = model.MIN_LOGITS
+    logits = logits + mask_unk
     return logits
     
 
@@ -154,12 +153,14 @@ def search(model,
             
             cache = model.gather_cache(cache, beam_id)    
         else:
+            replacement = not (group_size > 0 and steps == 0)
             logits = logits * (1 - finished.float()) + mask_finished * finished.float()
             y,probs = top_k_top_p_sampling(logits,
                                            top_k,
                                            top_p,
                                            temperature,
-                                           n_samples=cur_beam_size)
+                                           n_samples=cur_beam_size,
+                                           replacement=replacement)
             
             base_id = torch.arange(0, cur_batch_size, device = y.device) * last_beam_size
             beam_id = (base_id.view(-1, 1) + y // vocab_size).view(-1)

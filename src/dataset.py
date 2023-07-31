@@ -139,10 +139,10 @@ class S2SDataset(Dataset):
         batch_size = len(batch_data)
         src_max_len = max(len(x["src"]) for x in batch_data)
         trg_max_len = max(len(x["trg"]) - 1 for x in batch_data)
-        x = self.PAD + np.zeros((batch_size, src_max_len), dtype=np.long)
-        y = self.PAD + np.zeros((batch_size, trg_max_len), dtype=np.long)
+        x = self.PAD + np.zeros((batch_size, src_max_len), dtype=np.int64)
+        y = self.PAD + np.zeros((batch_size, trg_max_len), dtype=np.int64)
         y_target = self.PAD + np.zeros((batch_size, trg_max_len), 
-                                       dtype=np.long)
+                                       dtype=np.int64)
         
         for i, d in enumerate(batch_data):
             xx,yy = d["src"],d["trg"]
@@ -189,9 +189,9 @@ class LMDataset(Dataset):
         """
         batch_size = len(batch_data)
         trg_max_len = max(len(x["trg"]) - 1 for x in batch_data)
-        y = self.PAD + np.zeros((batch_size, trg_max_len), dtype=np.long)
+        y = self.PAD + np.zeros((batch_size, trg_max_len), dtype=np.int64)
         y_target = self.PAD + np.zeros((batch_size, trg_max_len), 
-                                       dtype=np.long)
+                                       dtype=np.int64)
         
         for i, d in enumerate(batch_data):
             yy = d["trg"]
@@ -236,9 +236,9 @@ class ClassifyDataset(Dataset):
         """
         batch_size = len(batch_data)
         src_max_len = max(len(x["src"]) for x in batch_data)
-        x = self.PAD + np.zeros((batch_size, src_max_len), dtype=np.long)
+        x = self.PAD + np.zeros((batch_size, src_max_len), dtype=np.int64)
         
-        y = np.zeros((batch_size, 1), dtype=np.long)
+        y = np.zeros((batch_size, 1), dtype=np.int64)
         
         for i, d in enumerate(batch_data):
             xx,yy = d["src"],d["label"]
@@ -283,8 +283,8 @@ class SequenceLabelingDataset(Dataset):
         """
         batch_size = len(batch_data)
         src_max_len = max(len(x["src"]) for x in batch_data)
-        x = self.PAD + np.zeros((batch_size, src_max_len), dtype=np.long)
-        y = self.PAD + np.zeros((batch_size, src_max_len), dtype=np.long)
+        x = self.PAD + np.zeros((batch_size, src_max_len), dtype=np.int64)
+        y = self.PAD + np.zeros((batch_size, src_max_len), dtype=np.int64)
         
         for i, d in enumerate(batch_data):
             xx,yy = d["src"],d["seq_label"]
@@ -331,9 +331,9 @@ class BiLMDataset(Dataset):
         """
         batch_size = len(batch_data)
         trg_max_len = max(len(x["src"]) for x in batch_data)
-        y = self.PAD + np.zeros((batch_size, trg_max_len), dtype=np.long)
+        y = self.PAD + np.zeros((batch_size, trg_max_len), dtype=np.int64)
         y_target = self.PAD + np.zeros((batch_size, trg_max_len), 
-                                       dtype=np.long)
+                                       dtype=np.int64)
         
         for i, d in enumerate(batch_data):
             yy = d["src"]
@@ -386,8 +386,8 @@ class MatchDataset(Dataset):
         """
         batch_size = len(batch_data)
         src_max_len = max(max(len(xx) for xx in x["src_list"]) for x in batch_data)
-        y = self.PAD + np.zeros((2 * batch_size, src_max_len), dtype=np.long)
-        y_target = np.zeros((2 * batch_size), dtype=np.long)
+        y = self.PAD + np.zeros((2 * batch_size, src_max_len), dtype=np.int64)
+        y_target = np.zeros((2 * batch_size), dtype=np.int64)
         for i, d in enumerate(batch_data):
             y1,y2 = random.sample(d["src_list"], 2)
             y[2*i, :len(y1)] = y1
