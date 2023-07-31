@@ -122,7 +122,7 @@ class Transformer(nn.Module):
         if embedding is not None:
             embeded = embedding(y)
          
-        if self.use_pos_embedding == True:    
+        if self.use_pos_embedding == True:   
             embeded = embeded + self.pos_embedding(self_pos_ids)
 
         if type_ids is not None:
@@ -809,72 +809,109 @@ class ViTransformer(nn.Module):
     def __init__(self, **kwargs):
         """
         """
-        super(ViTransformerEncoder, self).__init__()
+        super(ViTransformer, self).__init__()
+        
+        self.d_model = kwargs["d_model"]
+        self.n_class = kwargs["n_class"]
+        
+        img_h,img_w = kwargs["img_h"], kwargs["img_w"]
+        ph,pw = kwargs["patch_h"], kwargs["patch_w"]
+        
         enc_config = kwargs.copy()
-        enc_config["vocab_size"] = kwargs["src_vocab_size"]
-        enc_config["max_len"] = kwargs["src_max_len"]
-        self.encoder = Encoder(kwargs)
-        #self.patch_embedding_W = 
-        #self.cls = 
-         
+        enc_config["use_word_embedding"] = False
+        enc_config["max_len"] = img_h // ph * img_w // pw 
+        self.encoder = Transformer(**enc_config)
+        
+        self.patch_embedding = nn.Conv2d(kwargs["n_channels"], self.d_model, kernel_size=(ph, pw), stride=(ph, pw))
+        self.cls = nn.Parameter(torch.Tensor(self.d_model))
+
+        self.W_pool = nn.Parameter(torch.Tensor(self.d_model, self.d_model))
+        self.b_pool = nn.Parameter(torch.zeros(self.d_model))
+        self.W_out = nn.Parameter(torch.Tensor(self.d_model, self.n_class))
+        self.b_out = nn.Parameter(torch.zeros(self.n_class))
+ 
+        self.reset_parameters()
+    
+    
+    def reset_parameters(self):
+        """
+        """
+        stdv = 1.0 / np.sqrt(self.d_model)
+        for weight in [self.cls, self.W_pool, self.W_out]:
+            weight.data.uniform_(-stdv, stdv)
+        for weight in [self.b_pool, self.b_out]:
+            weight.data.zero_()
+
 
     def forward(self, inputs, return_states=False, targets=None, compute_loss=False):
         """
         """
-        #embedding = F.linear(x)
-       
+        x = inputs[0]
+        
+        embeded = self.patch_embedding(x).flatten(2).transpose(1, 2)
+        
+        cls = self.cls.repeat(x.shape[0], 1, 1)
+        embeded = torch.cat([cls, embeded], 1)
+        
+        pos_ids = torch.arange(embeded.size(1)).repeat([embeded.size(0), 1]).to(x.device)
+        
+        enc_outputs = self.encoder(embeded, self_pos_ids=pos_ids)
 
-        pass
+        enc_output = enc_outputs[0]
+        
+        enc_output = torch.tanh(torch.matmul(enc_output, self.W_pool) + self.b_pool)
+            
+        logits = torch.matmul(enc_output, self.W_out) + self.b_out
+        outputs = [logits[:,0,:]] + enc_outputs
+        
+        if compute_loss == True:
+            loss = self.loss_fn(outputs, targets)
+            outputs = [loss] + outputs
 
-
-def build_transformer_model(config):
-    """
-    """
-    transformer = TransformerSeq2seq(**config)
-    return transformer
+        if return_states == False:
+            outputs = outputs[:1]
+                    
+        return outputs     
 
 
 def build_enc_dec_model(config):
     """
     """
     if config["model"] == "transformer":
-        model = build_transformer_model(config)
+        model = TransformerSeq2seq(**config)
     else:
         raise ValueError("model not correct!")
         
     return model
-
-
-def build_transformer_lm_model(config):
-    """
-    """
-    transformer = TransformerLM(**config)
-    return transformer
 
 
 def build_lm_model(config):
     """
     """
     if config["model"] == "transformer":
-        model = build_transformer_lm_model(config)
+        model = TransformerLM(**config)
     else:
         raise ValueError("model not correct!")
         
     return model
 
 
-def build_transformer_encoder_model(config):
-    """
-    """
-    transformer = TransformerEncoder(**config)
-    return transformer
-
-
 def build_encoder_model(config):
     """
     """
     if config["model"] == "transformer":
-        model = build_transformer_encoder_model(config)
+        model = TransformerEncoder(**config)
+    else:
+        raise ValueError("model not correct!")
+        
+    return model
+
+
+def build_vit_model(config):
+    """
+    """
+    if config["model"] == "vit":
+        model = ViTransformer(**config)
     else:
         raise ValueError("model not correct!")
         
