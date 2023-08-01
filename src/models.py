@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from layers import Embedding,Dropout,LayerNorm,gelu_new,PositionEmbedding,CRF
+from layers import Embedding,Dropout,LayerNorm,act2fn,PositionEmbedding,CRF
 from layers import TransformerLayer
 
 
@@ -764,21 +764,19 @@ class TransformerEncoder(nn.Module):
             enc_output = torch.tanh(torch.matmul(enc_output, self.W_pool) + self.b_pool)
             
             outputs = [enc_output]
-            if self.out_dim is not None or self.n_class is not None:
-                enc_output = torch.matmul(enc_output, self.W_out) + self.b_out
-
-                outputs = [enc_output[:,0,:]] + outputs
             
-            if self.crf is not None:
-                mask = x.ne(self.PAD).to(enc_output.dtype)
-                nlg = self.crf(enc_output, inputs[1], mask)
-                outputs = [nlg] + outputs 
+        if self.out_dim is not None or self.n_class is not None:
+            enc_output = torch.matmul(enc_output, self.W_out) + self.b_out
+
+            outputs = [enc_output[:,0,:]]
+            
+        if self.crf is not None:
+            mask = x.ne(self.PAD).to(enc_output.dtype)
+            nlg = self.crf(enc_output, inputs[1], mask)
+            outputs = [nlg] 
         
         if self.with_mlm == True:
-            if self.activation == "relu":
-                enc_output = F.relu(enc_output)
-            elif self.activation == "gelu":
-                enc_output = gelu_new(enc_output)
+            enc_output = act2fn[self.activation](enc_output)
             
             enc_output = self.norm_mlm(enc_output)
 
@@ -819,14 +817,18 @@ class ViTransformer(nn.Module):
         
         enc_config = kwargs.copy()
         enc_config["use_word_embedding"] = False
-        enc_config["max_len"] = img_h // ph * img_w // pw 
+        enc_config["max_len"] = img_h // ph * img_w // pw + 1
         self.encoder = Transformer(**enc_config)
         
         self.patch_embedding = nn.Conv2d(kwargs["n_channels"], self.d_model, kernel_size=(ph, pw), stride=(ph, pw))
         self.cls = nn.Parameter(torch.Tensor(self.d_model))
-
-        self.W_pool = nn.Parameter(torch.Tensor(self.d_model, self.d_model))
-        self.b_pool = nn.Parameter(torch.zeros(self.d_model))
+        
+        self.use_pooling = kwargs.get("use_pooling", False)
+        self.W_pool = None
+        self.b_pool = None
+        if self.use_pooling == True:
+            self.W_pool = nn.Parameter(torch.Tensor(self.d_model, self.d_model))
+            self.b_pool = nn.Parameter(torch.zeros(self.d_model))
         self.W_out = nn.Parameter(torch.Tensor(self.d_model, self.n_class))
         self.b_out = nn.Parameter(torch.zeros(self.n_class))
  
@@ -837,10 +839,12 @@ class ViTransformer(nn.Module):
         """
         """
         stdv = 1.0 / np.sqrt(self.d_model)
-        for weight in [self.cls, self.W_pool, self.W_out]:
-            weight.data.uniform_(-stdv, stdv)
+        for weight in [self.W_pool, self.W_out]:
+            if weight is not None:
+                weight.data.uniform_(-stdv, stdv)
         for weight in [self.b_pool, self.b_out]:
-            weight.data.zero_()
+            if weight is not None:
+                weight.data.zero_()
 
 
     def forward(self, inputs, return_states=False, targets=None, compute_loss=False):
@@ -859,7 +863,8 @@ class ViTransformer(nn.Module):
 
         enc_output = enc_outputs[0]
         
-        enc_output = torch.tanh(torch.matmul(enc_output, self.W_pool) + self.b_pool)
+        if self.use_pooling == True:
+            enc_output = torch.tanh(torch.matmul(enc_output, self.W_pool) + self.b_pool)
             
         logits = torch.matmul(enc_output, self.W_out) + self.b_out
         outputs = [logits[:,0,:]] + enc_outputs
@@ -916,4 +921,19 @@ def build_vit_model(config):
         raise ValueError("model not correct!")
         
     return model
+
+vit = ViTransformer(d_model=768,
+                    n_heads=12,
+                    img_w=224,
+                    img_h=224,
+                    patch_w=16,
+                    patch_h=16,
+                    n_class=1000,
+                    n_layers=12,
+                    n_channels=3,
+                    norm_before_pred=True)
+w = torch.load("../model/pretrain/vit.base.model_16-224", map_location='cpu')
+vit.load_state_dict(w)
+print(sum(w[k].numel() for k in w))
+print(sum(v.numel() for k,v in vit.named_parameters()))
 

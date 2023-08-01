@@ -255,6 +255,9 @@ def gelu_new(x):
     """
     return 0.5 * x * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (x + 0.044715 * torch.pow(x, 3.0))))
 
+ 
+act2fn = {"relu": F.relu, "gelu":gelu_new, "gelu_new":gelu_new}
+
 
 class FeedForward(nn.Module):
     """
@@ -308,28 +311,17 @@ class FeedForward(nn.Module):
     def forward(self, x):
         """
         """
+        act_fn = act2fn[self.activation]
         if self.use_glu == False:
-            if self.activation == "relu":
-                if self.use_bias == True:
-                    x = F.linear(F.relu(F.linear(x, self.W1) + self.b1), self.W2) + self.b2
-                else:
-                    x = F.linear(F.relu(F.linear(x, self.W1)), self.W2)
-            elif self.activation == "gelu" or self.activation == "gelu_new":
-                if self.use_bias == True:
-                    x = F.linear(gelu_new(F.linear(x, self.W1) + self.b1), self.W2) + self.b2
-                else:
-                    x = F.linear(F.relu(F.linear(x, self.W1)), self.W2)
+            if self.use_bias == True:
+                x = F.linear(act_fn(F.linear(x, self.W1) + self.b1), self.W2) + self.b2
+            else:
+                x = F.linear(act_fn(F.linear(x, self.W1)), self.W2)
         else:
-            if self.activation == "relu":
-                if self.use_bias == True:
-                    x = F.linear(F.relu(F.linear(x, self.W1) + self.b1) * (F.linear(x, self.W2) + self.b2), self.W3) + self.b3
-                else:
-                    x = F.linear(F.relu(F.linear(x, self.W1)) * F.linear(x, self.W2), self.W3)
-            elif self.activation == "gelu" or self.activation == "gelu_new":
-                if self.use_bias == True:
-                    x = F.linear(gelu_new(F.linear(x, self.W1) + self.b1) * (F.linear(x, self.W2) + self.b2), self.W3) + self.b3
-                else:
-                    x = F.linear(gelu_new(F.linear(x, self.W1)) * F.linear(x, self.W2), self.W3)           
+            if self.use_bias == True:
+                x = F.linear(act_fn(F.linear(x, self.W1) + self.b1) * (F.linear(x, self.W2) + self.b2), self.W3) + self.b3
+            else:
+                x = F.linear(act_fn(F.linear(x, self.W1)) * F.linear(x, self.W2), self.W3)
             
         if self.dropout is not None:
             x = self.dropout(x)
