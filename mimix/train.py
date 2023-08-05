@@ -9,7 +9,7 @@ import os
 from datetime import datetime
 import logging
 import torch
-from utils import real_path
+from mimix.utils import real_path
 
 LOG_DIR = "../logger"
 

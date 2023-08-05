@@ -14,8 +14,8 @@ matplotlib.rcParams['font.sans-serif'] = ['KaiTi']
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 from pylab import mpl
-from predictor import EncDecGenerator
-from utils import load_model_config,real_path
+from mimix.predictor import EncDecGenerator
+from mimix.utils import load_model_config,real_path
 
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 

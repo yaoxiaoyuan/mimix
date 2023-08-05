@@ -9,8 +9,8 @@ from optparse import OptionParser
 import json
 import os
 import random
-from tokenization import build_tokenizer
-from utils import real_path, load_vocab, load_config, load_model_config
+from mimix.tokenization import build_tokenizer
+from mimix.utils import real_path, load_vocab, load_config, load_model_config
 
 class TextProcessor():
     """

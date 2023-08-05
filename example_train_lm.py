@@ -7,14 +7,63 @@ Created on Fri Jul 28 22:06:35 2023
 import sys
 import os
 from optparse import OptionParser
-from models import build_lm_model
-from dataset import LMDataset
-from predictor import load_model_weights
-from optimizer import build_optimizer
-from scheduler import build_scheduler
-from loss import seq_cross_entropy
-from utils import real_path, load_config, load_model_config
-from train import train
+import numpy as np
+import torch
+from mimix.models import build_lm_model
+from mimix.predictor import load_model_weights
+from mimix.optimizer import build_optimizer
+from mimix.scheduler import build_scheduler
+from mimix.loss import seq_cross_entropy
+from mimix.utils import real_path, load_config, load_model_config, SimpleDataset
+from mimix.train import train
+
+
+class LMDataset(SimpleDataset):
+    """
+    """
+    def __init__(self, 
+                 data_dir,
+                 batch_size, 
+                 symbol2id,
+                 device="cpu",
+                 rank=0,
+                 world_size=1):
+        """
+        """
+        self.data_dir = data_dir
+        self.batch_size = batch_size
+        self.PAD = symbol2id["_pad_"]
+        self.BOS = symbol2id["_bos_"]
+        self.EOS = symbol2id["_eos_"]
+        self.UNK = symbol2id["_unk_"]
+        self.SEP = symbol2id["_sep_"]
+        self.CLS = symbol2id["_cls_"]
+        self.MASK = symbol2id["_mask_"]
+        self.device = device
+        self.rank = rank
+        self.world_size = world_size        
+        self.sort_key_fn = None
+                
+        
+    def vectorize(self, batch_data):
+        """
+        """
+        batch_size = len(batch_data)
+        trg_max_len = max(len(x["trg"]) - 1 for x in batch_data)
+        y = self.PAD + np.zeros((batch_size, trg_max_len), dtype=np.int64)
+        y_target = self.PAD + np.zeros((batch_size, trg_max_len), 
+                                       dtype=np.int64)
+        
+        for i, d in enumerate(batch_data):
+            yy = d["trg"]
+            y[i, :len(yy) - 1] = yy[:-1]
+            y_target[i, :len(yy) - 1] = yy[1:]
+            
+        y = torch.tensor(y, dtype=torch.long)
+        y_target = torch.tensor(y_target, dtype=torch.long)
+        
+        return [y], [y_target]
+
 
 def main(model_config, train_config):
     """
@@ -46,7 +95,7 @@ def main(model_config, train_config):
         test_batch_size = train_config["test_batch_size"]
         test_dataset = LMDataset(test_dir, test_batch_size, symbol2id, device)  
         
-    optimizer = build_optimizer(model, train_config["optimizer"], train_config["lr"])
+    optimizer = build_optimizer(model, train_config)
     lr_scheduler = build_scheduler(train_config, optimizer)
     eval_fn_list = []
     train(model, 
@@ -62,7 +111,7 @@ def main(model_config, train_config):
 def run_train():
     """
     """
-    usage = "usage: exapmle_train_seq2seq.py --model_conf <file> --train_conf <file>"
+    usage = "usage: exapmle_train_lm.py --model_conf <file> --train_conf <file>"
     
     parser = OptionParser(usage)
 

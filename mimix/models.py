@@ -8,8 +8,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from layers import Embedding,Dropout,LayerNorm,act2fn,PositionEmbedding,CRF
-from layers import TransformerLayer
+from mimix.layers import Embedding,Dropout,LayerNorm,act2fn,PositionEmbedding,CRF
+from mimix.layers import TransformerLayer
 
 
 class Transformer(nn.Module):
@@ -664,7 +664,7 @@ class TransformerEncoder(nn.Module):
 
         self.n_class = kwargs.get("n_class", None)
         
-        self.activation = kwargs["activation"]
+        self.activation = kwargs.get("activation", "relu")
         
         self.W_pool = None
         self.b_pool = None
@@ -687,7 +687,7 @@ class TransformerEncoder(nn.Module):
             self.b_out = nn.Parameter(torch.zeros(self.out_dim))
         
         self.crf = None
-        if self.n_class is not None and kwargs["use_crf"] == True:
+        if self.n_class is not None and kwargs.get("use_crf", False) == True:
             self.crf = CRF(self.n_class)
         
         self.W_mlm = None
@@ -755,6 +755,7 @@ class TransformerEncoder(nn.Module):
         enc_outputs = self.encoder(x, 
                                    enc_self_attn_mask,
                                    self_pos_ids=self_pos_ids, 
+                                   past_pos_ids=self_pos_ids, 
                                    return_states=return_states)
         enc_output = enc_outputs[0]
         
@@ -839,7 +840,7 @@ class ViTransformer(nn.Module):
         """
         """
         stdv = 1.0 / np.sqrt(self.d_model)
-        for weight in [self.W_pool, self.W_out]:
+        for weight in [self.W_pool, self.W_out, self.cls]:
             if weight is not None:
                 weight.data.uniform_(-stdv, stdv)
         for weight in [self.b_pool, self.b_out]:
@@ -921,19 +922,3 @@ def build_vit_model(config):
         raise ValueError("model not correct!")
         
     return model
-
-vit = ViTransformer(d_model=768,
-                    n_heads=12,
-                    img_w=224,
-                    img_h=224,
-                    patch_w=16,
-                    patch_h=16,
-                    n_class=1000,
-                    n_layers=12,
-                    n_channels=3,
-                    norm_before_pred=True)
-w = torch.load("../model/pretrain/vit.base.model_16-224", map_location='cpu')
-vit.load_state_dict(w)
-print(sum(w[k].numel() for k in w))
-print(sum(v.numel() for k,v in vit.named_parameters()))
-

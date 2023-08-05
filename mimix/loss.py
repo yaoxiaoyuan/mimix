@@ -9,12 +9,11 @@ import torch.nn.functional as F
 
 def cross_entropy_with_smoothing(logits, target, eps, pad):
     """
-    """
+    """ 
     n_class = logits.size(1)
-    one_hot = torch.zeros_like(logits).scatter(1, target.view(-1, 1), 1)
-    one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / (n_class - 1)
-    log_probs = F.log_softmax(logits, dim=1)
-    loss = -torch.sum(one_hot * log_probs, dim=1)
+    one_hot = torch.eye(n_class, device=target.device)[target]
+    target = one_hot * (1 - eps) + (1 - one_hot) * eps / (n_class - 1)
+    loss = F.cross_entropy(logits, target, reduction="none")
 
     if pad is not None:
         mask = target.view(-1).ne(pad)
@@ -56,7 +55,7 @@ def classify_loss(logits, target, eps):
     if eps > 0:
         loss = cross_entropy_with_smoothing(logits, target, eps, None)
     else:
-        loss = F.cross_entropy(logits, target.view(-1))
+        loss = F.cross_entropy(logits, target)
             
     return loss
 

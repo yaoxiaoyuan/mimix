@@ -7,7 +7,7 @@ Created on Mon Nov 18 15:17:36 2019
 import numpy as np
 import torch
 import torch.nn.functional as F
-from decoding import crf_model_decoding
+from mimix.decoding import crf_model_decoding
 
 def eval_acc(model, dataset):
     """

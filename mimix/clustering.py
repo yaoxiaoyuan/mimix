@@ -15,8 +15,8 @@ mpl.rcParams['axes.unicode_minus'] = False
 import json
 from collections import Counter
 from annoy import AnnoyIndex
-from predictor import TextEncoder
-from utils import real_path, load_model_config
+from mimix.predictor import TextEncoder
+from mimix.utils import real_path, load_model_config
 
 def encode_texts(config, fi_path, fo_path):
     """

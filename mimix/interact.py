@@ -7,8 +7,9 @@ Created on Mon Jul 16 12:20:14 2018
 from optparse import OptionParser
 import sys
 import time
-from predictor import EncDecGenerator,LMGenerator,TextEncoder
-from utils import real_path, load_model_config
+from mimix.predictor import EncDecGenerator,LMGenerator,TextEncoder
+from mimix.predictor import ImageEncoder
+from mimix.utils import real_path, load_model_config
 
 
 def pretty_print(res):
@@ -132,7 +133,7 @@ def match_text_demo(config):
         print("-----cost time: %s s-----" % cost)
 
 
-def classify_demo(config):
+def classification_demo(config):
     """
     """
     classifier = TextEncoder(config)
@@ -272,6 +273,33 @@ def lm_score(config):
     print("#cost time: %s s" % cost)
 
 
+def image_classification_demo(config):
+    """
+    """
+    classifier = ImageEncoder(config)
+
+    print("INPUT IMAGE PATH:")
+
+    for line in sys.stdin:
+
+        line = line.strip()
+
+        if len(line) == 0:
+            continue
+
+        src_list = [line]
+
+        start = time.time()
+
+        res = classifier.predict_cls(src_list)
+        res = [{"src":src, "labels":li} for src,li in res]
+        pretty_print(res)
+
+        end = time.time()
+        cost = end - start
+        print("-----cost time: %s s-----" % cost)
+
+
 def run_interactive():
     """
     """
@@ -295,8 +323,8 @@ def run_interactive():
     if options.mode == "demo":
         if config["task"] == "enc_dec":
             enc_dec_demo(config)
-        elif config["task"] == "classify":
-            classify_demo(config)
+        elif config["task"] == "classification":
+            classification_demo(config)
         elif config["task"] == "lm":
             lm_demo(config)
         elif config["task"] == "bi_lm":
@@ -305,6 +333,8 @@ def run_interactive():
             sequene_labeling_demo(config)
         elif config["task"] == "match":
             match_text_demo(config)
+        elif config["task"] == "image_classification":
+            image_classification_demo(config)
     elif options.mode == "debug":
         if config["task"] == "enc_dec":
             enc_dec_debug(config)        

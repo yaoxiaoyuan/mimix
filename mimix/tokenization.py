@@ -6,8 +6,8 @@ Created on Fri Nov 20 17:40:07 2020
 """
 import re
 from abc import abstractmethod
-from utils import load_vocab
-import bert
+from mimix.utils import load_vocab
+from mimix.bert import FullTokenizer as bert_tokenizer
 
 def is_alphabet(ch):
     """
@@ -395,7 +395,7 @@ class BertTokenizer(Tokenizer):
         """
         super(BertTokenizer,self).__init__(
                 vocab_file, pre_tokenized, pre_vectorized)
-        self.tokenizer = bert.FullTokenizer(vocab_file)
+        self.tokenizer = bert_tokenizer(vocab_file)
         
         
     def tokenize(self, text):

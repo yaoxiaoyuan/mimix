@@ -8,11 +8,12 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.distributions import Categorical
-from tokenization import build_tokenizer
-from decoding import search
-from decoding import crf_model_decoding
-from utils import load_vocab, real_path, invert_dict, cut_and_pad_seq_list
-from models import build_enc_dec_model, build_lm_model, build_encoder_model
+from mimix.tokenization import build_tokenizer
+from mimix.decoding import search
+from mimix.decoding import crf_model_decoding
+from mimix.utils import load_vocab, real_path, invert_dict, cut_and_pad_seq_list
+from mimix.models import build_enc_dec_model, build_lm_model, build_encoder_model
+from mimix.models import build_vit_model
 
 def load_model_weights(model, weights_path):
     """
@@ -647,4 +648,76 @@ class TextEncoder():
             _labels = [self.id2label[label] for label in labels[i]]
             res.append([src_list[i], list(zip(tokens, _labels))])
         
+        return res
+
+
+class ImageEncoder():
+    """
+    """
+    def __init__(self, config):
+        """
+        """
+        self.model = load_model_weights(build_vit_model(config), config["load_model"])
+
+        self.use_cuda = config.get("use_cuda", False)
+        self.device = torch.device('cpu')
+        if self.use_cuda == True:
+            device_id = config.get("device_id", "0")
+            self.device = torch.device('cuda:%s' % device_id)
+            self.model = self.model.to(self.device)
+
+        self.label2id = None
+        self.id2label = None
+        if "label2id" in config:
+            self.label2id = load_vocab(real_path(config["label2id"]))
+            self.id2label = invert_dict(self.label2id)
+        self.num_class = config.get("n_class", None)
+
+        from torchvision import transforms
+        self.transform = transforms.Compose([
+            transforms.Resize((config["img_w"], config["img_h"])),
+            transforms.ToTensor(),
+            transforms.Normalize(0.5, 0.5, 0.5),
+            ])
+
+
+    def transform_image(self, image_paths):
+        """
+        """
+        x = []
+        for image_path in image_paths:
+            image = Image.open(image_path) 
+            x.append(self.transform(image).unsqueeze(0))
+        x = torch.cat(x, 0).to(self.device)
+        
+        return x
+
+
+    def predict_cls(self, image_paths, return_topk=5):
+        """
+        """
+        x = self.transform_image(image_paths)
+
+        self.model.eval()
+        with torch.no_grad():
+            outputs = self.model([x])
+
+        logits = outputs[0]
+
+        y = torch.softmax(logits, 1)
+        prob,label = torch.topk(y, self.num_class)
+        prob = prob.cpu().numpy()
+        label = label.cpu().numpy()
+
+        res = []
+        for i,image_path in enumerate(image_paths):
+            res.append([image_path, []])
+            for yy,ss in zip(prob[i,:], label[i,:]):
+                label_str = str(ss)
+                if self.id2label is not None:
+                    label_str = self.id2label[ss]
+
+                res[i][1].append([label_str, yy])
+                if len(res[i][1]) >= return_topk:
+                    break
         return res
