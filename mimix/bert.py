@@ -349,6 +349,8 @@ Created on Sun Jul  9 21:43:09 2023
 
 @author: 1
 """
+import os
+import json
 import torch
 
 def load_bert_weights(bert, weight_path):
@@ -356,8 +358,8 @@ def load_bert_weights(bert, weight_path):
     """
     bert.eval()
     state_dict = torch.load(weight_path)
-    
-    map_key_dict = {"encoder.src_embedding.W": "bert.embeddings.word_embeddings.weight",
+
+    map_key_dict = {"encoder.word_embedding.W": "bert.embeddings.word_embeddings.weight",
                     "encoder.pos_embedding.W": "bert.embeddings.position_embeddings.weight",
                     "encoder.type_embedding.W":"bert.embeddings.token_type_embeddings.weight",
                     "encoder.norm_emb.alpha": "bert.embeddings.LayerNorm.gamma",
@@ -372,15 +374,15 @@ def load_bert_weights(bert, weight_path):
                     "norm_mlm.bias": "cls.predictions.transform.LayerNorm.beta",
                     "b_out_mlm": "cls.predictions.bias"}
     
-    for i in range(bert.n_enc_layers):
-        map_key_dict["encoder.layers.%d.attention.W_q" % i] = "bert.encoder.layer.%d.attention.self.query.weight" % i
-        map_key_dict["encoder.layers.%d.attention.b_q" % i] = "bert.encoder.layer.%d.attention.self.query.bias" % i
-        map_key_dict["encoder.layers.%d.attention.W_k" % i] = "bert.encoder.layer.%d.attention.self.key.weight" % i
-        map_key_dict["encoder.layers.%d.attention.b_k" % i] = "bert.encoder.layer.%d.attention.self.key.bias" % i
-        map_key_dict["encoder.layers.%d.attention.W_v" % i] = "bert.encoder.layer.%d.attention.self.value.weight" % i
-        map_key_dict["encoder.layers.%d.attention.b_v" % i] = "bert.encoder.layer.%d.attention.self.value.bias" % i
-        map_key_dict["encoder.layers.%d.attention.W_o" % i] = "bert.encoder.layer.%d.attention.output.dense.weight" % i
-        map_key_dict["encoder.layers.%d.attention.b_o" % i] = "bert.encoder.layer.%d.attention.output.dense.bias" % i
+    for i in range(bert.n_layers):
+        map_key_dict["encoder.layers.%d.self_attention.W_q" % i] = "bert.encoder.layer.%d.attention.self.query.weight" % i
+        map_key_dict["encoder.layers.%d.self_attention.b_q" % i] = "bert.encoder.layer.%d.attention.self.query.bias" % i
+        map_key_dict["encoder.layers.%d.self_attention.W_k" % i] = "bert.encoder.layer.%d.attention.self.key.weight" % i
+        map_key_dict["encoder.layers.%d.self_attention.b_k" % i] = "bert.encoder.layer.%d.attention.self.key.bias" % i
+        map_key_dict["encoder.layers.%d.self_attention.W_v" % i] = "bert.encoder.layer.%d.attention.self.value.weight" % i
+        map_key_dict["encoder.layers.%d.self_attention.b_v" % i] = "bert.encoder.layer.%d.attention.self.value.bias" % i
+        map_key_dict["encoder.layers.%d.self_attention.W_o" % i] = "bert.encoder.layer.%d.attention.output.dense.weight" % i
+        map_key_dict["encoder.layers.%d.self_attention.b_o" % i] = "bert.encoder.layer.%d.attention.output.dense.bias" % i
         map_key_dict["encoder.layers.%d.norm_1.alpha" % i] = "bert.encoder.layer.%d.attention.output.LayerNorm.gamma" % i
         map_key_dict["encoder.layers.%d.norm_1.bias" % i] = "bert.encoder.layer.%d.attention.output.LayerNorm.beta" % i
         map_key_dict["encoder.layers.%d.ffn.W1" % i] = "bert.encoder.layer.%d.intermediate.dense.weight" % i
@@ -396,9 +398,41 @@ def load_bert_weights(bert, weight_path):
     model_state_dict = {}
     for key,param in bert.named_parameters():
         model_state_dict[key] = state_dict[map_key_dict[key]]
+        if key == "W_out_mlm":
+            model_state_dict[key] = state_dict[map_key_dict[key]].T
     
     bert.load_state_dict(model_state_dict, False)
     
+    return bert
+
+
+def load_bert_model(model_path, use_cuda=False):
+    """
+    """
+    config = json.load(open(os.path.join(model_path, "config.json")))
+    mimix_config = {}
+    mimix_config["attn_dropout"] = config["attention_probs_dropout_prob"]
+    mimix_config["activation"] = config["hidden_act"]
+    mimix_config["dropout"] = config["hidden_dropout_prob"]
+    mimix_config["d_model"] = config["hidden_size"]
+    mimix_config["d_ff"] = config["intermediate_size"]
+    mimix_config["ln_eps"] = config["layer_norm_eps"]
+    mimix_config["src_max_len"] = config["max_position_embeddings"]
+    mimix_config["n_heads"] = config["num_attention_heads"]
+    mimix_config["n_enc_layers"] = config["num_hidden_layers"]
+    mimix_config["n_types"] = config["type_vocab_size"]
+    mimix_config["src_vocab_size"] = config["vocab_size"]
+    mimix_config["use_pre_norm"] = False
+    mimix_config["norm_after_embedding"] = True
+    mimix_config["with_mlm"] = True
+    from mimix.models import TransformerEncoder
+    from mimix.utils import SYMBOLS,SYMBOL2ID    
+    mimix_config["symbols"] = SYMBOLS
+    mimix_config["symbol2id"] = SYMBOL2ID
+    bert = TransformerEncoder(**mimix_config)
+    bert = load_bert_weights(bert, os.path.join(model_path, "pytorch_model.bin"))
+    if use_cuda == True:
+        bert = bert.cuda()
     return bert
 
 

@@ -40,7 +40,7 @@ class Transformer(nn.Module):
         self.use_alibi_bias = kwargs.get("use_alibi_bias", False)
         self.max_relative_len = kwargs.get("max_relative_len", -1)
         self.use_rel_pos_value = kwargs.get("use_rel_pos_value", False)
-        self.rel_pos_need_train = kwargs.get("rel_pos_need_train", False)
+        self.rel_pos_type = kwargs.get("rel_pos_type", "learned")
         self.factorized_size = kwargs.get("factorized_size", None)
         self.share_layer_params = kwargs.get("share_layer_params", False)
         self.n_share_across_layers = kwargs.get("n_share_across_layers", 1)
@@ -53,7 +53,7 @@ class Transformer(nn.Module):
         self.norm_before_pred = kwargs.get("norm_before_pred", False)
         self.norm_after_embedding = kwargs.get("norm_after_embedding", False)
         self.use_pos_embedding = kwargs.get("use_pos_embedding", True)
-        self.pos_need_train = kwargs.get("pos_need_train", True)
+        self.pos_type = kwargs.get("pos_type", "learned")
         self.use_output_bias = kwargs.get("use_output_bias", False)
         self.use_talking_attention = kwargs.get("use_talking_attention", False)
         self.use_attention_residual = kwargs.get("use_attention_residual", False)
@@ -67,7 +67,7 @@ class Transformer(nn.Module):
         self.emb_dropout = Dropout(self.emb_dropout) if self.emb_dropout else None
         
         if self.use_pos_embedding == True:    
-            self.pos_embedding = PositionEmbedding(self.max_len, self.d_model, self.pos_need_train)
+            self.pos_embedding = PositionEmbedding(self.max_len, self.d_model, self.pos_type)
 
         if self.n_types is not None:    
             self.type_embedding = Embedding(self.n_types, self.d_model, self.factorized_size)
@@ -661,7 +661,9 @@ class TransformerEncoder(nn.Module):
         enc_config["max_len"] = kwargs["src_max_len"] 
         enc_config["n_layers"] = kwargs["n_enc_layers"] 
         self.encoder = Transformer(**enc_config)
-
+        
+        self.n_types = kwargs.get("n_types", None) 
+        self.n_layers = kwargs["n_enc_layers"] 
         self.n_class = kwargs.get("n_class", None)
         
         self.activation = kwargs.get("activation", "relu")
@@ -692,17 +694,19 @@ class TransformerEncoder(nn.Module):
         
         self.W_mlm = None
         self.b_mlm = None
-        self.W_mlm = None
-        self.b_mlm = None
+        self.W_out_mlm = None
+        self.b_out_mlm = None
         self.with_mlm = kwargs.get("with_mlm", False)
+        self.share_emb_out_proj = kwargs.get("share_emb_out_proj", False)
         if self.with_mlm == True:
+            self.W_mlm = nn.Parameter(torch.Tensor(self.d_model, self.d_model))
             self.b_mlm = nn.Parameter(torch.Tensor(self.d_model))
             self.norm_mlm = LayerNorm(self.d_model)
             
             self.share_emb_out_proj = kwargs.get("share_emb_out_proj", False)
             if self.share_emb_out_proj == False:
-                self.W_mlm = nn.Parameter(torch.Tensor(self.d_model, self.src_vocab_size))
-            self.b_mlm = nn.Parameter(torch.Tensor(self.src_vocab_size))
+                self.W_out_mlm = nn.Parameter(torch.Tensor(self.d_model, self.src_vocab_size))
+            self.b_out_mlm = nn.Parameter(torch.Tensor(self.src_vocab_size))
 
         self.reset_parameters()
     
@@ -711,10 +715,10 @@ class TransformerEncoder(nn.Module):
         """
         """
         stdv = 1.0 / np.sqrt(self.d_model)
-        for weight in [self.W_pool, self.W_out, self.W_mlm]:
+        for weight in [self.W_pool, self.W_out, self.W_mlm, self.W_out_mlm]:
             if weight is not None:
                 weight.data.uniform_(-stdv, stdv)
-        for weight in [self.b_pool, self.b_out, self.b_mlm]:
+        for weight in [self.b_pool, self.b_out, self.b_mlm, self.b_out_mlm]:
             if weight is not None:
                 weight.data.zero_()
                 
@@ -749,15 +753,19 @@ class TransformerEncoder(nn.Module):
         """
         """
         x = inputs[0]
-
+        type_ids = None
+        if self.n_types is not None:
+            type_ids = inputs[1]
         enc_self_attn_mask = self.get_attn_mask(x, x)
         self_pos_ids = x.ne(self.PAD).cumsum(-1)-1
         enc_outputs = self.encoder(x, 
                                    enc_self_attn_mask,
                                    self_pos_ids=self_pos_ids, 
                                    past_pos_ids=self_pos_ids, 
-                                   return_states=return_states)
-        enc_output = enc_outputs[0]
+                                   return_states=return_states,
+                                   type_ids=type_ids)
+        enc_output = enc_outputs[0]   
+        mlm_enc_output = enc_output
         
         outputs = []
         if self.use_pooling == True:
@@ -777,27 +785,28 @@ class TransformerEncoder(nn.Module):
             outputs = [nlg] 
         
         if self.with_mlm == True:
-            enc_output = act2fn[self.activation](enc_output)
+            enc_output = F.linear(mlm_enc_output, self.W_mlm)
+            
+            enc_output = act2fn[self.activation](enc_output + self.b_mlm)
             
             enc_output = self.norm_mlm(enc_output)
 
             if self.share_emb_out_proj == False:
-                W = self.W_mlm
+                W = self.W_out_mlm
             else:
                 W = self.encoder.src_embedding.get_embedding().T
             
-            logits = torch.matmul(enc_output, W) + self.b_mlm
-            
-            outputs = [logits]
+            logits = torch.matmul(enc_output, W) + self.b_out_mlm
+
+            outputs += [logits]
         
-        outputs = outputs + enc_outputs
         
         if compute_loss == True:
             loss = self.loss_fn(outputs, targets)
             outputs = [loss] + outputs
 
-        if return_states == False:
-            outputs = outputs[:1]
+        if return_states == True:
+            outputs = outputs + enc_outputs
                     
         return outputs        
 

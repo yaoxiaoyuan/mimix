@@ -4,7 +4,7 @@ Created on Thu Aug 25 19:52:32 2022
 
 @author: Xiaoyuan Yao
 """
-from optparse import OptionParser
+from argparse import ArgumentParser
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,35 +18,8 @@ from annoy import AnnoyIndex
 from mimix.predictor import TextEncoder
 from mimix.utils import real_path, load_model_config
 
-def encode_texts(config, fi_path, fo_path):
-    """
-    """
-    encoder = TextEncoder(config)
-    cache = []
-    fo = open(fo_path, "w", encoding="utf-8")
 
-    def process_batch(cache):
-        """
-        """
-        texts = [d["text"] for d in cache]
-        vecs = encoder.encode_texts(texts).cpu().numpy().tolist()
-        for data,vec in zip(cache, vecs):
-            data["vec"] = vec
-            fo.write(json.dumps(data, ensure_ascii=False) + "\n")
-
-    for line in open(fi_path, "r", encoding="utf-8"):
-        data = json.loads(line)
-        cache.append(data)
-        if len(cache) >= config["test_batch_size"]:
-            process_batch(cache)
-            cache = []
-    if len(cache) > 0:
-        process_batch(cache)
-    
-    fo.close()
-
-
-def ann_clustering(fi_path, fo_path, dim, n, threshold, min_size):
+def ann_clustering(fi_path, fo_path, dim, search_n, threshold, min_size):
     """
     """
     data = []       
@@ -68,7 +41,7 @@ def ann_clustering(fi_path, fo_path, dim, n, threshold, min_size):
             print("processed %d" % i)
         if i in id2clu:
             continue
-        indexs,scores = t.get_nns_by_item(i, n, include_distances=True)
+        indexs,scores = t.get_nns_by_item(i, search_n, include_distances=True)
         count = Counter()
         near_but_no_label = []
         for idx,score in zip(indexs, scores):
@@ -111,23 +84,24 @@ def ann_clustering(fi_path, fo_path, dim, n, threshold, min_size):
     fo.close()
             
 
-def text_clustering(config, fi_path, fo_path):
+def text_clustering(model_config, fi_path, fo_path, search_n, threshold, min_size):
     """
     """    
+    model = TextEncoder(model_config)
     print("encode text to vector...")
-    encode_texts(config, fi_path, fo_path + ".vec")
+    model.dump_encode_text(fi_path, fo_path + ".vec")
     
     print("text clustering...")
     ann_clustering(fo_path + ".vec", 
                    fo_path + ".clu", 
                    config["d_model"],
-                   config.get("clu_ann_n", 50), 
-                   config.get("clu_ann_threshold", 0.8),
-                   config.get("clu_min_size", 3)
+                   search_n, 
+                   threshold,
+                   min_size
                    )
 
     print("vis clustering...")
-    vis_clusters(fo_path + ".clu", fo_path + ".png",)
+    vis_clusters(fo_path + ".clu", fo_path + ".png")
 
 
 def vis_clusters(fi_path, fig_path):
@@ -172,26 +146,25 @@ def vis_clusters(fi_path, fig_path):
 def run_clustering():
     """
     """
-    usage = "usage: run_clustering.py --model_conf <file>"
-    parser = OptionParser(usage)
+    parser = ArgumentParser()
 
-    parser.add_option("--model_conf", action="store", type="string",
-                      dest="model_config")
-    parser.add_option("--input_path", action="store", type="string",
-                      dest="fi")
-    parser.add_option("--output_path", action="store", type="string",
-                      dest="fo")    
+    parser.add_argument("--model_conf", type=str)
+    parser.add_argument("--fi", type=str)
+    parser.add_argument("--fo", type=str)
+    parser.add_argument("--search_n", type=int)
+    parser.add_argument("--threshold", type=float)
+    parser.add_argument("--min_size", type=int)
     
-    (options, args) = parser.parse_args(sys.argv)
+    args = parser.parse_args(sys.argv[1:])
 
-    if not options.model_config:
-        print(usage)
-        sys.exit(0)
-
-    conf_file = options.model_config
-    config = load_model_config(real_path(conf_file))
+    model_config = load_model_config(real_path(args.model_conf))
     
-    text_clustering(config, real_path(options.fi), real_path(options.fo))
+    text_clustering(model_config, 
+                    real_path(args.fi), 
+                    real_path(args.fo),
+                    n,
+                    threshold,
+                    min_size)
 
 
 if __name__ == "__main__":

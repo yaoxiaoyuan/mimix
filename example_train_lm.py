@@ -6,7 +6,7 @@ Created on Fri Jul 28 22:06:35 2023
 """
 import sys
 import os
-from optparse import OptionParser
+from argparse import ArgumentParser
 import numpy as np
 import torch
 from mimix.models import build_lm_model
@@ -111,24 +111,15 @@ def main(model_config, train_config):
 def run_train():
     """
     """
-    usage = "usage: exapmle_train_lm.py --model_conf <file> --train_conf <file>"
+    parser = ArgumentParser()
+
+    parser.add_argument("--model_conf", type=str)
+    parser.add_argument("--train_conf", type=str)
     
-    parser = OptionParser(usage)
+    args = parser.parse_args(sys.argv[1:])
 
-    parser.add_option("--train_conf", action="store", type="string",
-                      dest="train_config")
-
-    parser.add_option("--model_conf", action="store", type="string", 
-                      dest="model_config")
-
-    (options, args) = parser.parse_args(sys.argv)
-
-    if not options.train_config or not options.model_config:
-        print(usage)
-        sys.exit(0)
-    
-    model_config = load_model_config(real_path(options.model_config))
-    train_config = load_config(real_path(options.train_config))
+    model_config = load_model_config(real_path(args.model_conf))
+    train_config = load_config(real_path(args.train_conf))
 
     main(model_config, train_config)
 

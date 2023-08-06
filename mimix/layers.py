@@ -157,19 +157,19 @@ class Embedding(nn.Module):
 class PositionEmbedding(nn.Module):
     """
     """
-    def __init__(self, max_len, d_model, need_train=False):
+    def __init__(self, max_len, d_model, pos_type="learned"):
         super(PositionEmbedding, self).__init__()
         self.max_len = max_len
         self.embedding_size = d_model
-        self.need_train = need_train
-        if need_train == False:
+        self.pos_type = pos_type
+        if pos_type == "sinusoidal":
             W = torch.zeros(max_len, d_model)
             for i in range(max_len):
                 for j in range(0, d_model, 2):
                     W[i, j] = np.sin(i / np.power(10000, 2 * j / d_model))
                     W[i, j + 1] = np.cos(i / np.power(10000, 2 * j / d_model))
             self.register_buffer('W', W)
-        else:
+        elif pos_type == "learned":
             self.W = nn.Parameter(torch.Tensor(max_len, d_model))
             self.reset_parameters()
     
@@ -184,10 +184,10 @@ class PositionEmbedding(nn.Module):
         """
         """
         pos_ids[pos_ids >=self.max_len] = -1 
-        if self.need_train == False:
+        if self.pos_type == False:
             pe = Variable(self.W[pos_ids], requires_grad=False)
             return pe
-        else:
+        elif self.pos_type == "learned":
             return self.W[pos_ids]
 
 
@@ -201,14 +201,14 @@ class RelativePositionEmbedding(nn.Module):
         self.embedding_size = d_model
         self.max_relative_len = max_relative_len
         self.need_train = need_train
-        if need_train == False:
+        if pos_type == "sinusoidal":
             W = torch.zeros(2*max_relative_len+1, d_model)
             for i in range(2*max_relative_len+1):
                 for j in range(0, d_model, 2):
                     W[i, j] = np.sin(i / np.power(10000, 2 * j / d_model))
                     W[i, j + 1] = np.cos(i / np.power(10000, 2 * j / d_model))
             self.register_buffer('W', W)
-        else:
+        elif pos_type == "learned":
             self.W = nn.Parameter(torch.Tensor(2*max_relative_len+1, d_model))
             self.reset_parameters()
     
@@ -224,11 +224,11 @@ class RelativePositionEmbedding(nn.Module):
         """
         relative_dis = torch.clamp(relative_dis, -self.max_relative_len, self.max_relative_len)
         idx = relative_dis + self.max_relative_len
-        if self.need_train == False:
+        if self.pos_type == "sinusoidal":
             pe = Variable(self.W[idx], 
                           requires_grad=False)
             return pe
-        else:
+        elif self.pos_type == "learned":
             return self.W[idx]
 
 
@@ -428,7 +428,7 @@ class MultiHeadAttention(nn.Module):
                  use_bias=True, 
                  max_relative_len=-1,
                  use_rel_pos_value=False,
-                 rel_pos_need_train=True,
+                 rel_pos_type="learned",
                  use_multi_query_attention=False,
                  use_alibi_bias=False,
                  use_talking_attention=False):
@@ -471,9 +471,9 @@ class MultiHeadAttention(nn.Module):
         self.rel_pos_v_emb = None
         self.use_rel_pos_value = use_rel_pos_value
         if max_relative_len > 0:
-            self.rel_pos_k_emb = RelativePositionEmbedding(max_relative_len, self.d_qk, rel_pos_need_train)
+            self.rel_pos_k_emb = RelativePositionEmbedding(max_relative_len, self.d_qk, pos_type)
             if use_rel_pos_value == True:
-                self.rel_pos_v_emb = RelativePositionEmbedding(max_relative_len, self.d_v, rel_pos_need_train)
+                self.rel_pos_v_emb = RelativePositionEmbedding(max_relative_len, self.d_v, rel_pos_type)
         
         self.use_alibi_bias = use_alibi_bias
         
@@ -627,7 +627,7 @@ class TransformerLayer(nn.Module):
         self.use_alibi_bias = kwargs.get("use_alibi_bias", False)
         self.max_relative_len = kwargs.get("max_relative_len", -1)
         self.use_rel_pos_value = kwargs.get("use_rel_pos_value", False)
-        self.rel_pos_need_train = kwargs.get("rel_pos_need_train", False)
+        self.rel_pos_type = kwargs.get("rel_pos_type", "learned")
         self.with_across_attention = kwargs.get("with_across_attention", False)
         self.use_talking_attention = kwargs.get("use_talking_attention", False)
         self.use_glu = kwargs.get("use_glu", False)
@@ -643,7 +643,7 @@ class TransformerLayer(nn.Module):
                                                  self.use_attention_bias,
                                                  self.max_relative_len,
                                                  self.use_rel_pos_value,
-                                                 self.rel_pos_need_train,
+                                                 self.rel_pos_type,
                                                  self.use_multi_query_attention,
                                                  self.use_alibi_bias,
                                                  self.use_talking_attention)
@@ -660,7 +660,7 @@ class TransformerLayer(nn.Module):
                                                     self.use_attention_bias,
                                                     self.max_relative_len,
                                                     self.use_rel_pos_value,
-                                                    self.rel_pos_need_train,
+                                                    self.rel_pos_type,
                                                     self.use_multi_query_attention,
                                                     False,
                                                     self.use_talking_attention)

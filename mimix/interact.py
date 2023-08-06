@@ -4,7 +4,7 @@ Created on Mon Jul 16 12:20:14 2018
 
 @author: Xiaoyuan Yao
 """
-from optparse import OptionParser
+from argparse import ArgumentParser
 import sys
 import time
 from mimix.predictor import EncDecGenerator,LMGenerator,TextEncoder
@@ -303,24 +303,17 @@ def image_classification_demo(config):
 def run_interactive():
     """
     """
-    usage = "usage: interact.py --model_conf <file>"
-    parser = OptionParser(usage)
+    parser = ArgumentParser()
 
-    parser.add_option("--model_conf", action="store", type="string",
-                      dest="model_config")
-    parser.add_option("--mode", action="store", type="string",
-                      dest="mode", default="demo")
+    parser.add_argument("--model_conf", type=str)
+    parser.add_argument("--mode", type=str, default="pred")
     
-    (options, args) = parser.parse_args(sys.argv)
+    args = parser.parse_args(sys.argv[1:])
 
-    if not options.model_config:
-        print(usage)
-        sys.exit(0)
-
-    conf_file = options.model_config
+    conf_file = args.model_conf
     config = load_model_config(real_path(conf_file))
     
-    if options.mode == "demo":
+    if args.mode == "pred":
         if config["task"] == "enc_dec":
             enc_dec_demo(config)
         elif config["task"] == "classification":
@@ -335,10 +328,10 @@ def run_interactive():
             match_text_demo(config)
         elif config["task"] == "image_classification":
             image_classification_demo(config)
-    elif options.mode == "debug":
+    elif args.mode == "debug":
         if config["task"] == "enc_dec":
             enc_dec_debug(config)        
-    elif options.mode == "scoring":
+    elif args.mode == "scoring":
         if config["task"] == "enc_dec":
             enc_dec_score(config) 
         elif config["task"] == "lm":

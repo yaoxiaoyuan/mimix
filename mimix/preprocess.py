@@ -5,7 +5,7 @@ Created on Sun Aug 18 10:39:14 2019
 @author: Xiaoyuan Yao
 """
 import sys
-from optparse import OptionParser
+from argparse import ArgumentParser
 import json
 import os
 import random
@@ -142,24 +142,15 @@ def preprocess(data_dir,
 def run_preprocess():
     """
     """
-    usage = "usage: preprocess.py --model_conf <file>"
+    parser = ArgumentParser()
+
+    parser.add_argument("--model_conf", type=str)
+    parser.add_argument("--train_conf", type=str)
     
-    parser = OptionParser(usage)
+    args = parser.parse_args(sys.argv[1:])
 
-    parser.add_option("--train_conf", action="store", type="string",
-                      dest="train_config")
-
-    parser.add_option("--model_conf", action="store", type="string", 
-                      dest="model_config")
-
-    (options, args) = parser.parse_args(sys.argv)
-
-    if not options.train_config or not options.model_config:
-        print(usage)
-        sys.exit(0)
-    
-    model_config = load_model_config(real_path(options.model_config))
-    train_config = load_config(real_path(options.train_config))
+    model_config = load_model_config(real_path(args.model_conf))
+    train_config = load_config(real_path(args.train_conf))
     
     processor = TextProcessor(**model_config)
     

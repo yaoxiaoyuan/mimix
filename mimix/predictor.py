@@ -651,6 +651,33 @@ class TextEncoder():
         return res
 
 
+    def dump_encode_text(self, fi_path, fo_path):
+        """
+        """
+        fo = open(fo_path, "w", encoding="utf-8")
+        
+        def process_batch(cache):
+            """
+            """
+            texts = [d["text"] for d in cache]
+            vecs = self.encode_texts(texts).cpu().numpy().tolist()
+            for data,vec in zip(cache, vecs):
+                data["vec"] = vec
+                fo.write(json.dumps(data, ensure_ascii=False) + "\n")
+        
+        cache = []
+        for line in open(fi_path, "r", encoding="utf-8"):
+            data = json.loads(line)
+            cache.append(data)
+            if len(cache) >= config["test_batch_size"]:
+                process_batch(cache)
+                cache = []
+        if len(cache) > 0:
+            process_batch(cache)
+    
+        fo.close()
+
+
 class ImageEncoder():
     """
     """

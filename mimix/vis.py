@@ -8,7 +8,7 @@ import os
 import sys
 import torch
 import numpy as np
-from optparse import OptionParser
+from argparse import ArgumentParser
 import matplotlib
 matplotlib.rcParams['font.sans-serif'] = ['KaiTi']
 import matplotlib.pyplot as plt
@@ -118,19 +118,10 @@ def visualize_enc_dec(config):
 def run_visualize():
     """
     """
-    usage = "usage: vis_attn.py --model_conf <file>"
-    parser = OptionParser(usage)
+    parser = ArgumentParser()
 
-    parser.add_option("--model_conf", action="store", type="string",
-                      dest="model_config")
-    
-    (options, args) = parser.parse_args(sys.argv)
-
-    if not options.model_config:
-        print(usage)
-        sys.exit(0)
-
-    conf_file = options.model_config
+    parser.add_argument("--model_conf", type=str)
+    conf_file = options.model_conf
     config = load_model_config(real_path(conf_file))
         
     if config["task"] == "enc_dec":

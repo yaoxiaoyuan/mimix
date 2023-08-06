@@ -390,11 +390,10 @@ class MimixTokenizer(Tokenizer):
 class BertTokenizer(Tokenizer):
     """
     """
-    def __init__(self, vocab_file, pre_tokenized, pre_vectorized):
+    def __init__(self, vocab_file):
         """
         """
-        super(BertTokenizer,self).__init__(
-                vocab_file, pre_tokenized, pre_vectorized)
+        super(BertTokenizer,self).__init__(vocab_file)
         self.tokenizer = bert_tokenizer(vocab_file)
         
         
@@ -409,6 +408,18 @@ class BertTokenizer(Tokenizer):
         """
         return " ".join(tokens)
     
+
+    def convert_tokens_to_ids(self, tokenized):
+        """
+        """
+        return self.tokenizer.convert_tokens_to_ids(tokenized)
+
+
+    def convert_ids_to_tokens(self, word_ids):
+        """
+        """
+        return self.tokenizer.convert_ids_to_tokens(word_ids)
+
 
 def build_tokenizer(**args):
     """
