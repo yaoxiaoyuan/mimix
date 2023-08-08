@@ -51,14 +51,10 @@ class EncDecGenerator():
             
         self.src_tokenizer = build_tokenizer(
                 tokenizer=config["src_tokenizer"],
-                vocab_file=config["src_vocab"], 
-                pre_tokenized=config.get("pre_tokenized", False),  
-                pre_vectorized=config.get("pre_vectorized", False))
+                vocab_file=config["src_vocab"])
         self.trg_tokenizer = build_tokenizer(
                 tokenizer=config["trg_tokenizer"],
-                vocab_file=config["trg_vocab"], 
-                pre_tokenized=config.get("pre_tokenized", False),  
-                pre_vectorized=config.get("pre_vectorized", False))
+                vocab_file=config["trg_vocab"])
         
         vocab = load_vocab(real_path(config["trg_vocab"]))
         self.trg_word2id = vocab
@@ -79,13 +75,13 @@ class EncDecGenerator():
         self.max_dec_steps = config["max_decode_steps"]
         
         self.beam_size = config.get("beam_size", 3)
-        self.group_size = config.get("group_size", -1)
+        self.group_size = config.get("group_size", 0)
         self.gamma = float(config.get("gamma", 1))
-        self.temperature = config.get("temperature", 1)
+        self.temperature = config.get("temperature", 1.)
         self.strategy = config.get("search_strategy", "beam_search")
-        self.top_k = config.get("top_k", -1)
-        self.top_p = config.get("top_p", -1)
-        self.repeat_penalty = config.get("repeat_penalty", 0)
+        self.top_k = config.get("top_k", 0)
+        self.top_p = config.get("top_p", 0.)
+        self.repetition_penalty = config.get("repetition_penalty", 0.)
         self.normalize = config.get("normalize", "none")
         self.use_mask_unk =  config.get("use_mask_unk", False)
         self.use_cuda = config["use_cuda"] 
@@ -152,7 +148,7 @@ class EncDecGenerator():
                                        temperature=self.temperature,
                                        eos=self.model.EOS,
                                        group_size=self.group_size, 
-                                       repeat_penalty=self.repeat_penalty,
+                                       repetition_penalty=self.repetition_penalty,
                                        use_mask_unk=self.use_mask_unk,
                                        max_decode_steps=self.max_dec_steps)
                 hypothesis,scores = states[4], states[1]
@@ -162,7 +158,6 @@ class EncDecGenerator():
         h_len = torch.sum(hypothesis.ne(self.model.PAD), -1).cpu().numpy()
         hypothesis = hypothesis.cpu().numpy()
         scores = scores.cpu().numpy()
-        
         res = []
         for i,src in enumerate(src_list):
             tmp = []
@@ -334,14 +329,12 @@ class LMGenerator():
         
         self.trg_tokenizer = build_tokenizer(
                 tokenizer=config["trg_tokenizer"],
-                vocab_file=config["trg_vocab"], 
-                pre_tokenized=config.get("pre_tokenized", False),  
-                pre_vectorized=config.get("pre_vectorized", False))
+                vocab_file=config["trg_vocab"])
         self.use_cuda = config.get("use_cuda", False)
         self.gamma = float(config.get("gamma", 1))
         self.trg_max_len = config["trg_max_len"]
         self.trg_vocab_size = config["trg_vocab_size"]
-        self.max_dec_steps = config["max_decode_steps"]
+        self.max_decode_steps = config["max_decode_steps"]
         self.use_cuda = config["use_cuda"]
         
         self.bos_tok = config["symbols"]["BOS_TOK"]
@@ -349,13 +342,13 @@ class LMGenerator():
         self.pad_tok = config["symbols"]["PAD_TOK"]
         
         self.beam_size = config.get("beam_size", 3)
-        self.group_size = config.get("group_size", -1)
+        self.group_size = config.get("group_size", 0)
         self.gamma = float(config.get("gamma", 1))
-        self.temperature = config.get("temperature", 1)
+        self.temperature = config.get("temperature", 1.)
         self.strategy = config.get("search_strategy", "beam_search")
-        self.top_k = config.get("top_k", -1)
-        self.top_p = config.get("top_p", -1)
-        self.repeat_penalty = config.get("repeat_penalty", 0)
+        self.top_k = config.get("top_k", 0)
+        self.top_p = config.get("top_p", 0.)
+        self.repetition_penalty = config.get("repetition_penalty", 0.)
         self.normalize = config.get("normalize", "none")
         self.use_mask_unk =  config.get("use_mask_unk", False)
         self.use_cuda = config["use_cuda"] 
@@ -407,9 +400,9 @@ class LMGenerator():
                                        temperature=self.temperature,
                                        eos=self.model.EOS,
                                        group_size=self.group_size, 
-                                       repeat_penalty=self.repeat_penalty,
+                                       repetition_penalty=self.repetition_penalty,
                                        use_mask_unk=self.use_mask_unk,
-                                       max_decode_steps=self.max_dec_steps)
+                                       max_decode_steps=self.max_decode_steps)
                 hypothesis,scores = states[4], states[1]
             else:
                 raise ValueError("strategy not correct!")
@@ -505,9 +498,7 @@ class TextEncoder():
         
         self.src_tokenizer = build_tokenizer(
                 tokenizer=config["src_tokenizer"],
-                vocab_file=config["src_vocab"], 
-                pre_tokenized=config.get("pre_tokenized", False),  
-                pre_vectorized=config.get("pre_vectorized", False))
+                vocab_file=config["src_vocab"])
         self.add_cls = config.get("add_cls", False)
         
         self.mask_id = config["symbol2id"][config["symbols"]["MASK_TOK"]]

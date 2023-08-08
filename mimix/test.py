@@ -4,44 +4,33 @@ Created on Mon Jan 25 11:10:26 2021
 
 @author: Xiaoyuan Yao
 """
-import tokenization
-import generation_metric
+import mimix.tokenization as tokenization
+import mimix.evaluate as evaluate
 
 def test_tokenization():
     """
     """
     test_str = "1234567号选手是top10哦,hello你好666啊,春 秋 忽 代 谢windows7le, _苍天啊_苍天_오늘 날씨가 참 좋네요."
-    mimix_tokenizer = tokenization.MimixTokenizer(
-            vocab_file="../model/vocab/zh_vocab.txt",
-            pre_tokenized=False,
-            pre_vectorized=False)
+    mimix_tokenizer = tokenization.MimixTokenizer(vocab_file="model/vocab/zh_vocab.txt")
 
     print(mimix_tokenizer.tokenize(test_str))
 
-    mimix_tokenizer = tokenization.MimixTokenizer(
-            vocab_file="../model/vocab/zh_words_vocab.txt",
-            pre_tokenized=False,
-            pre_vectorized=False)
+    mimix_tokenizer = tokenization.MimixTokenizer(vocab_file="model/vocab/zh_words_vocab.txt")
     
     print(mimix_tokenizer.tokenize(test_str))
     
     #bert_tokenizer = tokenization.BertTokenizer(
-    #        vocab_file="../model/pretrain/bert-base-chinese/vocab.txt",
-    #        pre_tokenized=False,
-    #        pre_vectorized=False)
+    #        vocab_file="model/pretrain/bert-base-chinese/vocab.txt")
     
     #print(bert_tokenizer.tokenize(test_str))  
 
     test_str = "1234567号选手是top10哦,_mask_hello你好666啊,春 秋 忽 代 谢windows7le, _苍天啊_苍天_오늘 날씨가 참 좋네요."
-    mimix_tokenizer = tokenization.MimixTokenizer(
-            vocab_file="../model/vocab/zh_vocab.txt",
-            pre_tokenized=False,
-            pre_vectorized=False)
+    mimix_tokenizer = tokenization.MimixTokenizer(vocab_file="model/vocab/zh_vocab.txt")
 
     print(mimix_tokenizer.tokenize(test_str))
 
 
-def test_generation_metric():
+def test_evaluate():
     """
     """
     ref_corpus = ["今 天 天 气 真 不 错".split(),
@@ -49,10 +38,10 @@ def test_generation_metric():
     eval_corpus = ["今 天 天 气 真 的 不 错".split(),
                    "我 真 的 很 无 聊".split()]
     print(ref_corpus, eval_corpus)
-    print(generation_metric.compute_bleu(ref_corpus, eval_corpus, 4))
-    print(generation_metric.rouge_n(eval_corpus, ref_corpus, 1))
-    print(generation_metric.rouge_n(eval_corpus, ref_corpus, 2))
-    print(generation_metric.rouge_l_sentence_level(eval_corpus, ref_corpus))
+    print(evaluate.compute_bleu(ref_corpus, eval_corpus, 4))
+    print(evaluate.rouge_n(eval_corpus, ref_corpus, 1))
+    print(evaluate.rouge_n(eval_corpus, ref_corpus, 2))
+    print(evaluate.rouge_l_sentence_level(eval_corpus, ref_corpus))
     
     print("------")
     
@@ -77,7 +66,7 @@ if __name__ == "__main__":
     
     test_tokenization()
     
-    #test_generation_metric()
+    test_evaluate()
     
     
     

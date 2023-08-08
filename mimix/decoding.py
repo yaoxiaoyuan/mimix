@@ -19,7 +19,7 @@ def init_search(model, batch_size, use_cuda):
 
     mask_finished = torch.tensor([model.MIN_LOGITS] * vocab_size,
                                  dtype=torch.float)
-    mask_finished[model.PAD] = 0
+    mask_finished[model.PAD] = model.MAX_LOGITS
                      
     if use_cuda == False:
         states = [y,
@@ -93,7 +93,7 @@ def search(model,
            temperature=1,
            eos=None,
            group_size=-1, 
-           repeat_penalty=0,
+           repetition_penalty=0,
            use_mask_unk=False,
            max_decode_steps=None):
     """
