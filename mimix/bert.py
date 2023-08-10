@@ -425,10 +425,17 @@ def load_bert_model(model_path, use_cuda=False):
     mimix_config["use_pre_norm"] = False
     mimix_config["norm_after_embedding"] = True
     mimix_config["with_mlm"] = True
-    from mimix.models import TransformerEncoder
-    from mimix.utils import SYMBOLS,SYMBOL2ID    
-    mimix_config["symbols"] = SYMBOLS
-    mimix_config["symbol2id"] = SYMBOL2ID
+    from mimix.models import TransformerEncoder    
+    mimix_config["symbols"] = {"_pad_": "[PAD]",
+                               "_bos_": "[unused1]",
+                               "_eos_": "[unused2]",
+                               "_unk_": "[UNK]",
+                               "_cls_": "[CLS]",
+                               "_sep_": "[SEP]",
+                               "_mask_": "[MASK]"
+                               }
+    vocab = {line.strip():i for i,line in enumerate(open(os.path.join(model_path, "vocab.txt"), "r", encoding="utf-8"))}
+    mimix_config["symbol2id"] = {k:vocab[mimix_config["symbols"][k]] for k in mimix_config["symbols"]}
     bert = TransformerEncoder(**mimix_config)
     bert = load_bert_weights(bert, os.path.join(model_path, "pytorch_model.bin"))
     if use_cuda == True:

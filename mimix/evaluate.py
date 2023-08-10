@@ -9,14 +9,14 @@ import torch
 import torch.nn.functional as F
 from mimix.decoding import crf_model_decoding
 
-def eval_acc(model, dataset):
+def eval_acc(model, generator):
     """
     """
     model.eval()
     with torch.no_grad():
         shot_count = 0
         total_count = 0
-        for inputs,targets in dataset():
+        for inputs,targets in generator():
             outputs = model(inputs)
             pred = outputs[0]
             shot = torch.sum(pred.argmax(1) == targets[0].view(-1))
@@ -28,14 +28,14 @@ def eval_acc(model, dataset):
     return {"acc":acc}
 
 
-def eval_perplexity(model, dataset):
+def eval_perplexity(model, generator):
     """
     """
     model.eval()
     with torch.no_grad():
         sum_log_p = 0
         sum_len = 0
-        for inputs,targets in dataset():          
+        for inputs,targets in generator():          
             outputs = model(inputs)
             logits = outputs[0]
 
@@ -53,14 +53,14 @@ def eval_perplexity(model, dataset):
     return {"ppl":perplexity}
 
 
-def eval_sequence_labeling_acc(model, dataset):
+def eval_sequence_labeling_acc(model, generator):
     """
     """
     model.eval()
     with torch.no_grad():
         shot_count = 0
         total_count = 0
-        for inputs,targets in dataset():
+        for inputs,targets in generator():
             x = inputs[0]
             if model.crf is not None:
                 pred = crf_model_decoding(model, x)

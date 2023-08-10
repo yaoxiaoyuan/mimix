@@ -7,6 +7,7 @@ Created on Mon Jul 16 12:20:14 2018
 from argparse import ArgumentParser
 import sys
 import time
+from PIL import Image
 from mimix.predictor import EncDecGenerator,LMGenerator,TextEncoder
 from mimix.predictor import ImageEncoder
 from mimix.utils import real_path, load_model_config
@@ -287,14 +288,16 @@ def image_classification_demo(config):
         if len(line) == 0:
             continue
 
-        src_list = [line]
+        image_path = line
+        images = [Image.open(image_path)]
 
         start = time.time()
 
-        res = classifier.predict_cls(src_list)
-        res = [{"src":src, "labels":li} for src,li in res]
+        res = classifier.predict_cls(images)
+        images[0].close()
+        res = [{"labels":li} for src,li in res]
         pretty_print(res)
-
+        
         end = time.time()
         cost = end - start
         print("-----cost time: %s s-----" % cost)

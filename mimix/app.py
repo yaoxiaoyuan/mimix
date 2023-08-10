@@ -7,6 +7,8 @@ Created on Sun Aug  6 20:54:44 2023
 import time
 import sys
 from argparse import ArgumentParser
+from PIL import Image
+import io
 import streamlit as st
 from mimix.predictor import EncDecGenerator,LMGenerator,TextEncoder
 from mimix.predictor import ImageEncoder
@@ -57,6 +59,20 @@ def text_gen_app(model):
                 for i, (text, score) in enumerate(res[0][1]):
                     st.text_area("the {} result".format(i + 1), text)
 
+
+def image_classification_app(model):
+    """
+    """
+    uploaded_file = st.file_uploader("Choose a image file", type="jpg")
+
+    if uploaded_file is not None:
+        image = Image.open(io.BytesIO(uploaded_file.getvalue()))
+        st.image(image, width=224)
+        res = model.predict_cls([image])
+        for i, (label, score) in enumerate(res[0][1]):
+            st.text_area("top {} result".format(i + 1), label + " " + str(score))
+
+
 def run_app():
     """
     """
@@ -73,7 +89,10 @@ def run_app():
         text_gen_app(model)
     elif model_config["task"] == "lm":
         model = LMGenerator(model_config)
-        text_gen_app(model)        
+        text_gen_app(model)   
+    elif model_config["task"] == "image_classification":
+        model = ImageEncoder(model_config)
+        image_classification_app(model)
         
 if __name__ == "__main__":
     run_app()

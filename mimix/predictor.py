@@ -699,12 +699,11 @@ class ImageEncoder():
             ])
 
 
-    def transform_image(self, image_paths):
+    def transform_image(self, images):
         """
         """
         x = []
-        for image_path in image_paths:
-            image = Image.open(image_path) 
+        for image in images:
             x.append(self.transform(image).unsqueeze(0))
         x = torch.cat(x, 0).to(self.device)
         

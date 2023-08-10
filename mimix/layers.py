@@ -256,7 +256,7 @@ def gelu_new(x):
     return 0.5 * x * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (x + 0.044715 * torch.pow(x, 3.0))))
 
  
-act2fn = {"relu": F.relu, "gelu":gelu_new, "gelu_new":gelu_new}
+act2fn = {"relu": F.relu, "gelu":F.gelu, "gelu_new":gelu_new}
 
 
 class FeedForward(nn.Module):
@@ -335,7 +335,7 @@ class LayerNorm(nn.Module):
         """
         """
         super(LayerNorm, self).__init__()
-        
+
         self.eps = eps
         self.d_model = d_model
         self.use_scale = use_scale
@@ -727,7 +727,7 @@ class TransformerLayer(nn.Module):
         output = residual + output
         if self.use_pre_norm == False:
             output = self.norm_1(output)
-            
+        
         residual = output
         
         if self.with_across_attention == True:
@@ -761,7 +761,7 @@ class TransformerLayer(nn.Module):
                 output = self.norm_3(output)
             else:
                 output = self.norm_2(output)
-       
+   
         outputs = [output, self_attn_scores, self_scores]
         if self.with_across_attention == True:
             outputs += [enc_attn_scores, enc_scores]

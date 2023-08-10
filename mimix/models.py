@@ -129,12 +129,12 @@ class Transformer(nn.Module):
             embeded = embeded + self.type_embedding(type_ids)
 
         output = embeded
-
+        
         if self.norm_after_embedding == True:
             output = self.norm_emb(output)
         if self.emb_dropout is not None:
             output = self.emb_dropout(output)
-        
+
         self_attn_scores_list = []
         enc_attn_scores_list = []
         states = [output]
@@ -160,7 +160,7 @@ class Transformer(nn.Module):
                             past_pos_ids,
                             attention_residual if self.use_attention_residual else None,
                             enc_attention_residual if self.use_attention_residual else None)
-
+            
             output, self_attn_scores, attention_residual = outputs[:3]
             
             if self.with_across_attention == True:
@@ -701,7 +701,7 @@ class TransformerEncoder(nn.Module):
         if self.with_mlm == True:
             self.W_mlm = nn.Parameter(torch.Tensor(self.d_model, self.d_model))
             self.b_mlm = nn.Parameter(torch.Tensor(self.d_model))
-            self.norm_mlm = LayerNorm(self.d_model)
+            self.norm_mlm = LayerNorm(self.d_model, eps=kwargs.get("ln_eps", 1e-5))
             
             self.share_emb_out_proj = kwargs.get("share_emb_out_proj", False)
             if self.share_emb_out_proj == False:
@@ -785,9 +785,9 @@ class TransformerEncoder(nn.Module):
             outputs = [nlg] 
         
         if self.with_mlm == True:
-            enc_output = F.linear(mlm_enc_output, self.W_mlm)
+            enc_output = F.linear(mlm_enc_output, self.W_mlm) + self.b_mlm
             
-            enc_output = act2fn[self.activation](enc_output + self.b_mlm)
+            enc_output = act2fn[self.activation](enc_output)
             
             enc_output = self.norm_mlm(enc_output)
 

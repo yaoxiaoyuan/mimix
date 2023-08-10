@@ -67,9 +67,9 @@ def print_model_info(model):
 def train(model, 
           optimizer,
           train_config,
-          train_dataset, 
-          val_dataset=None, 
-          test_dataset=None, 
+          train_generator, 
+          val_generator=None, 
+          test_generator=None, 
           eval_fn_list=None,
           lr_scheduler=None):
     """
@@ -98,7 +98,7 @@ def train(model,
     while epoch < train_config["max_epoch"]: 
         model.train()
         
-        for inputs,targets in train_dataset(steps):
+        for inputs,targets in train_generator(steps):
             if use_amp == True:
                 with torch.cuda.amp.autocast():
                     outputs = model(inputs, targets=targets, compute_loss=True)
@@ -154,21 +154,21 @@ def train(model,
                     optimizer.step()
                     optimizer.zero_grad()
         
-        train_dataset.local_shuffle()
+        train_generator.local_shuffle()
         
         epoch += 1
         steps = 0
         
         if len(eval_fn_list) > 0:
-            if val_dataset is not None:
+            if val_generator is not None:
                 logger.info("Eval val now...")
                 for eval_fn in eval_fn_list:
-                    eval_res = eval_fn(model, val_dataset)
+                    eval_res = eval_fn(model, val_generator)
                     logger.info("Result: %s" % eval_res)
-            if test_dataset is not None:
+            if test_generator is not None:
                 logger.info("Eval test now...")
                 for eval_fn in eval_fn_list:
-                    eval_res = eval_fn(model, test_dataset)
+                    eval_res = eval_fn(model, test_generator)
                     logger.info("Result: %s" % eval_res)
     save_model(model, optimizer, model_path % ("%d.%d.%d" % (epoch, steps, total_steps)))
     logger.info("Train Completed!")
