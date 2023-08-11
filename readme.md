@@ -2,7 +2,7 @@
 
 Mimix is a tool for Seq2seq learning framework based on Pytorch. Basically, I implement several generative models, including rnn-seq2seq and transformer. Some other models, such as Text CNN, Transformer-based classifier and Transformer-based Language model, are also provided. To facilitate the use of pretrained models, Mimix can also load bert model weights. Other pretrained models may be supported in the future.
 
-I have trained some Chinese Generative Models which are listed in Demo section. You can follow the instructions and run the demo.  **An application is required for model download.**
+I have trained some Chinese Generative Models which are listed in Demo section. You can follow the instructions and run the demo.  ~~**An application is required for model download.**~~ Now you can download the weights directly without sending me an email. **You must follow the agreement to use the model. Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/Mimix%20Model%20Release%20Agreement.docx).** 
 
 ### Cite
 
@@ -16,7 +16,7 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 
 ## Models
 
-Several pretrained models are listed below.  **Some models are not available for download due to the data privacy. Please check the "open for download" column. You can follow the instructions to use the open-download model.**
+Several pretrained models are listed below.  ~~**Some models are not available for download due to the data privacy. Please check the "open for download" column. You can follow the instructions to use the open-download model.**~~
 
 | model name                           | architecture                    | n_params  | n_layers | d_model | n_heads | n_samples | data size | open for download |
 | ------------------------------------ | ---- | ---- | :--- | ---- | ---- | ------------------------------------ | ------------------------------------ | ------------------------------------ |
@@ -41,17 +41,17 @@ Several pretrained models are listed below.  **Some models are not available for
 | Chinese ancient translation              | transformer enc-dec     | 216m     | 12       | 768     | 12      | 6m        | 1GB       | True             |
 | Chinese spelling correction | transformer enc-dec | 216m | 12 | 768 | 12 | 32m | 6GB | True |
 
-
+Download link:  https://pan.baidu.com/s/18UmwOwbN2u_J0ym382SxAA?pwd=bxka 
 
 ### HOW TO RUN MODEL
 
-1. Download conf and model data.  **Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/Mimix%20Model%20Release%20Agreement.docx). If agree to the agreement, fill in the information and send the agreement to yaoxiaoyuan1990 at gmail dot com. Without agreement,  I won't reply to you.  I will send links to your email address once the procedure is approved.** **The email title must be written as "Application to download the Mimix Models".**  
+1. Download conf and model data.  
 
 2. Put conf and model under mimix folder
 
 3. cd src and run: 
 
-   1. Chinese chitchat generation: python interact.py --model_conf ../conf/chat_base_conf
+   1. Chinese chitchat generation: python interact.py --model_conf conf/chitchat_base_conf
 
       1. input:今天天气好热啊
 
@@ -79,7 +79,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
          
 
-   2. Chinese shiciqulian generation: python interact.py --model_conf ../conf/shi_base_conf
+   2. Chinese shiciqulian generation: python interact.py --model_conf conf/shi_base_conf
 
       1. input: \_shi\_ \_xinyun\_ \_7lv\_ \_title\_
 
@@ -87,45 +87,27 @@ Several pretrained models are listed below.  **Some models are not available for
 
          
 
-   3. Chinese summarization generation interact.py --model_conf ../conf/summ_base_conf
+   3. Chinese summarization generation interact.py --model_conf conf/sum_base_conf
 
       1. input: 6月21日，河北省公安厅发布唐山打人案情况通报：经查，2022年6月7日，陈某亮（男，43岁）等4人从江苏驾车至河北唐山，与陈某志（男，41岁）等人合谋实施网络赌博洗钱违法犯罪活动。6月10日凌晨，陈某志等5人与陈某亮等4人在唐山市路北区某烧烤店聚餐饮酒。期 间，2时40分，陈某志对下班后在同店就餐的王某某（女，31岁）进行骚扰，遭拒后伙同马某齐（男，25岁）、陈某亮等人，对王某某、 刘某某（女，29岁）等4人进行殴打，2时47分逃离，2时55分4名被害人由120送医。2时41分接群众报警后，唐山市公安局路北分局机场路派出所民警率辅警于3时09分赶到现场开展处置工作。据通报，2时40分陈某志对女孩进行骚扰，2时41分警方接到群众报警，冲突发生1分钟即有人报警。2时47分陈某志及其同伙逃离，从骚扰到逃离，共计7分钟。
 
       2. output:
 
-         唐山打人案情况通报 -5.3681640625
+         河北唐山警方通报唐山打人案情况：4人被刑拘  -12.504453659057617
 
-         河北省公安厅通报唐山打人案情况 -6.82421875
+         河北唐山警方通报唐山打人案情况：4人被拘  -13.885486602783203
 
-         河北警方通报唐山打人案情况 -7.1669921875
+         唐山警方通报唐山打人案情况：4人被刑拘  -14.24258041381836
 
-         唐山打人案情况通报：4人合谋实施网络赌博洗钱违法犯罪活动 -8.2666015625
+         唐山警方通报唐山打人案情况：4人被刑拘 4人被警方刑拘  -20.783082962036133
 
-         唐山打人案情况通报：4人合谋实施网络赌博洗钱违法犯罪 -9.4990234375
+         女孩遭4人骚扰后遭殴打 河北唐山警方通报打人案  -22.540132522583008
 
-         唐山打人案情况通报：4人合谋实施网络赌博洗钱 -9.9794921875
-
-         唐山打人案情况通报：4名被害人从120送医 -10.2021484375
-
-         河北警方通报唐山打人案情况：4人合谋实施网络赌博洗钱违法犯罪活动 -10.27734375
-
-         河北省公安厅通报唐山打人案情况：4人合谋实施网络赌博洗钱违法犯罪活动 -10.55828857421875
-
-         河北警方通报唐山打人案情况：4名被害人由120送医 -11.2734375
-
-         唐山打人案情况通报：4人合谋实施网络赌博洗钱犯罪活动 -11.3076171875
-
-         河北警方通报唐山打人案情况：4人合谋实施网络赌博洗钱 -11.52734375
-
-         唐山打人案情况通报：4人合谋实施网络赌博洗钱活动 -11.560546875
-
-         河北省公安厅通报唐山打人案情况：4名被害人由120送医 -11.7265625
-
-         唐山打人案情况通报：4名被害人被殴打7分钟 -11.966796875
+         女孩遭4人骚扰后遭殴打 河北唐山警方通报打人案情  -22.774932861328125
 
          
 
-   4. Chinese modern poet, lyric generation : python interact.py --model_conf ../conf/poet_base_conf
+   4. Chinese modern poet, lyric generation : python interact.py --model_conf conf/poet_base_conf
 
       1. input: \_poet\_ \_title\_ 寒江雪 \_content\_
 
@@ -133,7 +115,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
          
 
-   5. Chinese question paraphrase generation: python interact.py --model_conf ../conf/aug_base_conf
+   5. Chinese question paraphrase generation: python interact.py --model_conf conf/aug_base_conf
 
       1. input: 孕妇吃什么好
 
@@ -161,27 +143,27 @@ Several pretrained models are listed below.  **Some models are not available for
 
          
 
-   6. Chinese question similarity tool: interact.py --conf ../conf/sim_base_conf
+   6. Chinese question similarity tool: interact.py --conf conf/sim_base_conf
 
       1. input:  适合小孩听的歌\t推荐几首儿歌\t熬夜有什么坏处\t晚睡对身体的影响
 
       2. output:
 
-         适合小孩听的歌 推荐几首儿歌 0.708049
+         适合小孩听的歌 推荐几首儿歌 0.75041837
 
-         适合小孩听的歌 熬夜有什么坏处 0.11056142
+         适合小孩听的歌 熬夜有什么坏处 0.13408381
 
-         适合小孩听的歌 晚睡对身体的影响 0.19936031
+         适合小孩听的歌 晚睡对身体的影响 0.19240658
 
-         推荐几首儿歌 熬夜有什么坏处 0.015660984
+         推荐几首儿歌 熬夜有什么坏处 0.06708599
 
-         推荐几首儿歌 晚睡对身体的影响 0.046153657
+         推荐几首儿歌 晚睡对身体的影响 0.07781723
 
-         熬夜有什么坏处 晚睡对身体的影响 0.6877855
+         熬夜有什么坏处 晚睡对身体的影响 0.65766805
 
          
 
-   7. Chinese question generation: python interact.py --model_conf ../conf/qg_base_conf
+   7. Chinese question generation: python interact.py --model_conf conf/qg_base_conf
 
       1. input: 《玫瑰之战》是由孙皓执导，郑仁湘、张涵编剧，袁泉、黄晓明、俞飞鸿领衔主演，代旭、于谨维、王鹤润主演、芦芳生、张艺上、隋俊波特邀主演，王志飞特约出演，王姬特别主演的都市剧。
 
@@ -191,39 +173,39 @@ Several pretrained models are listed below.  **Some models are not available for
 
          
 
-   8. Chinese ancient translation: python interact.py --model_conf ../conf/a2m_base_conf
+   8. Chinese ancient translation: python interact.py --model_conf conf/a2m_base_conf
 
        1. input:  白日依山尽,黄河入海流。欲穷千里目,更上一层楼。
 
        2. output:
 
-         夕阳依傍着终南山慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色看完,就应该再登上更高的一层城楼。 -5.5400390625
+         夕阳依傍着终南山慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色看完,就应该再登上更高的一层城楼。 -5.487918376922607
 
-         夕阳依傍着高山慢慢地西沉,滔滔黄河奔腾向东流去。想要把千里之外的景色看完,就应该再登上更高的一层城楼。 -5.7763671875
+         夕阳依傍着山峦慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色看完,就应该再登上更高的一层城楼。 -5.857359886169434
 
-         夕阳依傍着高山慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色看完,就应该再登上更高的一层城楼。 -5.8095703125
+         夕阳依傍着高山慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色看完,就应该再登上更高的一层城楼。 -5.87897253036499
 
-         夕阳依傍着山峦慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色看完,就应该再登上更高的一层城楼。 -5.8486328125
+         夕阳依傍着终南山慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色尽情欣赏,就应该再登上更高的一层城楼。 -6.974221706390381
 
-         夕阳依傍着终南山慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色尽情地观赏,就应该再登上更高的一层城楼。 -7.002392292022705
+         夕阳依傍着终南山慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色尽情地观赏,就应该再登上更高的一层城楼。 -7.131397724151611
        
        
        
-   9. Chinese comment generation: python interact.py --model_conf ../conf/comment_base_conf
+   9. Chinese comment generation: python interact.py --model_conf conf/comment_base_conf
 
        1. input:  今天（9月27日），中国空军新闻发言人申进科大校在第14届中国航展新闻发布会上表示，歼-20已经遍布东南西北中，列装越来越多、飞得越来越远。
 
        2. output: 
 
-          中国军工加油 -9.763671875
+          中国军工加油！ -9.743780136108398
 
-          中国军工加油！ -9.810546875
+          中国军工加油 -9.822992324829102
 
-          中国人民解放军万岁！ -10.584172248840332
+          中国人民解放军万岁！ -10.73838996887207
        
        
        
-   10. Chinese essay generation: python interact.py --model_conf ../conf/essay_base_conf
+   10. Chinese essay generation: python interact.py --model_conf conf/essay_base_conf
 
        1. input: 春天
 
@@ -233,7 +215,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
           
        
-   11. Chinese qa generation: python interact.py --model_conf ../conf/qa_base_conf
+   11. Chinese qa generation: python interact.py --model_conf conf/qa_base_conf
 
        1. input: 失恋了怎么办
 
@@ -261,7 +243,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
           
 
-   12. Chinese product description generation: python interact.py --model_conf ../conf/desc_base_conf
+   12. Chinese product description generation: python interact.py --model_conf conf/desc_base_conf
 
        1. input: 维多利亚的摩尔佧 性感连体泳衣女比基尼高级感时尚泡温泉泳装
 
@@ -275,7 +257,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
           
 
-   13. Chinese product review generation: python interact.py --model_conf ../conf/review_base_conf
+   13. Chinese product review generation: python interact.py --model_conf conf/review_base_conf
 
        1. input:  Cartier卡地亚LOVE戒指 玫瑰金黄金白金 窄版对戒
 
@@ -289,7 +271,7 @@ Several pretrained models are listed below.  **Some models are not available for
 
           
 
-   14. Chinese wuxia novel generation: python interact.py --model_conf ../conf/wx_base_conf
+   14. Chinese wuxia novel generation: python interact.py --model_conf conf/wx_base_conf
 
        1. input:
 
@@ -305,23 +287,23 @@ Several pretrained models are listed below.  **Some models are not available for
 
           
 
-   15. Chinese-English translation: python interact.py --model_conf ../conf/nmt_base_conf
+   15. Chinese-English translation: python interact.py --model_conf conf/nmt_base_conf
 
        1. input:
 
-          \_zhen\_ 2023年元旦刚过，菲律宾总统马科斯对中国进行了国事访问，他因此成为新年第一位访华的外国领导人
+          \_zhen\_ 2023年元旦刚过，菲律宾总统马科斯对中国进行了国事访问，他因此成为新年第一位访华的外国领导人。
 
        2. output:
 
-          in january 2023, philippine president marcos made a state visit to china, making him the first foreign leader to visit china in the new year -3.929159164428711
+          on new year's day, 2023, president marcos of the philippines paid a state visit to china, making him the first foreign leader to visit china in the new year.  -0.3184391975402832
        
-          in january 2023, philippine president marcos made a state visit to china, making him the first foreign leader to visit china in the new year -4.155511379241943
+          on new year's day, 2023, president marcos of the philippines paid a state visit to china, making him the first foreign leader to visit china.  -0.34901772605048287
        
-          in january 2023, philippine president marcos made his first foreign visit to china in the new year -4.489346504211426
+          on new year's day, 2023, president marcos of the philippines made his first foreign visit to china.  -0.3811599291287936
        
-          in january 2023, philippine president marcos made his first foreign visit to china in the new year. -4.679396629333496
+          on new year's day, 2023, philippine president marcos made his first foreign visit to china.  -0.3870043357213338
        
-          in january 2023, philippine president marcos made his first foreign visit to china in the new year -4.718146324157715
+          on new year's day 2023, philippine president marcos made his first foreign visit to china.  -0.41778796652088995
           
        3. input:
        
@@ -329,20 +311,20 @@ Several pretrained models are listed below.  **Some models are not available for
        
        4. output:
        
-          新西兰领导人亚历山大宣布在即将举行的选举前辞职 -3.591200113296509
+          新西兰领导人雅辛达·阿尔德林在即将举行的选举前宣布辞职。  -0.2518916130065918
           
-          新西兰领导人亚历山大宣布将在即将举行的选举前辞职 -3.7777717113494873
+          新西兰领导人雅辛达·阿尔德林在即将到来的选举前宣布辞职。  -0.25208149285152043
           
-          新西兰领导人亚历山大宣布在即将举行的选举之前辞职 -3.9053900241851807
+          新西兰领导人雅辛达·阿尔德林在即将到来的选举前宣布了震惊辞职。  -0.2606537640094757
        
-          新西兰领导人亚历山大宣布将在即将举行的选举之前辞职 -4.042999267578125
+          新西兰领导人阿尔德林在即将举行的选举前宣布辞职。  -0.2731153869628906
        
-          新西兰领导人亚历山大宣布将在即将举行的选举之前辞职。 -4.503944396972656
+          新西兰领导人阿尔德林在即将到来的选举前宣布辞职。  -0.2777881622314453
           
           
           
        
-   16. Chinese paper generation: python interact.py --model_conf ../conf/paper_base_conf
+   16. Chinese paper generation: python interact.py --model_conf conf/paper_base_conf
 
        1. input:
 
@@ -357,7 +339,7 @@ Several pretrained models are listed below.  **Some models are not available for
           中日韩自贸区与韩国新自贸区若干问题探析 \_sep\_ 自2005年日本政府最近在韩国举行调查示范活动后,由韩国自由贸易区(garthge aurantifiation,api)于2007年启动,正式于2008年建立了中日韩自贸区。在自贸区的建立、保护、协调等方面,中日韩三国及其相关部门在经贸领域取得了宝贵的成果。但是,由于签订协议不够透明,各自制度较为模糊,使中日韩自贸区的发展有今天的困境。 -316.9208068847656
           
        
-   17. Chinese tag generation: python interact.py --model_conf ../conf/tag_base_conf
+   17. Chinese tag generation: python interact.py --model_conf conf/tag_base_conf
 
        1. input:
 
@@ -368,7 +350,7 @@ Several pretrained models are listed below.  **Some models are not available for
           医学 \_sep\_ 临床医学 \_sep\_ 新型冠状病毒 -7.32832670211792
           
 
-   18. Chinese medical qa generation: python interact.py --model_conf ../conf/med_base_conf
+   18. Chinese medical qa generation: python interact.py --model_conf conf/med_base_conf
 
        1. input:
 
@@ -383,7 +365,7 @@ Several pretrained models are listed below.  **Some models are not available for
           这样的情况要考虑是否有肾虚或者腰椎疾病引起的,建议你去医院做一下检查看看。可以吃点六味地黄丸和金锁固精丸来治疗,注意休息,不要过度劳累 -53.82005310058594
           
 
-   19. Chinese doc2query generation: python interact.py --model_conf ../conf/doc2query_base_conf
+   19. Chinese doc2query generation: python interact.py --model_conf conf/doc2query_base_conf
 
        1. input:
 
@@ -391,14 +373,14 @@ Several pretrained models are listed below.  **Some models are not available for
 
        2. output:
 
-          北京什么时候二阳 -6.940310955047607
+          北京二阳是什么意思 -4.803812503814697
           
-          5月8号北京有多少传染病 -10.51338005065918
+          北京新冠病毒多少 -6.473724365234375
           
-          北京新冠疫情过几天会复发 -20.61032485961914
+          北京新冠病毒感染数量 -6.521775245666504
 
 
-   20. Chinese spelling correction: python interact.py --model_conf ../conf/csc_base_conf
+   20. Chinese spelling correction: python interact.py --model_conf conf/csc_base_conf
 
        1. input:
 
@@ -406,5 +388,5 @@ Several pretrained models are listed below.  **Some models are not available for
 
        2. output:
 
-          大家要努力学习aigc知识。 -0.03288019448518753
+          大家要努力学习aigc知识。 -0.0025362607557326555
 
