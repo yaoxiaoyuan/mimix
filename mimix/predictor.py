@@ -4,6 +4,7 @@ Created on Thu Aug 29 10:34:48 2019
 
 @author: Xiaoyuan Yao
 """
+import re
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -166,10 +167,8 @@ class EncDecGenerator():
                 trg = self.trg_tokenizer.detokenize_ids(hypothesis[j])
                 
                 trg = trg.replace(self.bos_tok, "").replace(self.pad_tok, "").strip()
-                if trg.endswith(self.eos_tok):
-                    trg = trg.replace(self.eos_tok, "").strip()
-                else:
-                    trg = trg + " _unfinished_"
+                trg = re.sub(self.eos_tok + ".*", "", trg)
+                
                 score = float(scores[j])
                 
                 if self.normalize == "linear":
@@ -343,7 +342,6 @@ class LMGenerator():
         
         self.beam_size = config.get("beam_size", 3)
         self.group_size = config.get("group_size", 0)
-        self.gamma = float(config.get("gamma", 1))
         self.temperature = config.get("temperature", 1.)
         self.strategy = config.get("search_strategy", "beam_search")
         self.top_k = config.get("top_k", 0)
@@ -419,10 +417,7 @@ class LMGenerator():
                 trg = self.trg_tokenizer.detokenize_ids(hypothesis[j])
                 
                 trg = trg.replace(self.bos_tok, "").replace(self.pad_tok, "").strip()
-                if trg.endswith(self.eos_tok):
-                    trg = trg.replace(self.eos_tok, "").strip()
-                else:
-                    trg = trg + " _unfinished_"
+                trg = re.sub(self.eos_tok + ".*", "", trg)
                 score = float(scores[j])
                 
                 if self.normalize == "linear":

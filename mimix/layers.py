@@ -184,7 +184,7 @@ class PositionEmbedding(nn.Module):
         """
         """
         pos_ids[pos_ids >=self.max_len] = -1 
-        if self.pos_type == False:
+        if self.pos_type == "sinusoidal":
             pe = Variable(self.W[pos_ids], requires_grad=False)
             return pe
         elif self.pos_type == "learned":

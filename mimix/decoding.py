@@ -38,12 +38,25 @@ def init_search(model, batch_size, use_cuda):
     return states
 
 
-def process_logits(model, logits, states):
+def process_logits(model, logits, states, repetition_penalty):
     """ 
     """
     mask_unk = torch.zeros_like(logits)
     mask_unk[:,model.UNK] = model.MIN_LOGITS
     logits = logits + mask_unk
+    
+    if repetition_penalty < 0:
+        y, log_probs, finished, mask_finished, hypothesis, history_probs = states
+        mask = torch.zeros(hypothesis.shape[0]*hypothesis.shape[1], 
+                           model.trg_vocab_size, 
+                           device = hypothesis.device)
+        mask.scatter_(1, hypothesis.view(-1, 1), 1)
+        mask = mask.view(hypothesis.shape[0], hypothesis.shape[1], model.trg_vocab_size)
+
+        mask = torch.sum(mask, 1)
+    
+        logits = logits + mask * repetition_penalty
+    
     return logits
     
 
@@ -55,7 +68,6 @@ def top_k_top_p_sampling(logits,
                          replacement=True):
     """
     """
-
     logits /= temperature
     probs = torch.softmax(logits, -1)
     
@@ -79,7 +91,7 @@ def top_k_top_p_sampling(logits,
 
     samples = torch.multinomial(probs, n_samples, replacement=replacement)
     probs = torch.gather(probs, 1, samples)
-    
+
     return samples, probs
 
 
@@ -125,7 +137,7 @@ def search(model,
         
         #logits: (B x last_beam_size) x V
         #probs: (B x last_beam_size) x V
-        logits = process_logits(model, logits, states)
+        logits = process_logits(model, logits, states, repetition_penalty)
         probs = torch.softmax(logits, -1)  
         
         if strategy == "beam_search":
@@ -134,7 +146,8 @@ def search(model,
             #finished: (B x last_beam_size) x 1
             #mask_finished: vocab_size      
             #cur_log_probs: (B x last_beam_size) x V
-            cur_log_probs = log_probs.view(-1, 1) + torch.log_softmax(logits, -1) * (1 - finished.float()) + mask_finished * finished.float()
+            masked_logits = logits * (1 - finished.float()) + mask_finished * finished.float()
+            cur_log_probs = log_probs.view(-1, 1) + torch.log_softmax(masked_logits, -1)
             
             #topk_log_probs: B x cur_beam_size
             #topk_ids: B x cur_beam_size    
