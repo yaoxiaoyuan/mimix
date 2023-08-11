@@ -1,8 +1,8 @@
-# Mimix: A Tool for Seq2seq learning framework based on Pytorch and Tensorflow
+# Mimix: A Tool for Seq2seq learning framework based on Pytorch 
 
 Mimix is a tool for Seq2seq learning framework based on Pytorch. Basically, I implement several generative models, including rnn-seq2seq and transformer. Some other models, such as Text CNN, Transformer-based classifier and Transformer-based Language model, are also provided. To facilitate the use of pretrained models, Mimix can also load bert model weights. Other pretrained models may be supported in the future.
 
-I have trained some Chinese Generative Models which are listed in Demo section. You can follow the instructions and run the demo.  ~~**An application is required for model download.**~~ Now you can download the weights directly without sending me an email. **You must follow the agreement to use the model. Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/Mimix%20Model%20Release%20Agreement.docx).** 
+I have trained some Chinese Generative Models which are listed in Demo section. You can follow the instructions and run the demo.  ~~**An application is required for model download.**~~ Now you can download the weights directly without sending me an email. **You must follow the agreement to use the model. Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/agreement/Mimix%20Model%20Release%20Agreement.docx).** 
 
 ### Cite
 
@@ -41,7 +41,17 @@ Several pretrained models are listed below.  ~~**Some models are not available f
 | Chinese ancient translation              | transformer enc-dec     | 216m     | 12       | 768     | 12      | 6m        | 1GB       | True             |
 | Chinese spelling correction | transformer enc-dec | 216m | 12 | 768 | 12 | 32m | 6GB | True |
 
-Download link:  https://pan.baidu.com/s/18UmwOwbN2u_J0ym382SxAA?pwd=bxka 
+~~Download link:  https://pan.baidu.com/s/18UmwOwbN2u_J0ym382SxAA?pwd=bxka~~ 
+
+**DON'T USE OLD MODEL WEIGHTS AND CONFIG FILES ABOVE!** 
+
+**DON'T USE OLD MODEL WEIGHTS AND CONFIG FILES ABOVE!** 
+
+**DON'T USE OLD MODEL WEIGHTS AND CONFIG FILES ABOVE!** 
+
+The old weights and configs are not compatible with new code. Please download new model data below.
+
+Download link：https://pan.baidu.com/s/1RrvrduPWSximpmhYmzZH-Q?pwd=p413 
 
 ### HOW TO RUN MODEL
 
@@ -49,7 +59,7 @@ Download link:  https://pan.baidu.com/s/18UmwOwbN2u_J0ym382SxAA?pwd=bxka
 
 2. Put conf and model under mimix folder
 
-3. cd src and run: 
+3. run: 
 
    1. Chinese chitchat generation: python interact.py --model_conf conf/chitchat_base_conf
 
