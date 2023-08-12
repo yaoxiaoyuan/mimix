@@ -9,7 +9,7 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 1. The entire project's code has been refactored. Now it is easier to use. 
 2. I added some example code and config files for training. The training code is flexible and can be easily modified.
 3. Now MIMIX support VIT model for image classification task. I have trained on ChineseFoodNet dataset. By using the pretrained VIT model, it can easily beats the single resnet152 model (VIT get top1 acc 0.7967 on test data set, ResNet152 get top1 acc 0.7900 on test data set) 
-4. I also add a streamlit script to better play with the text generation task and image classification task. To run the demo, you can run streamlit run app.py -- --model_conf /your/model/conf/path![streamlit](image\streamlit.png)
+4. I also add a streamlit script to better play with the text generation task and image classification task. To run the demo, you can run streamlit run app.py -- --model_conf /your/model/conf/path![streamlit](image/streamlit.png)
 5. Although LLM achieve remarkable performance in recent years, this project focus on training model useful but not that large.  Training LLM cost too much for individuals. Also, there already exists many projects for finetune large LLM  at low cost. However, I may boost Chinese text generation models trained before by leveraging the new LLM model.  
 
 ### Cite
