@@ -11,7 +11,7 @@ import logging
 import torch
 from mimix.utils import real_path
 
-LOG_DIR = "../logger"
+LOG_DIR = "logger"
 
 if not os.path.exists(real_path(LOG_DIR)):
     os.mkdir(real_path(LOG_DIR))

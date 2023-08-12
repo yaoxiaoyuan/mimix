@@ -112,7 +112,7 @@ def visualize_enc_dec(config):
 
         for i in range(enc_dec_gen.model.n_dec_layers):
             
-            draw_heatmap(src, trg, attn_score_list[i], "../logger/dec_enc_%d.png" % i)
+            draw_heatmap(src, trg, attn_score_list[i], "logger/dec_enc_%d.png" % i)
 
 
 def run_visualize():
