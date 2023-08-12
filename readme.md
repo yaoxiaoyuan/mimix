@@ -29,6 +29,7 @@ Several pretrained models are listed below.  ~~**Some models are not available f
 
 | model name                           | architecture                    | n_params  | n_layers | d_model | n_heads | n_samples | data size | open for download |
 | ------------------------------------ | ---- | ---- | :--- | ---- | ---- | ------------------------------------ | ------------------------------------ | ------------------------------------ |
+| Chinese Food classification | VIT | 88m | 12 | 768 | 12 | 18w | 20G | True |
 | Chinese chitchat generation           | transformer enc-dec | 100m | 12 | 512 | 8 | 400m | 76GB | True |
 | Chinese shi,ci,duilian generation     | transformer dec-only lm | 49m | 12 | 512 | 8 | 6m | 1GB | True |
 | Chinese news summarization generation | transformer enc-dec | 100m | 12 | 512 | 8 | 18m | 42GB | True |
@@ -60,7 +61,7 @@ Several pretrained models are listed below.  ~~**Some models are not available f
 
 The old weights and configs are not compatible with new code. Please download new model data below.
 
-Download link：https://pan.baidu.com/s/1RrvrduPWSximpmhYmzZH-Q?pwd=p413 
+Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z 
 
 ### HOW TO RUN MODEL
 
