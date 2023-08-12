@@ -13,6 +13,10 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 5. Although LLM achieve remarkable performance in recent years, this project focus on training model useful but not that large.  Training LLM cost too much for individuals. Also, there already exists many projects for finetune large LLM  at low cost. However, I may boost Chinese text generation models trained before by leveraging the new LLM model.  New models may be released in the future.
 6. RNN-seq2seq code has been removed in new code. You can still check the code on branch v1. But it won't be maintained.
 
+
+
+If you want to contact with me, please send me an email.
+
 ### Cite
 
 ```
@@ -59,7 +63,7 @@ Several pretrained models are listed below.  ~~**Some models are not available f
 
 **DON'T USE OLD MODEL WEIGHTS AND CONFIG FILES ABOVE!** 
 
-The old weights and configs are not compatible with new code. Please download new model data below.
+The old weights and configs are not compatible with new code. Please download new model data with below link. Old weights links may become invalid in the future.
 
 Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z 
 
