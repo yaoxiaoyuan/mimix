@@ -7,14 +7,14 @@ Created on Fri Jul 28 22:06:35 2023
 import sys
 import os
 from argparse import ArgumentParser
-from models import build_vit_model
-from predictor import load_model_weights
-from optimizer import build_optimizer
-from scheduler import build_scheduler
-from loss import classify_loss
-from utils import real_path, load_config, load_model_config
-from train import train
-from evaluate import eval_acc
+from mimix.models import build_vit_model
+from mimix.predictor import load_model_weights
+from mimix.optimizer import build_optimizer
+from mimix.scheduler import build_scheduler
+from mimix.loss import classify_loss
+from mimix.utils import real_path, load_config, load_model_config
+from mimix.train import train
+from mimix.evaluate import eval_acc
 import torch
 import numpy as np
 import random
@@ -47,7 +47,7 @@ class MNIST():
             x = torch.cat([self.data[j][0][0].unsqueeze(0) for j in self.idx[i:i+self.batch_size]])
             x = x.float().unsqueeze(1).to(self.device)
             y = torch.tensor([self.data[j][1] for j in self.idx[i:i+self.batch_size]])
-            y = y.long().unsqueeze(1).to(self.device)
+            y = y.long().to(self.device)
             yield [x], [y]
             i += self.batch_size
 
@@ -82,7 +82,7 @@ def main(model_config, train_config):
                          train_config["batch_size"],
                          device)
 
-    optimizer = build_optimizer(model, train_config["optimizer"], train_config["lr"])
+    optimizer = build_optimizer(model, train_config)
     lr_scheduler = build_scheduler(train_config, optimizer)
     eval_fn_list = [eval_acc]
     train(model, 
