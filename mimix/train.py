@@ -98,7 +98,7 @@ def train(model,
     while epoch < train_config["max_epoch"]: 
         model.train()
         
-        for inputs,targets in train_generator(steps):
+        for inputs,targets in train_generator():
             if use_amp == True:
                 with torch.cuda.amp.autocast():
                     outputs = model(inputs, targets=targets, compute_loss=True)
