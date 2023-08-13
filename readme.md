@@ -7,11 +7,12 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 **UPDATE 2023.08**:  
 
 1. The entire project's code has been refactored. Now it is easier to use. 
-2. I added some example code and config files for training. The training code is flexible and can be easily modified. If use training code, it is better to read the model kwargs in code. Documentation may be improved in the future. 
-3. Now MIMIX support VIT model for image classification task. I have trained on ChineseFoodNet dataset. By using the pretrained VIT model, it can easily beats the single resnet152 model (VIT get top1 acc 0.7967 on test data set, ResNet152 get top1 acc 0.7900 on test data set) 
-4. I also add a streamlit script to better play with the text generation task and image classification task. To run the demo, you can run streamlit run app.py -- --model_conf /your/model/conf/path![streamlit](image/streamlit.png)
-5. Although LLM achieve remarkable performance in recent years, this project focus on training model useful but not that large.  Training LLM cost too much for individuals. Also, there already exists many projects for finetune large LLM  at low cost. However, I may boost Chinese text generation models trained before by leveraging the new LLM model.  New models may be released in the future.
-6. RNN-seq2seq code has been removed in new code. You can still check the code on branch v1. But it won't be maintained.
+2. **The old model weights and config files are not compatible with new code. Please download new model data. Old weights links may become invalid in the future.**
+3. I added some example code and config files for training. The training code is flexible and can be easily modified. If use training code, it is better to read the model kwargs in code. Documentation may be improved in the future. 
+4. Now MIMIX support VIT model for image classification task. I have trained on ChineseFoodNet dataset. By using the pretrained VIT model, it can easily beats the single resnet152 model (VIT get top1 acc 0.7967 on test data set, ResNet152 get top1 acc 0.7900 on test data set) 
+5. I also add a streamlit script to better play with the text generation task and image classification task. To run the demo, you can run streamlit run app.py -- --model_conf /your/model/conf/path![streamlit](image/streamlit.png)
+6. Although LLM achieve remarkable performance in recent years, this project focus on training model useful but not that large.  Training LLM cost too much for individuals. Also, there already exists many projects for finetune large LLM  at low cost. However, I may boost Chinese text generation models trained before by leveraging the new LLM model.  New models may be released in the future.
+7. RNN-seq2seq code has been removed in new code. You can still check the code on branch v1. But it won't be maintained.
 
 
 
@@ -33,7 +34,6 @@ Several pretrained models are listed below.  ~~**Some models are not available f
 
 | model name                           | architecture                    | n_params  | n_layers | d_model | n_heads | n_samples | data size | open for download |
 | ------------------------------------ | ---- | ---- | :--- | ---- | ---- | ------------------------------------ | ------------------------------------ | ------------------------------------ |
-| Chinese Food classification | VIT | 88m | 12 | 768 | 12 | 18w | 20G | True |
 | Chinese chitchat generation           | transformer enc-dec | 100m | 12 | 512 | 8 | 400m | 76GB | True |
 | Chinese shi,ci,duilian generation     | transformer dec-only lm | 49m | 12 | 512 | 8 | 6m | 1GB | True |
 | Chinese news summarization generation | transformer enc-dec | 100m | 12 | 512 | 8 | 18m | 42GB | True |
@@ -54,6 +54,8 @@ Several pretrained models are listed below.  ~~**Some models are not available f
 | Chinese doc2query generation | transformer enc-dec | 216m | 12       | 768     | 12      | 1.3m      | 1.5GB     | True         |
 | Chinese ancient translation              | transformer enc-dec     | 216m     | 12       | 768     | 12      | 6m        | 1GB       | True             |
 | Chinese spelling correction | transformer enc-dec | 216m | 12 | 768 | 12 | 32m | 6GB | True |
+| Chinese Food classification | VIT                     | 88m      | 12       | 768     | 12      | 180k      | 20G       | True |
+| Chinese Traditional Medicine classification | VIT                     | 88m      | 12       | 768     | 12      | 267k      | 5G        | True |
 
 ~~Download link:  https://pan.baidu.com/s/18UmwOwbN2u_J0ym382SxAA?pwd=bxka~~ 
 
