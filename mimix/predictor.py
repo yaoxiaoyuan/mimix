@@ -49,10 +49,19 @@ class EncDecGenerator():
             device_id = config.get("device_id", "0")
             self.device = torch.device('cuda:%s' % device_id)
             self.model = self.model.to(self.device)
-            
-        self.src_tokenizer = build_tokenizer(
-                tokenizer=config["src_tokenizer"],
-                vocab_file=config["src_vocab"])
+        
+        self.use_vit_encoder = config.get("use_vit_encoder", False)
+        if self.use_vit_encoder == False:
+            self.src_tokenizer = build_tokenizer(
+                    tokenizer=config["src_tokenizer"],
+                    vocab_file=config["src_vocab"])
+        else:
+            from torchvision import transforms
+            self.transform = transforms.Compose([
+                transforms.Resize((config["img_w"], config["img_h"])),
+                transforms.ToTensor(),
+                transforms.Normalize(0.5, 0.5, 0.5),
+            ])
         self.trg_tokenizer = build_tokenizer(
                 tokenizer=config["trg_tokenizer"],
                 vocab_file=config["trg_vocab"])
@@ -60,17 +69,19 @@ class EncDecGenerator():
         vocab = load_vocab(real_path(config["trg_vocab"]))
         self.trg_word2id = vocab
         self.trg_id2word = {vocab[word]:word for word in vocab}
-
-        vocab = load_vocab(real_path(config["src_vocab"]))
-        self.src_word2id = vocab
-        self.src_id2word = {vocab[word]:word for word in vocab}
+        
+        if self.use_vit_encoder == False:
+            vocab = load_vocab(real_path(config["src_vocab"]))
+            self.src_word2id = vocab
+            self.src_id2word = {vocab[word]:word for word in vocab}
         
         self.add_cls = config.get("add_cls", False)
         self.bos_tok = config["symbols"]["BOS_TOK"]
         self.eos_tok = config["symbols"]["EOS_TOK"]
         self.pad_tok = config["symbols"]["PAD_TOK"]
         
-        self.src_max_len = config["src_max_len"]
+        if self.use_vit_encoder == False:     
+            self.src_max_len = config["src_max_len"]
         self.trg_max_len = config["trg_max_len"]
         self.trg_vocab_size = config["trg_vocab_size"]
         self.max_dec_steps = config["max_decode_steps"]
@@ -95,14 +106,17 @@ class EncDecGenerator():
                       add_eos=False,
                       pad_trg_left=False):
         """
-        """        
-        src_ids = list(map(self.src_tokenizer.tokenize_to_ids, src_list))
-        x = cut_and_pad_seq_list(src_ids,
-                                 self.src_max_len, 
-                                 self.model.PAD,
-                                 True)
-        if self.add_cls == True:
-            x = [[self.model.CLS] + xx[:self.src_max_len-1] for xx in x]
+        """   
+        if self.use_vit_encoder == False:  
+            src_ids = list(map(self.src_tokenizer.tokenize_to_ids, src_list))
+            x = cut_and_pad_seq_list(src_ids,
+                                     self.src_max_len, 
+                                     self.model.PAD,
+                                     True)
+            if self.add_cls == True:
+                x = [[self.model.CLS] + xx[:self.src_max_len-1] for xx in x]
+        else:
+            x = [self.transform(img).unsqueeze(0) for img in src_list]
             
         y = None
         if trg_list is not None:
@@ -118,8 +132,11 @@ class EncDecGenerator():
                                      True,
                                      pad_trg_left)
             
-
-        x = torch.tensor(x, dtype=torch.long)
+        if self.use_vit_encoder == False:  
+            x = torch.tensor(x, dtype=torch.long)
+        else:
+            x = torch.cat(x, 0).float()
+            
         if y is not None:
             y = torch.tensor(y, dtype=torch.long)
 

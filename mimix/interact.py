@@ -303,6 +303,35 @@ def image_classification_demo(config):
         print("-----cost time: %s s-----" % cost)
 
 
+def image_caption_demo(config):
+    """
+    """
+    enc_dec_gen = EncDecGenerator(config)
+
+    print("INPUT IMAGE PATH:")
+
+    for line in sys.stdin:
+
+        line = line.strip()
+
+        if len(line) == 0:
+            continue
+
+        image_path = line
+        images = [Image.open(image_path)]
+
+        start = time.time()
+
+        search_res = enc_dec_gen.predict(images)
+        images[0].close()
+        search_res = [{"predict":y} for x,y in search_res]
+        pretty_print(search_res)
+
+        end = time.time()
+        cost = end - start
+        print("-----cost time: %s s-----" % cost)
+
+
 def run_interactive():
     """
     """
@@ -331,6 +360,8 @@ def run_interactive():
             match_text_demo(config)
         elif config["task"] == "image_classification":
             image_classification_demo(config)
+        elif config["task"] == "image_caption":
+            image_caption_demo(config)
     elif args.mode == "debug":
         if config["task"] == "enc_dec":
             enc_dec_debug(config)        

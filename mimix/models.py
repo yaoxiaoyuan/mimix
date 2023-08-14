@@ -301,11 +301,27 @@ class TransformerSeq2seq(nn.Module):
         self.share_src_trg_emb = kwargs.get("share_src_trg_emb", False)
         self.n_dec_layers = kwargs["n_dec_layers"]
         self.trg_vocab_size = kwargs["trg_vocab_size"]
+ 
+        self.use_vit_encoder = kwargs.get("use_vit_encoder", False)
         enc_config = kwargs.copy()
-        enc_config["vocab_size"] = kwargs["src_vocab_size"]
-        enc_config["max_len"] = kwargs["src_max_len"]
-        enc_config["n_layers"] = kwargs["n_enc_layers"]
-        self.encoder = Transformer(**enc_config)
+        if self.use_vit_encoder == True:
+            d_model = kwargs["d_model"]
+            img_h,img_w = kwargs["img_h"], kwargs["img_w"]
+            ph,pw = kwargs["patch_h"], kwargs["patch_w"]
+            enc_config = kwargs.copy()
+            enc_config["use_word_embedding"] = False
+            enc_config["max_len"] = img_h // ph * img_w // pw + 1
+            enc_config["n_layers"] = kwargs["n_enc_layers"]
+            self.src_max_len = enc_config["max_len"]
+            self.encoder = Transformer(**enc_config)
+            self.patch_embedding = nn.Conv2d(kwargs["n_channels"], d_model, kernel_size=(ph, pw), stride=(ph, pw))
+            self.cls = nn.Parameter(torch.Tensor(d_model)) 
+        else:
+            enc_config["vocab_size"] = kwargs["src_vocab_size"]
+            enc_config["max_len"] = kwargs["src_max_len"]
+            enc_config["n_layers"] = kwargs["n_enc_layers"]
+            self.encoder = Transformer(**enc_config)
+        
         dec_config = kwargs.copy()
         dec_config["vocab_size"] = kwargs["trg_vocab_size"]
         dec_config["max_len"] = kwargs["trg_max_len"]
@@ -342,16 +358,29 @@ class TransformerSeq2seq(nn.Module):
         """
         """
         x, y = inputs
-        enc_self_attn_mask = self.get_attn_mask(x, x)
-        dec_self_attn_mask = self.get_subsequent_mask(y)
-        
 
-        dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y, y)
-        dec_enc_attn_mask = self.get_attn_mask(y, x)
-                      
-        enc_pos_ids = x.ne(self.PAD).cumsum(-1) - 1
-        dec_pos_ids = y.ne(self.PAD).cumsum(-1) - 1
+        enc_self_attn_mask = None
+        if self.use_vit_encoder == False:
+            enc_self_attn_mask = self.get_attn_mask(x, x)
         
+        dec_self_attn_mask = self.get_subsequent_mask(y)
+        dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y, y)
+        
+        dec_enc_attn_mask = None
+        if self.use_vit_encoder == False:
+            dec_enc_attn_mask = self.get_attn_mask(y, x)
+        
+        if self.use_vit_encoder == False:              
+            enc_pos_ids = x.ne(self.PAD).cumsum(-1) - 1
+        else:
+            enc_pos_ids = torch.arange(self.src_max_len).repeat([x.size(0), 1]).to(x.device)
+        dec_pos_ids = y.ne(self.PAD).cumsum(-1) - 1
+                    
+        if self.use_vit_encoder == True:
+            x = self.patch_embedding(x).flatten(2).transpose(1, 2)
+            cls = self.cls.repeat(x.shape[0], 1, 1)
+            x = torch.cat([cls, x], 1)
+
         enc_outputs = self.encoder(x, 
                                    self_attn_mask=enc_self_attn_mask,
                                    self_pos_ids=enc_pos_ids,
@@ -390,15 +419,27 @@ class TransformerSeq2seq(nn.Module):
         """
         x = inputs[0]
         
-        enc_pos_ids = x.ne(self.PAD).cumsum(-1) - 1
-        enc_attn_mask = self.get_attn_mask(x, x)
-        enc_outputs = self.encoder(x, enc_attn_mask, self_pos_ids=enc_pos_ids)      
+        if self.use_vit_encoder == False:
+            enc_pos_ids = x.ne(self.PAD).cumsum(-1) - 1
+            enc_attn_mask = self.get_attn_mask(x, x)
+        else:
+            enc_pos_ids = torch.arange(self.src_max_len).repeat([x.size(0), 1]).to(x.device)
+            enc_attn_mask = None 
+            x = self.patch_embedding(x).flatten(2).transpose(1, 2)
+            cls = self.cls.repeat(x.shape[0], 1, 1)
+            x = torch.cat([cls, x], 1)
+            
+        enc_outputs = self.encoder(x, 
+                                   self_attn_mask=enc_attn_mask, 
+                                   self_pos_ids=enc_pos_ids,
+                                   past_pos_ids=enc_pos_ids)      
         enc_output = enc_outputs[0]
         enc_kv_list = self.decoder.cache_enc_kv(enc_output)
         
         dec_pos_ids = states[0].ne(self.PAD).cumsum(-1) - 1         
         dec_kv_list = self.decoder.cache_dec_kv()
         past_pos_ids = dec_pos_ids
+        dec_enc_attn_mask = None
         if len(inputs) > 1 and inputs[1] is not None: 
             y = inputs[1][:, :-1].clone()
             states[0] = inputs[1][:,-1][:,None].clone() 
@@ -409,7 +450,9 @@ class TransformerSeq2seq(nn.Module):
             dec_self_attn_mask = self.get_subsequent_mask(y)
             
             dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y, y)
-            dec_enc_attn_mask = self.get_attn_mask(y, x)
+            
+            if self.use_vit_encoder == False:
+                dec_enc_attn_mask = self.get_attn_mask(y, x)
             
             trg_embedding = None
             if self.share_src_trg_emb == True:
@@ -426,7 +469,8 @@ class TransformerSeq2seq(nn.Module):
             past_pos_ids = dec_pos_ids
             dec_pos_ids = dec_pos_ids[:,-1][:,None] + 1 
             past_pos_ids = torch.cat([past_pos_ids, dec_pos_ids], -1)
-        dec_enc_attn_mask = x.eq(self.PAD).unsqueeze(1).byte()
+        if self.use_vit_encoder == False:
+            dec_enc_attn_mask = x.eq(self.PAD).unsqueeze(1).byte()
         
         cache = [enc_kv_list, dec_kv_list, dec_enc_attn_mask, enc_pos_ids, dec_pos_ids, past_pos_ids]
         
@@ -477,8 +521,9 @@ class TransformerSeq2seq(nn.Module):
 
             dec_kv_list[i][0] = dec_kv_list[i][0][beam_id]
             dec_kv_list[i][1] = dec_kv_list[i][1][beam_id]
-
-        dec_enc_attn_mask = dec_enc_attn_mask[beam_id]
+        
+        if dec_enc_attn_mask is not None:
+            dec_enc_attn_mask = dec_enc_attn_mask[beam_id]
 
         enc_pos_ids = enc_pos_ids[beam_id]
         
