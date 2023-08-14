@@ -306,8 +306,9 @@ def image_classification_demo(config):
 def image_caption_demo(config):
     """
     """
-    enc_dec_gen = EncDecGenerator(config)
-
+    if config["model"] == "transformer":
+        enc_dec_gen = EncDecGenerator(config)
+    
     print("INPUT IMAGE PATH:")
 
     for line in sys.stdin:
