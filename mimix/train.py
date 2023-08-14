@@ -21,7 +21,7 @@ def build_logger():
     """
     """
     format_str = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    filename = datetime.today().strftime('../logger/%Y-%m-%d-%H-%M-%S.log')
+    filename = datetime.today().strftime('logger/%Y-%m-%d-%H-%M-%S.log')
     logging.basicConfig(filename=real_path(filename),
                         level=logging.INFO,
                         format=format_str)
