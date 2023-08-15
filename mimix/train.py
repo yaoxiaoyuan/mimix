@@ -154,8 +154,6 @@ def train(model,
                     optimizer.step()
                     optimizer.zero_grad()
         
-        train_generator.local_shuffle()
-        
         epoch += 1
         steps = 0
         
