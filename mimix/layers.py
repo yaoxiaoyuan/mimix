@@ -194,13 +194,13 @@ class PositionEmbedding(nn.Module):
 class RelativePositionEmbedding(nn.Module):
     """
     """
-    def __init__(self, max_relative_len, d_model, need_train=True):
+    def __init__(self, max_relative_len, d_model, pos_type="learned"):
         """
         """
         super(RelativePositionEmbedding, self).__init__()
         self.embedding_size = d_model
         self.max_relative_len = max_relative_len
-        self.need_train = need_train
+        self.pos_type = pos_type
         if pos_type == "sinusoidal":
             W = torch.zeros(2*max_relative_len+1, d_model)
             for i in range(2*max_relative_len+1):
@@ -471,7 +471,7 @@ class MultiHeadAttention(nn.Module):
         self.rel_pos_v_emb = None
         self.use_rel_pos_value = use_rel_pos_value
         if max_relative_len > 0:
-            self.rel_pos_k_emb = RelativePositionEmbedding(max_relative_len, self.d_qk, pos_type)
+            self.rel_pos_k_emb = RelativePositionEmbedding(max_relative_len, self.d_qk, rel_pos_type)
             if use_rel_pos_value == True:
                 self.rel_pos_v_emb = RelativePositionEmbedding(max_relative_len, self.d_v, rel_pos_type)
         
