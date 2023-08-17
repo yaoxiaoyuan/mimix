@@ -7,7 +7,7 @@ Created on Fri Nov 20 17:40:07 2020
 import re
 from abc import abstractmethod
 from mimix.utils import load_vocab
-from mimix.bert import FullTokenizer as bert_tokenizer
+from mimix.bert_tokenizer import FullTokenizer as bert_tokenizer
 
 def is_alphabet(ch):
     """
