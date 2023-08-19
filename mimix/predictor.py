@@ -84,7 +84,7 @@ class EncDecGenerator():
             self.src_max_len = config["src_max_len"]
         self.trg_max_len = config["trg_max_len"]
         self.trg_vocab_size = config["trg_vocab_size"]
-        self.max_dec_steps = config["max_decode_steps"]
+        self.max_decode_steps = config["max_decode_steps"]
         
         self.beam_size = config.get("beam_size", 3)
         self.group_size = config.get("group_size", 0)
@@ -168,7 +168,7 @@ class EncDecGenerator():
                                        group_size=self.group_size, 
                                        repetition_penalty=self.repetition_penalty,
                                        use_mask_unk=self.use_mask_unk,
-                                       max_decode_steps=self.max_dec_steps)
+                                       max_decode_steps=self.max_decode_steps)
                 hypothesis,scores = states[4], states[1]
             else:
                 raise ValueError("strategy not correct!")
