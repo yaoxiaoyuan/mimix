@@ -9,8 +9,8 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 1. The entire project's code has been refactored. Now it is easier to use. 
 2. **The old model weights and config files are not compatible with new code. Please download new model data. Old weights links may become invalid in the future.**
 3. I added some example code and config files for training. The training code is flexible and can be easily modified. If use training code, it is better to read the model kwargs in code. Documentation may be improved in the future. 
-4. Now MIMIX support VIT model for image classification task. I have trained on ChineseFoodNet dataset. By using the pretrained VIT model, it can easily beats the single resnet152 model (VIT get top1 acc 0.7967 on test data set, ResNet152 get top1 acc 0.7900 on test data set) 
-5. I also add a streamlit script to better play with the text generation task and image classification task. To run the demo, you can run streamlit run app.py -- --model_conf /your/model/conf/path![streamlit](image/streamlit.png)
+4. Now MIMIX support VIT model for image classification task. I have trained on ChineseFoodNet dataset. By using the pretrained VIT model, it can easily beats the single resnet152 model (VIT get top1 acc 0.7967 on test data set, ResNet152 get top1 acc 0.7900 on test data set) .  Also, Image caption task is supported.
+5. I also add a streamlit script to better play with the text generation task and image classification task. To run the demo, you can run streamlit run app.py -- --model_conf /your/model/conf/path![streamlit](image/streamlit.png)![streamlit](image/streamlit2.png)
 6. Although LLM achieve remarkable performance in recent years, this project focus on training model useful but not that large.  Training LLM cost too much for individuals. Also, there already exists many projects for finetune large LLM  at low cost. However, I may boost Chinese text generation models trained before by leveraging the new LLM model.  New models may be released in the future.
 7. RNN-seq2seq code has been removed in new code. You can still check the code on branch v1. But it won't be maintained.
 
@@ -56,6 +56,7 @@ Several pretrained models are listed below.  ~~**Some models are not available f
 | Chinese spelling correction | transformer enc-dec | 216m | 12 | 768 | 12 | 32m | 6GB | True |
 | Chinese Food classification | VIT                     | 88m      | 12       | 768     | 12      | 180k      | 20G       | True |
 | Chinese Traditional Medicine classification | VIT                     | 88m      | 12       | 768     | 12      | 267k      | 5G        | True |
+| Chinese image caption | transformer enc-dec | 219m | 12 | 768 | 12 | 356k | 34G | True |
 
 ~~Download link:  https://pan.baidu.com/s/18UmwOwbN2u_J0ym382SxAA?pwd=bxka~~ 
 

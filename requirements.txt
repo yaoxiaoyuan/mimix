@@ -1,0 +1,3 @@
+torch==2.01
+streamlit==1.25.0
+torchvision==0.15.2
