@@ -71,14 +71,14 @@ def main(model_config, train_config):
     batch_size = train_config["batch_size"]
     
     train_dataset = MNIST(
-                          datasets.MNIST("../test_data/mnist-data", train=True, download=True, transform=transforms.ToTensor()),
-                          #datasets.FashionMNIST("../test_data/mnist-data", train=True, download=True, transform=transforms.ToTensor()),
+                          datasets.MNIST("test_data/mnist-data", train=True, download=True, transform=transforms.ToTensor()),
+                          #datasets.FashionMNIST("test_data/mnist-data", train=True, download=True, transform=transforms.ToTensor()),
                           train_config["batch_size"], 
                           device)
     val_dataset = None
     test_dataset = MNIST(
-                         datasets.MNIST("../test_data/mnist-data", train=False, download=True, transform=transforms.ToTensor()), 
-                         #datasets.FashionMNIST("../test_data/mnist-data", train=True, download=True, transform=transforms.ToTensor()),
+                         datasets.MNIST("test_data/mnist-data", train=False, download=True, transform=transforms.ToTensor()), 
+                         #datasets.FashionMNIST("test_data/mnist-data", train=True, download=True, transform=transforms.ToTensor()),
                          train_config["batch_size"],
                          device)
 
