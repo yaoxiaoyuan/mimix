@@ -60,6 +60,15 @@ class Transformer(nn.Module):
         self.use_glu = kwargs.get("use_glu", False)
         self.use_ln_scale = kwargs.get("use_ln_scale", True)
         self.use_ln_bias = kwargs.get("use_ln_bias", True)
+        
+        self.use_vit_encoder = kwargs.get("use_vit_encoder", True)
+        if self.use_vit_encoder == True:
+            img_h,img_w = kwargs["img_h"], kwargs["img_w"]
+            ph,pw = kwargs["patch_h"], kwargs["patch_w"]
+            self.use_word_embedding = False
+            self.max_len = img_h // ph * img_w // pw + 1
+            self.patch_embedding = nn.Conv2d(kwargs["n_channels"], self.d_model, kernel_size=(ph, pw), stride=(ph, pw))
+            self.cls = nn.Parameter(torch.Tensor(self.d_model))
 
         if self.use_word_embedding == True:
             self.word_embedding = Embedding(self.vocab_size, self.d_model, self.factorized_size)
@@ -101,7 +110,7 @@ class Transformer(nn.Module):
             
             
     def forward(self, 
-                y, 
+                x, 
                 self_attn_mask=None,
                 self_kv_list=None, 
                 self_enc_attn_mask=None,
@@ -115,12 +124,17 @@ class Transformer(nn.Module):
                 type_ids=None):
         """
         """
+        if self.use_vit_encoder == True:
+            x = self.patch_embedding(x).flatten(2).transpose(1, 2)
+            cls = self.cls.repeat(x.shape[0], 1, 1)
+            x = torch.cat([cls, x], 1)
+
         if self.use_word_embedding == True:
             embedding = self.word_embedding
 
-        embeded = y
+        embeded = x
         if embedding is not None:
-            embeded = embedding(y)
+            embeded = embedding(x)
          
         if self.use_pos_embedding == True:   
             embeded = embeded + self.pos_embedding(self_pos_ids)
@@ -304,25 +318,15 @@ class TransformerSeq2seq(nn.Module):
  
         self.use_vit_encoder = kwargs.get("use_vit_encoder", False)
         enc_config = kwargs.copy()
-        if self.use_vit_encoder == True:
-            d_model = kwargs["d_model"]
-            img_h,img_w = kwargs["img_h"], kwargs["img_w"]
-            ph,pw = kwargs["patch_h"], kwargs["patch_w"]
-            enc_config = kwargs.copy()
-            enc_config["use_word_embedding"] = False
-            enc_config["max_len"] = img_h // ph * img_w // pw + 1
-            enc_config["n_layers"] = kwargs["n_enc_layers"]
-            self.src_max_len = enc_config["max_len"]
-            self.encoder = Transformer(**enc_config)
-            self.patch_embedding = nn.Conv2d(kwargs["n_channels"], d_model, kernel_size=(ph, pw), stride=(ph, pw))
-            self.cls = nn.Parameter(torch.Tensor(d_model)) 
-        else:
+        if self.use_vit_encoder == False:
             enc_config["vocab_size"] = kwargs["src_vocab_size"]
             enc_config["max_len"] = kwargs["src_max_len"]
-            enc_config["n_layers"] = kwargs["n_enc_layers"]
-            self.encoder = Transformer(**enc_config)
-        
+        enc_config["n_layers"] = kwargs["n_enc_layers"]
+        self.encoder = Transformer(**enc_config)
+        self.src_max_len = self.encoder.max_len
+
         dec_config = kwargs.copy()
+        dec_config["use_vit_encoder"] = False
         dec_config["vocab_size"] = kwargs["trg_vocab_size"]
         dec_config["max_len"] = kwargs["trg_max_len"]
         dec_config["output_next_word_logits"] = True
@@ -376,11 +380,6 @@ class TransformerSeq2seq(nn.Module):
             enc_pos_ids = torch.arange(self.src_max_len).repeat([x.size(0), 1]).to(x.device)
         dec_pos_ids = y.ne(self.PAD).cumsum(-1) - 1
                     
-        if self.use_vit_encoder == True:
-            x = self.patch_embedding(x).flatten(2).transpose(1, 2)
-            cls = self.cls.repeat(x.shape[0], 1, 1)
-            x = torch.cat([cls, x], 1)
-
         enc_outputs = self.encoder(x, 
                                    self_attn_mask=enc_self_attn_mask,
                                    self_pos_ids=enc_pos_ids,
@@ -425,9 +424,6 @@ class TransformerSeq2seq(nn.Module):
         else:
             enc_pos_ids = torch.arange(self.src_max_len).repeat([x.size(0), 1]).to(x.device)
             enc_attn_mask = None 
-            x = self.patch_embedding(x).flatten(2).transpose(1, 2)
-            cls = self.cls.repeat(x.shape[0], 1, 1)
-            x = torch.cat([cls, x], 1)
             
         enc_outputs = self.encoder(x, 
                                    self_attn_mask=enc_attn_mask, 
@@ -698,25 +694,33 @@ class TransformerEncoder(nn.Module):
         self.MAX_LOGITS = 10000.
         self.MIN_LOGITS = -10000.
         
-        self.src_vocab_size = kwargs["src_vocab_size"]
+        self.src_vocab_size = kwargs.get("src_vocab_size", None)
         self.d_model = kwargs["d_model"]
         
         enc_config = kwargs.copy()
-        enc_config["vocab_size"] = kwargs["src_vocab_size"]
-        enc_config["max_len"] = kwargs["src_max_len"] 
-        enc_config["n_layers"] = kwargs["n_enc_layers"] 
-        self.encoder = Transformer(**enc_config)
+        self.use_vit_encoder = kwargs.get("use_vit_encoder", False)
+        if self.use_vit_encoder == True:
+            img_h,img_w = kwargs["img_h"], kwargs["img_w"]
+            ph,pw = kwargs["patch_h"], kwargs["patch_w"]
+            enc_config["use_word_embedding"] = False
+            enc_config["max_len"] = img_h // ph * img_w // pw + 1
+            enc_config["n_layers"] = kwargs["n_enc_layers"]
+        else:
+            enc_config["vocab_size"] = kwargs["src_vocab_size"]
+            enc_config["max_len"] = kwargs["src_max_len"]
+            enc_config["n_layers"] = kwargs["n_enc_layers"]
         
+        self.encoder = Transformer(**enc_config)
+        self.src_max_len = self.encoder.max_len
+
         self.n_types = kwargs.get("n_types", None) 
         self.n_layers = kwargs["n_enc_layers"] 
         self.n_class = kwargs.get("n_class", None)
         
         self.activation = kwargs.get("activation", "relu")
-        
+       
         self.W_pool = None
         self.b_pool = None
-        self.W_out = None
-        self.b_out = None
         self.use_pooling = kwargs.get("use_pooling", False)
         if self.use_pooling == True:
             self.W_pool = nn.Parameter(torch.Tensor(self.d_model, self.d_model))
@@ -801,14 +805,21 @@ class TransformerEncoder(nn.Module):
         type_ids = None
         if self.n_types is not None:
             type_ids = inputs[1]
-        enc_self_attn_mask = self.get_attn_mask(x, x)
-        self_pos_ids = x.ne(self.PAD).cumsum(-1)-1
-        enc_outputs = self.encoder(x, 
-                                   enc_self_attn_mask,
-                                   self_pos_ids=self_pos_ids, 
-                                   past_pos_ids=self_pos_ids, 
-                                   return_states=return_states,
-                                   type_ids=type_ids)
+
+        if self.use_vit_encoder == False:
+            enc_self_attn_mask = self.get_attn_mask(x, x)
+            self_pos_ids = x.ne(self.PAD).cumsum(-1)-1
+            enc_outputs = self.encoder(x, 
+                                       enc_self_attn_mask,
+                                       self_pos_ids=self_pos_ids, 
+                                       past_pos_ids=self_pos_ids, 
+                                       return_states=return_states,
+                                       type_ids=type_ids)
+        else:
+            pos_ids = torch.arange(self.src_max_len).repeat([x.size(0), 1]).to(x.device)
+
+            enc_outputs = self.encoder(x, self_pos_ids=pos_ids)
+
         enc_output = enc_outputs[0]   
         mlm_enc_output = enc_output
         
@@ -856,82 +867,44 @@ class TransformerEncoder(nn.Module):
         return outputs        
 
 
-class ViTransformer(nn.Module):
+class CLIP(nn.Module):
     """
     """
     def __init__(self, **kwargs):
         """
         """
-        super(ViTransformer, self).__init__()
-        
-        self.d_model = kwargs["d_model"]
-        self.n_class = kwargs["n_class"]
-        
-        img_h,img_w = kwargs["img_h"], kwargs["img_w"]
-        ph,pw = kwargs["patch_h"], kwargs["patch_w"]
-        
-        enc_config = kwargs.copy()
-        enc_config["use_word_embedding"] = False
-        enc_config["max_len"] = img_h // ph * img_w // pw + 1
-        self.encoder = Transformer(**enc_config)
-        
-        self.patch_embedding = nn.Conv2d(kwargs["n_channels"], self.d_model, kernel_size=(ph, pw), stride=(ph, pw))
-        self.cls = nn.Parameter(torch.Tensor(self.d_model))
-        
-        self.use_pooling = kwargs.get("use_pooling", False)
-        self.W_pool = None
-        self.b_pool = None
-        if self.use_pooling == True:
-            self.W_pool = nn.Parameter(torch.Tensor(self.d_model, self.d_model))
-            self.b_pool = nn.Parameter(torch.zeros(self.d_model))
-        self.W_out = nn.Parameter(torch.Tensor(self.d_model, self.n_class))
-        self.b_out = nn.Parameter(torch.zeros(self.n_class))
- 
-        self.reset_parameters()
-    
-    
-    def reset_parameters(self):
-        """
-        """
-        stdv = 1.0 / np.sqrt(self.d_model)
-        for weight in [self.W_pool, self.W_out, self.cls]:
-            if weight is not None:
-                weight.data.uniform_(-stdv, stdv)
-        for weight in [self.b_pool, self.b_out]:
-            if weight is not None:
-                weight.data.zero_()
+        super(CLIP, self).__init__()
+
+        img_config = kwargs.copy()
+        for k in kwargs:
+            if k.startswith("image_"):
+                img_config[k.replace("image_", "")]
+        self.img_encoder = TransformerEncoder(**img_config)
+        text_config = kwargs.copy()
+        for k in kwargs:
+            if k.startswith("text_"):
+                img_config[k.replace("text_", "")]
+        self.text_encoder = TransformerEncoder(**text_config)
 
 
     def forward(self, inputs, return_states=False, targets=None, compute_loss=False):
         """
         """
-        x = inputs[0]
-        
-        embeded = self.patch_embedding(x).flatten(2).transpose(1, 2)
-        
-        cls = self.cls.repeat(x.shape[0], 1, 1)
-        embeded = torch.cat([cls, embeded], 1)
-        
-        pos_ids = torch.arange(embeded.size(1)).repeat([embeded.size(0), 1]).to(x.device)
-        
-        enc_outputs = self.encoder(embeded, self_pos_ids=pos_ids)
+        img, text = inputs
+              
+        img_outputs = self.img_encoder([img])
+        text_outputs = self.text_encoder([text])
 
-        enc_output = enc_outputs[0]
-        
-        if self.use_pooling == True:
-            enc_output = torch.tanh(torch.matmul(enc_output, self.W_pool) + self.b_pool)
-            
-        logits = torch.matmul(enc_output, self.W_out) + self.b_out
-        outputs = [logits[:,0,:]] + enc_outputs
-        
+        outputs = img_outputs[0:1] + text_outputs[0:1] + img_outputs[1:] + text_outputs[1:]
+
         if compute_loss == True:
             loss = self.loss_fn(outputs, targets)
             outputs = [loss] + outputs
 
-        if return_states == False:
-            outputs = outputs[:1]
-                    
-        return outputs     
+        if return_states == True:
+            outputs = outputs + enc_outputs
+
+        return outputs
 
 
 def build_enc_dec_model(config):
@@ -971,7 +944,7 @@ def build_vit_model(config):
     """
     """
     if config["model"] == "vit":
-        model = ViTransformer(**config)
+        model = TransformerEncoder(**config)
     else:
         raise ValueError("model not correct!")
         
