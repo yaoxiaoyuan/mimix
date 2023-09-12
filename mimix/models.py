@@ -61,7 +61,7 @@ class Transformer(nn.Module):
         self.use_ln_scale = kwargs.get("use_ln_scale", True)
         self.use_ln_bias = kwargs.get("use_ln_bias", True)
         
-        self.use_vit_encoder = kwargs.get("use_vit_encoder", True)
+        self.use_vit_encoder = kwargs.get("use_vit_encoder", False)
         if self.use_vit_encoder == True:
             img_h,img_w = kwargs["img_h"], kwargs["img_w"]
             ph,pw = kwargs["patch_h"], kwargs["patch_w"]
