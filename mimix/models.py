@@ -107,6 +107,8 @@ class Transformer(nn.Module):
                 self.W.data.uniform_(-stdv, stdv)
             if self.use_output_bias == True:
                 self.b.data.zero_()
+        if self.use_vit_encoder == True:
+            self.cls.data.uniform_(-stdv, stdv)
             
             
     def forward(self, 
@@ -823,12 +825,12 @@ class TransformerEncoder(nn.Module):
         enc_output = enc_outputs[0]   
         mlm_enc_output = enc_output
         
-        outputs = []
+        outputs = [enc_output]
         if self.use_pooling == True:
             
             enc_output = torch.tanh(torch.matmul(enc_output, self.W_pool) + self.b_pool)
             
-            outputs = [enc_output]
+            outputs = [enc_output[:,0,:]]
             
         if self.out_dim is not None or self.n_class is not None:
             enc_output = torch.matmul(enc_output, self.W_out) + self.b_out
@@ -854,7 +856,7 @@ class TransformerEncoder(nn.Module):
             
             logits = torch.matmul(enc_output, W) + self.b_out_mlm
 
-            outputs += [logits]
+            outputs = [logits]
         
         
         if compute_loss == True:
@@ -875,15 +877,26 @@ class CLIP(nn.Module):
         """
         super(CLIP, self).__init__()
 
-        img_config = kwargs.copy()
+        self.PAD = kwargs["symbol2id"]["_pad_"]
+        self.BOS = kwargs["symbol2id"]["_bos_"]
+        self.EOS = kwargs["symbol2id"]["_eos_"]
+        self.UNK = kwargs["symbol2id"]["_unk_"]
+        self.SEP = kwargs["symbol2id"]["_sep_"]
+        self.CLS = kwargs["symbol2id"]["_cls_"]
+        self.MASK = kwargs["symbol2id"]["_mask_"]
+
+        img_config = {}
         for k in kwargs:
-            if k.startswith("image_"):
-                img_config[k.replace("image_", "")]
+            if k.startswith("image_") or k in ["symbols", "symbol2id"]:
+                img_config[k.replace("image_", "")] = kwargs[k]
+        img_config["use_vit_encoder"] = True
+        
         self.img_encoder = TransformerEncoder(**img_config)
-        text_config = kwargs.copy()
+        text_config = {}
         for k in kwargs:
-            if k.startswith("text_"):
-                img_config[k.replace("text_", "")]
+            if k.startswith("text_") or k in ["symbols", "symbol2id"]:
+                text_config[k.replace("text_", "")] = kwargs[k]
+        text_config["use_vit_encoder"] = False
         self.text_encoder = TransformerEncoder(**text_config)
 
 
@@ -895,9 +908,9 @@ class CLIP(nn.Module):
         img_outputs = self.img_encoder([img])
         text_outputs = self.text_encoder([text])
 
-        outputs = img_outputs[0:1] + text_outputs[0:1] + img_outputs[1:] + text_outputs[1:]
+        outputs = [[img_outputs[0], text_outputs[0]]] + img_outputs[1:] + text_outputs[1:]
 
-        if compute_loss == True:
+        if compute_loss == True:            
             loss = self.loss_fn(outputs, targets)
             outputs = [loss] + outputs
 
@@ -945,6 +958,17 @@ def build_vit_model(config):
     """
     if config["model"] == "vit":
         model = TransformerEncoder(**config)
+    else:
+        raise ValueError("model not correct!")
+        
+    return model
+
+
+def build_clip_model(config):
+    """
+    """
+    if config["model"] == "clip":
+        model = CLIP(**config)
     else:
         raise ValueError("model not correct!")
         

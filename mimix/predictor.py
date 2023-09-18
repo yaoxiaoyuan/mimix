@@ -14,7 +14,7 @@ from mimix.decoding import search
 from mimix.decoding import crf_model_decoding
 from mimix.utils import load_vocab, real_path, invert_dict, cut_and_pad_seq_list
 from mimix.models import build_enc_dec_model, build_lm_model, build_encoder_model
-from mimix.models import build_vit_model
+from mimix.models import build_vit_model, build_clip_model
 
 def load_model_weights(model, weights_path):
     """
@@ -722,10 +722,10 @@ class ImageEncoder():
         return x
 
 
-    def predict_cls(self, image_paths, return_topk=5):
+    def predict_cls(self, images, return_topk=5):
         """
         """
-        x = self.transform_image(image_paths)
+        x = self.transform_image(images)
 
         self.model.eval()
         with torch.no_grad():
@@ -750,3 +750,110 @@ class ImageEncoder():
                 if len(res[i][1]) >= return_topk:
                     break
         return res
+
+
+class ClipMatcher():
+    """
+    """
+    def __init__(self, config):
+        """
+        """
+        self.model = load_model_weights(build_clip_model(config), config["load_model"])
+
+        self.use_cuda = config.get("use_cuda", False)
+        self.device = torch.device('cpu')
+        if self.use_cuda == True:
+            device_id = config.get("device_id", "0")
+            self.device = torch.device('cuda:%s' % device_id)
+            self.model = self.model.to(self.device)
+
+        from torchvision import transforms
+        self.transform = transforms.Compose([
+            transforms.Resize((config["image_img_w"], config["image_img_h"])),
+            transforms.ToTensor(),
+            transforms.Normalize(0.5, 0.5, 0.5),
+            ])
+
+
+        self.src_tokenizer = build_tokenizer(
+                tokenizer=config["src_tokenizer"],
+                vocab_file=config["src_vocab"])
+        self.add_cls = config.get("add_cls", False)
+        
+        self.use_cuda = config["use_cuda"]
+        self.src_max_len = config["text_src_max_len"]
+
+    
+    def encode_inputs(self, src_list):
+        """
+        """        
+        src_ids = list(map(self.src_tokenizer.tokenize_to_ids, src_list))
+
+        y = cut_and_pad_seq_list(src_ids,
+                                 self.src_max_len, 
+                                 self.model.PAD,
+                                 True)
+        if self.add_cls == True:
+            y = [[self.model.CLS] + yy[:self.src_max_len-1] for yy in y]
+
+        if y is not None:
+            y = torch.tensor(y, dtype=torch.long)
+
+        if self.use_cuda == True:
+            if y is not None:
+                y = y.to(self.device)
+        
+        return y
+
+
+    def encode_texts(self, src_list):
+        """
+        """
+        y = self.encode_inputs(src_list)
+        
+        self.model.eval()
+        with torch.no_grad():
+            outputs = self.model.text_encoder([y])
+        
+        return outputs[0]
+
+
+    def transform_image(self, images):
+        """
+        """
+        x = []
+        for image in images:
+            x.append(self.transform(image).unsqueeze(0))
+        x = torch.cat(x, 0).to(self.device)
+        
+        return x
+
+
+    def encode_images(self, images):
+        """
+        """
+        x = self.transform_image(images)
+
+        self.model.eval()
+        with torch.no_grad():
+            outputs = self.model.img_encoder([x])
+        
+        return outputs[0]
+    
+
+    def predict_sim(self, images, texts):
+        """
+        """
+        img_vec = self.encode_images(images)
+        text_vec = self.encode_texts(texts)
+ 
+        with torch.no_grad():
+            img_vec = F.normalize(img_vec, p=2, dim=1)
+            text_vec = F.normalize(text_vec, p=2, dim=1)
+            sim = torch.mm(img_vec, text_vec.T)
+        
+        return sim
+
+
+
+

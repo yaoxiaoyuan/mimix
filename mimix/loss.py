@@ -49,6 +49,19 @@ def contrastive_loss(vec, target, sim_alpha):
 
     return loss
 
+
+def symmetric_contrastive_loss(vecs, target, sim_alpha):
+    """
+    """
+    vec_1,vec_2 = vecs
+    norm_vec_1 = F.normalize(vec_1, p=2, dim=1)
+    norm_vec_2 = F.normalize(vec_2, p=2, dim=1)
+    sim = torch.mm(norm_vec_1, norm_vec_2.T)
+    loss = (F.cross_entropy(sim_alpha * sim, target) + F.cross_entropy(sim_alpha * sim.T, target)) / 2
+
+    return loss
+
+
 def classify_loss(logits, target, eps):
     """
     """

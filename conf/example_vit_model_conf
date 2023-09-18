@@ -1,9 +1,9 @@
 [int]
 src_max_len = 50
-n_heads = 4
+n_heads = 8
 d_model = 128
-d_ff = 1024
-n_layers = 6
+d_ff = 512
+n_enc_layers = 6
 n_class = 10
 img_h = 28
 img_w = 28
@@ -15,12 +15,13 @@ n_channels = 1
 dropout = 0.1
 
 [str]
-load_model = ../model/vit
+load_model = model/vit
 model = vit
-task = v_classify
-activation = relu
+task = image_classification
+activation = gelu
 
 [bool]
 use_cuda = True
 use_pre_norm = True
 norm_before_pred = True
+use_vit_encoder = True
