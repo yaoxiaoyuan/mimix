@@ -75,7 +75,7 @@ class EncDecGenerator():
             self.src_word2id = vocab
             self.src_id2word = {vocab[word]:word for word in vocab}
         
-        self.add_cls = config.get("add_cls", False)
+        self.add_tokens = config.get("add_tokens", "")
         self.bos_tok = config["symbols"]["BOS_TOK"]
         self.eos_tok = config["symbols"]["EOS_TOK"]
         self.pad_tok = config["symbols"]["PAD_TOK"]
@@ -107,14 +107,13 @@ class EncDecGenerator():
                       pad_trg_left=False):
         """
         """   
-        if self.use_vit_encoder == False:  
+        if self.use_vit_encoder == False: 
+            src_list = [self.add_tokens + src for src in src_list]
             src_ids = list(map(self.src_tokenizer.tokenize_to_ids, src_list))
             x = cut_and_pad_seq_list(src_ids,
                                      self.src_max_len, 
                                      self.model.PAD,
                                      True)
-            if self.add_cls == True:
-                x = [[self.model.CLS] + xx[:self.src_max_len-1] for xx in x]
         else:
             x = [self.transform(img).unsqueeze(0) for img in src_list]
             
@@ -511,7 +510,7 @@ class TextEncoder():
         self.src_tokenizer = build_tokenizer(
                 tokenizer=config["src_tokenizer"],
                 vocab_file=config["src_vocab"])
-        self.add_cls = config.get("add_cls", False)
+        self.add_tokens = config.get("add_tokens", "")
         
         self.mask_id = config["symbol2id"][config["symbols"]["MASK_TOK"]]
         
@@ -529,15 +528,14 @@ class TextEncoder():
     
     def encode_inputs(self, src_list):
         """
-        """        
+        """  
+        src_list = [self.add_tokens + src for src in src_list]
         src_ids = list(map(self.src_tokenizer.tokenize_to_ids, src_list))
 
         y = cut_and_pad_seq_list(src_ids,
                                  self.src_max_len, 
                                  self.model.PAD,
                                  True)
-        if self.add_cls == True:
-            y = [[self.model.CLS] + yy[:self.src_max_len-1] for yy in y]
 
         if y is not None:
             y = torch.tensor(y, dtype=torch.long)
@@ -778,7 +776,7 @@ class ClipMatcher():
         self.src_tokenizer = build_tokenizer(
                 tokenizer=config["src_tokenizer"],
                 vocab_file=config["src_vocab"])
-        self.add_cls = config.get("add_cls", False)
+        src_list = [self.add_tokens + src for src in src_list]
         
         self.use_cuda = config["use_cuda"]
         self.src_max_len = config["text_src_max_len"]
@@ -786,15 +784,15 @@ class ClipMatcher():
     
     def encode_inputs(self, src_list):
         """
-        """        
+        """      
+        src_list = [self.add_tokens + src for src in src_list]
+        
         src_ids = list(map(self.src_tokenizer.tokenize_to_ids, src_list))
 
         y = cut_and_pad_seq_list(src_ids,
                                  self.src_max_len, 
                                  self.model.PAD,
                                  True)
-        if self.add_cls == True:
-            y = [[self.model.CLS] + yy[:self.src_max_len-1] for yy in y]
 
         if y is not None:
             y = torch.tensor(y, dtype=torch.long)
