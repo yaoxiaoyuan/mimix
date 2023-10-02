@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from mimix.layers import Embedding,Dropout,LayerNorm,act2fn,PositionEmbedding,CRF
 from mimix.layers import TransformerLayer
-
+from mimix.utils import real_path
 
 class Transformer(nn.Module):
     """
@@ -920,56 +920,56 @@ class CLIP(nn.Module):
         return outputs
 
 
-def build_enc_dec_model(config):
+def load_model_weights(model, weights_path):
     """
     """
-    if config["model"] == "transformer":
-        model = TransformerSeq2seq(**config)
-    else:
-        raise ValueError("model not correct!")
-        
+    model_path = real_path(weights_path)
+    state_dict = torch.load(model_path,
+                            map_location=lambda storage, loc: storage)
+
+    param_dict = {}
+    for k,v in model.named_parameters():
+        if k in state_dict:
+            param_dict[k] = state_dict[k] 
+        else:
+            print("warn: weight %s not found in model file" % k)
+
+    model.load_state_dict(param_dict, False)
+    
     return model
 
 
-def build_lm_model(config):
+def build_model(config, load_model_path=None):
     """
     """
-    if config["model"] == "transformer":
-        model = TransformerLM(**config)
-    else:
-        raise ValueError("model not correct!")
-        
+    if config["task"] in ["enc_dec", "image_caption"]:
+        if config["model"] == "transformer":
+            model = TransformerSeq2seq(**config)
+        else:
+            raise ValueError("model not correct!")
+    elif config["task"] == "lm":
+        if config["model"] == "transformer":
+            model = TransformerLM(**config)
+        else:
+            raise ValueError("model not correct!")
+    elif config["task"] in ["match", "mlm"]:
+        if config["model"] == "transformer":
+            model = TransformerEncoder(**config)
+        else:
+            raise ValueError("model not correct!")
+    elif config["task"] in ["image_classification"]:
+        if config["model"] == "transformer":
+            model = TransformerEncoder(**config)
+        else:
+            raise ValueError("model not correct!")              
+    elif config["task"] in ["text_image_match"]:
+        if config["model"] == "transformer":
+            model = CLIP(**config)
+        else:
+            raise ValueError("model not correct!")  
+
+    if load_model_path is not None:
+        model = load_model_weights(model, load_model_path)
+     
     return model
 
-
-def build_encoder_model(config):
-    """
-    """
-    if config["model"] == "transformer":
-        model = TransformerEncoder(**config)
-    else:
-        raise ValueError("model not correct!")
-        
-    return model
-
-
-def build_vit_model(config):
-    """
-    """
-    if config["model"] == "vit":
-        model = TransformerEncoder(**config)
-    else:
-        raise ValueError("model not correct!")
-        
-    return model
-
-
-def build_clip_model(config):
-    """
-    """
-    if config["model"] == "clip":
-        model = CLIP(**config)
-    else:
-        raise ValueError("model not correct!")
-        
-    return model

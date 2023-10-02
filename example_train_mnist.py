@@ -7,8 +7,7 @@ Created on Fri Jul 28 22:06:35 2023
 import sys
 import os
 from argparse import ArgumentParser
-from mimix.models import build_vit_model
-from mimix.predictor import load_model_weights
+from mimix.models import build_model
 from mimix.optimizer import build_optimizer
 from mimix.scheduler import build_scheduler
 from mimix.loss import classify_loss
@@ -55,9 +54,7 @@ class MNIST():
 def main(model_config, train_config):
     """
     """
-    model = build_vit_model(model_config)
-    if train_config.get("reload_model", None) is not None:
-        model = load_model_weights(model, real_path(train_config["reload_model"]))
+    model = build_model(model_config, train_config.get("reload_model", None))
     
     device = "cpu"
     if train_config["use_cuda"] == True:

@@ -350,16 +350,18 @@ class LayerNorm(nn.Module):
         """
         """
         if self.use_rms_norm == True:
-            std = x.std(dim=-1, unbiased=False, keepdim=True)
-            norm = x / (std + self.eps)
-            if self.use_scale == True:
-                norm = self.alpha * norm
-            if self.use_bias:
-                norm = norm + self.bias        
+            rms = torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
+            norm = x * rms      
         else:
             mean = x.mean(dim=-1, keepdim=True)
             std = x.std(dim=-1, unbiased=False, keepdim=True)
-            norm = self.alpha * (x - mean) / (std + self.eps) + self.bias
+            norm = (x - mean) / (std + self.eps)
+            
+        if self.use_scale == True:
+            norm = self.alpha * norm
+        if self.use_bias == True:
+            norm = norm + self.bias  
+                
         return norm
 
 

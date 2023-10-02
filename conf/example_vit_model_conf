@@ -15,8 +15,8 @@ n_channels = 1
 dropout = 0.1
 
 [str]
-load_model = model/vit
-model = vit
+#load_model = model/vit
+model = transformer
 task = image_classification
 activation = gelu
 

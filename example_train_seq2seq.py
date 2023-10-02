@@ -9,8 +9,7 @@ import os
 from argparse import ArgumentParser
 import numpy as np
 import torch
-from mimix.models import build_enc_dec_model
-from mimix.predictor import load_model_weights
+from mimix.models import build_model
 from mimix.optimizer import build_optimizer
 from mimix.scheduler import build_scheduler
 from mimix.loss import seq_cross_entropy
@@ -72,9 +71,7 @@ class S2SDataset(SimpleDataset):
 def main(model_config, train_config):
     """
     """
-    model = build_enc_dec_model(model_config)
-    if train_config.get("reload_model", None) is not None:
-        model = load_model_weights(model, real_path(train_config["reload_model"]))
+    model = build_model(model_config, train_config.get("reload_model", None))
     
     device = "cpu"
     if train_config["use_cuda"] == True:

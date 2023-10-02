@@ -53,7 +53,7 @@ def load_bert_weights(bert, weight_path):
     
     model_state_dict = {}
     for key,param in bert.named_parameters():
-        model_state_dict[key] = state_dict[map_key_dict[key]]
+        model_state_dict[key] = state_dict[map_key_dict[key].replace("gamma", "weight").replace("beta", "bias")]
         if key == "W_out_mlm":
             model_state_dict[key] = state_dict[map_key_dict[key]].T
     
@@ -99,7 +99,8 @@ def load_bert_model(model_path, use_cuda=False):
     return bert
 
 
-bert_model_path = "model/pretrain/bert"
+#bert_model_path = "model/pretrain/bert"
+bert_model_path = "model/pretrain/bert_large"
 model = load_bert_model(bert_model_path)
 model.eval()
 tokenizer = build_tokenizer(**{"tokenizer":"bert", "vocab_file":os.path.join(bert_model_path, "vocab.txt")})

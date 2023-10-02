@@ -13,26 +13,7 @@ from mimix.tokenization import build_tokenizer
 from mimix.decoding import search
 from mimix.decoding import crf_model_decoding
 from mimix.utils import load_vocab, real_path, invert_dict, cut_and_pad_seq_list
-from mimix.models import build_enc_dec_model, build_lm_model, build_encoder_model
-from mimix.models import build_vit_model, build_clip_model
-
-def load_model_weights(model, weights_path):
-    """
-    """
-    model_path = real_path(weights_path)
-    state_dict = torch.load(model_path,
-                            map_location=lambda storage, loc: storage)
-
-    param_dict = {}
-    for k,v in model.named_parameters():
-        if k in state_dict:
-            param_dict[k] = state_dict[k] 
-        else:
-            print("warn: weight %s not found in model file" % k)
-
-    model.load_state_dict(param_dict, False)
-    
-    return model
+from mimix.models import build_model
 
 
 class EncDecGenerator():
@@ -41,7 +22,7 @@ class EncDecGenerator():
     def __init__(self, config):
         """
         """
-        self.model = load_model_weights(build_enc_dec_model(config), config["load_model"])
+        self.model = build_model(config, real_path(config["load_model"]))
         
         self.use_cuda = config.get("use_cuda", False)
         self.device = torch.device('cpu')
@@ -333,7 +314,7 @@ class LMGenerator():
     def __init__(self, config):
         """
         """
-        self.model = load_model_weights(build_lm_model(config), config["load_model"])
+        self.model = build_model(config, real_path(config["load_model"]))
 
         self.use_cuda = config.get("use_cuda", False)
         self.device = torch.device("cpu")
@@ -495,7 +476,7 @@ class TextEncoder():
     def __init__(self, config):
         """
         """
-        self.model = load_model_weights(build_encoder_model(config), config["load_model"])
+        self.model = build_model(config, real_path(config["load_model"]))
         
         self.use_cuda = config.get("use_cuda", False)
         self.device = torch.device('cpu')
@@ -685,7 +666,7 @@ class ImageEncoder():
     def __init__(self, config):
         """
         """
-        self.model = load_model_weights(build_vit_model(config), config["load_model"])
+        self.model = build_model(config, real_path(config["load_model"]))
 
         self.use_cuda = config.get("use_cuda", False)
         self.device = torch.device('cpu')
@@ -737,8 +718,8 @@ class ImageEncoder():
         label = label.cpu().numpy()
 
         res = []
-        for i,image_path in enumerate(image_paths):
-            res.append([image_path, []])
+        for i,image in enumerate(images):
+            res.append([image, []])
             for yy,ss in zip(prob[i,:], label[i,:]):
                 label_str = str(ss)
                 if self.id2label is not None:
@@ -756,7 +737,7 @@ class ClipMatcher():
     def __init__(self, config):
         """
         """
-        self.model = load_model_weights(build_clip_model(config), config["load_model"])
+        self.model = build_model(config, real_path(config["load_model"]))
 
         self.use_cuda = config.get("use_cuda", False)
         self.device = torch.device('cpu')
@@ -776,7 +757,7 @@ class ClipMatcher():
         self.src_tokenizer = build_tokenizer(
                 tokenizer=config["src_tokenizer"],
                 vocab_file=config["src_vocab"])
-        src_list = [self.add_tokens + src for src in src_list]
+        self.add_tokens = config.get("add_tokens", "")
         
         self.use_cuda = config["use_cuda"]
         self.src_max_len = config["text_src_max_len"]

@@ -176,9 +176,7 @@ class Scheduler():
 def main(model_config, train_config):
     """
     """
-    model = build_vit_model(model_config)
-    if train_config.get("reload_model", None) is not None:
-        model = load_model_weights(model, real_path(train_config["reload_model"]))
+    model = build_model(model_config, train_config.get("reload_model", None))
 
     device = "cpu"
     if train_config["use_cuda"] == True:
