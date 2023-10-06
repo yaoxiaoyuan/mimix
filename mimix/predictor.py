@@ -738,7 +738,7 @@ class ClipMatcher():
         """
         """
         self.model = build_model(config, real_path(config["load_model"]))
-
+        self.sim_alpha = config.get("sim_alpha", 20)
         self.use_cuda = config.get("use_cuda", False)
         self.device = torch.device('cpu')
         if self.use_cuda == True:
@@ -830,9 +830,40 @@ class ClipMatcher():
             img_vec = F.normalize(img_vec, p=2, dim=1)
             text_vec = F.normalize(text_vec, p=2, dim=1)
             sim = torch.mm(img_vec, text_vec.T)
+            prob_text = torch.softmax(self.sim_alpha*sim, 1)
+            prob_image = torch.softmax(self.sim_alpha*sim, 0)
+        sim = sim.cpu().numpy()
+        prob_text = prob_text.cpu().numpy()
+        prob_image = prob_image.cpu().numpy()
         
-        return sim
+        return sim,prob_text,prob_image
 
 
+    def predict_images_sim(self, images):
+        """
+        """
+        img_vec = self.encode_images(images)
+ 
+        with torch.no_grad():
+            img_vec = F.normalize(img_vec, p=2, dim=1)
+            sim = torch.mm(img_vec, img_vec.T)
+            prob = torch.softmax(self.sim_alpha*sim, 1)
+        sim = sim.cpu().numpy()
+        prob = prob.cpu().numpy()
+        
+        return sim,prob
 
 
+    def predict_texts_sim(self, texts):
+        """
+        """
+        text_vec = self.encode_texts(texts)
+ 
+        with torch.no_grad():
+            text_vec = F.normalize(text_vec, p=2, dim=1)
+            sim = torch.mm(text_vec, text_vec.T)
+            prob = torch.softmax(self.sim_alpha*sim, 1)
+        sim = sim.cpu().numpy()
+        prob = prob.cpu().numpy()
+        
+        return sim,prob

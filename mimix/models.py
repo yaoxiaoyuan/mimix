@@ -962,7 +962,7 @@ def build_model(config, load_model_path=None):
             model = TransformerEncoder(**config)
         else:
             raise ValueError("model not correct!")              
-    elif config["task"] in ["text_image_match"]:
+    elif config["task"] in ["image_text_match"]:
         if config["model"] == "transformer":
             model = CLIP(**config)
         else:

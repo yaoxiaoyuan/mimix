@@ -11,7 +11,7 @@ from PIL import Image
 import io
 import streamlit as st
 from mimix.predictor import EncDecGenerator,LMGenerator,TextEncoder
-from mimix.predictor import ImageEncoder
+from mimix.predictor import ImageEncoder, ClipMatcher
 from mimix.utils import real_path, load_model_config
 
 st.set_page_config(page_title="Mimix Demo", initial_sidebar_state="auto", layout="wide")
@@ -123,6 +123,66 @@ def image_caption_app(model):
                     st.text_area("the {} result".format(i + 1), text)
 
 
+def image_text_match_app(model):
+    """
+    """
+    st.markdown(
+        """
+        ## CLIP DEMO
+        """
+    )
+    
+    with st.form(key='my_form'):
+        uploaded_file = st.file_uploader("Choose a image file", type="jpg", key="1")
+        uploaded_file_2 = st.file_uploader("Choose a image file", type="jpg", key="2")
+        texts = st.text_area("input text", max_chars=512)
+        submit = st.form_submit_button("compute image text match score") 
+        submit_2 = st.form_submit_button("compute image image match score") 
+        #submit_3 = st.form_submit_button("compute text text match score") 
+        if submit:
+            if uploaded_file is not None and len(texts) > 0:
+                image = Image.open(io.BytesIO(uploaded_file.getvalue()))
+                texts = [text.strip() for text in texts.split("\n")]
+                texts = [text for text in texts if len(text) > 0]
+                st.image(image, width=224)
+                res = model.predict_sim([image], texts)
+                res = [[text,score,prob] for text,score,prob in zip(texts, res[0][0], res[1][0])]
+                res.sort(key=lambda x:x[1], reverse=True)
+                for text,score,prob in res:
+                    info = "%s match score: %.2f, match prob: %.2f" % (text, score, prob)
+                    st.text(info)
+            else:
+                info = "image and text must not be empty!"
+                st.text(info)
+
+        if submit_2:
+            if uploaded_file is not None and uploaded_file_2 is not None:
+                image = Image.open(io.BytesIO(uploaded_file.getvalue()))
+                image_2 = Image.open(io.BytesIO(uploaded_file_2.getvalue()))
+                st.image(image, width=224)
+                st.image(image_2, width=224)
+                res = model.predict_images_sim([image, image_2])
+                info = "match score: %.2f" % (res[0][0][1])
+                st.text(info)
+            else:
+                info = "image and image_2 must not be empty!"
+                st.text(info) 
+        
+        '''
+        if submit_3:
+            if len(texts) > 0:
+                res =  model.predict_texts_sim(texts)
+                texts = [text.strip() for text in texts.split("\n")]
+                texts = [text for text in texts if len(text) > 0]
+                for i,text in enumerate(texts):
+                    for j,text_2 in enumerate(texts):
+                        if j > i:
+                            info = "%s %s match score: %.2f" % (text, text_2, res[0][i][j])
+                            st.text(info)
+            else:
+                info = "texts must not be empty!"
+                st.text(info) 
+        '''
 
 def run_app():
     """
@@ -147,6 +207,9 @@ def run_app():
     elif model_config["task"] == "image_caption":
         model = EncDecGenerator(model_config)
         image_caption_app(model)
+    elif model_config["task"] == "image_text_match":
+        model = ClipMatcher(model_config)
+        image_text_match_app(model)
         
 if __name__ == "__main__":
     run_app()

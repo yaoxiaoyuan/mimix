@@ -9,7 +9,7 @@ import sys
 import time
 from PIL import Image
 from mimix.predictor import EncDecGenerator,LMGenerator,TextEncoder
-from mimix.predictor import ImageEncoder
+from mimix.predictor import ImageEncoder, ClipMatcher
 from mimix.utils import real_path, load_model_config
 
 
@@ -82,7 +82,7 @@ def lm_demo(config):
         print("-----cost time: %s s-----" % cost)
         
 
-def bi_lm_demo(config):
+def mlm_demo(config):
     """
     """
     lm_gen = TextEncoder(config)
@@ -333,6 +333,36 @@ def image_caption_demo(config):
         print("-----cost time: %s s-----" % cost)
 
 
+def text_image_match_demo(config):
+    """
+    """
+    clip = ClipMatcher(config)
+    
+    print("INPUT IMAGE PATH AND TEXT:")
+
+    for line in sys.stdin:
+
+        line = line.strip()
+
+        if len(line) == 0:
+            continue
+
+        image_path = line.split("\t")[0]
+        images = [Image.open(image_path)]
+        texts = line.split("\t")[1:]
+
+        start = time.time()
+
+        res = clip.predict_sim(images,texts)
+        images[0].close()
+        for text,score,prob in zip(texts, res[0][0], res[1][0]):
+            print(text, score, prob)
+
+        end = time.time()
+        cost = end - start
+        print("-----cost time: %s s-----" % cost)
+
+
 def run_interactive():
     """
     """
@@ -353,8 +383,8 @@ def run_interactive():
             classification_demo(config)
         elif config["task"] == "lm":
             lm_demo(config)
-        elif config["task"] == "bi_lm":
-            bi_lm_demo(config)
+        elif config["task"] == "mlm":
+            mlm_demo(config)
         elif config["task"] == "sequence_labeling":
             sequene_labeling_demo(config)
         elif config["task"] == "match":
@@ -363,6 +393,8 @@ def run_interactive():
             image_classification_demo(config)
         elif config["task"] == "image_caption":
             image_caption_demo(config)
+        elif config["task"] == "image_text_match":
+            text_image_match_demo(config)
     elif args.mode == "debug":
         if config["task"] == "enc_dec":
             enc_dec_debug(config)        
