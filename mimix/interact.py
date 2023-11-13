@@ -217,6 +217,29 @@ def enc_dec_debug(config):
             print(info)
 
 
+def lm_debug(config):
+    """
+    """
+    lm_gen = LMGenerator(config)
+    
+    print("INPUT TEXT:")
+    for line in sys.stdin:
+        line = line.strip()
+        
+        trg = line.strip()
+
+        res = lm_gen.get_topk_pred([trg], topk=10)[0]
+        words, topk_pairs, history, sum_log_probs, entropy = res
+        print("trg: %s" % trg)
+        print("sum_log_probs: %.2f" % sum_log_probs)
+        print("avg_log_probs: %.2f" % (sum_log_probs / len(words)))
+        for i,word in enumerate(words):
+            info = word
+            info = info + " prob: %.2f entropy: %.2f" % (history[i], entropy[i])
+            info = info + " topk:" + " ".join(["%s:%.2f" % (w,s) for w,s in topk_pairs[i]])
+            print(info)
+
+
 def enc_dec_score(config):
     """
     """
@@ -397,7 +420,9 @@ def run_interactive():
             text_image_match_demo(config)
     elif args.mode == "debug":
         if config["task"] == "enc_dec":
-            enc_dec_debug(config)        
+            enc_dec_debug(config)  
+        if config["task"] == "lm":
+            lm_debug(config) 
     elif args.mode == "scoring":
         if config["task"] == "enc_dec":
             enc_dec_score(config) 

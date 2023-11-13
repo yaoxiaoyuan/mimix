@@ -263,7 +263,7 @@ class EncDecGenerator():
     def get_topk_pred(self, src_list, trg_list, topk=10):
         """
         """
-        x, y = self.encode_inputs(src_list, trg_list, add_bos=True, add_eos=True)
+        x, y = self.encode_inputs(src_list, trg_list, add_bos=True, add_eos=False)
     
         self.model.eval()
         with torch.no_grad():
@@ -326,6 +326,11 @@ class LMGenerator():
         self.trg_tokenizer = build_tokenizer(
                 tokenizer=config["trg_tokenizer"],
                 vocab_file=config["trg_vocab"])
+
+        vocab = load_vocab(real_path(config["trg_vocab"]))
+        self.trg_word2id = vocab
+        self.trg_id2word = {vocab[word]:word for word in vocab}
+
         self.use_cuda = config.get("use_cuda", False)
         self.gamma = float(config.get("gamma", 1))
         self.trg_max_len = config["trg_max_len"]
@@ -468,6 +473,54 @@ class LMGenerator():
             i += 1
             
         return res        
+
+
+    def get_topk_pred(self, trg_list, topk=10):
+        """
+        """
+        y = self.encode_inputs(trg_list, add_bos=True, add_eos=False)
+    
+        self.model.eval()
+        with torch.no_grad():
+            outputs = self.model([y])
+                
+            logits = outputs[0]
+            logits = logits.view(-1, self.trg_vocab_size)
+            
+            probs = F.softmax(logits, -1)
+            probs = probs.view(y.size(0), y.size(1), -1)
+            
+            top_probs, top_ids = probs.topk(topk, -1)
+            
+            y_len = torch.sum(y.ne(self.model.PAD), -1)
+            
+            entropy = Categorical(probs=probs).entropy()
+            
+            history = torch.gather(probs[:,:-1,:], -1, y[:,1:].unsqueeze(-1))
+            
+        y = y.cpu().numpy()
+        top_ids = top_ids.cpu().numpy()
+        top_probs = np.round(top_probs.cpu().numpy(), 3)
+        y_len = y_len.cpu().numpy()
+        history = np.round(history.squeeze(-1).cpu().numpy(), 3)
+        entropy = np.round(entropy.cpu().numpy(), 3)
+    
+        res = []
+        for i,trg in enumerate(trg_list):
+            words = [self.trg_id2word.get(w, "_unk_") for w in  y[i][1:]]
+            topk_pairs = []
+            for j in range(y_len[i].item() - 1):
+    
+                top_words = [self.trg_id2word.get(w, "_unk_") for w in top_ids[i][j]]
+                pairs = tuple(zip(top_words, top_probs[i][j]))
+                topk_pairs.append(pairs)
+            
+            history_probs = list(history[i][:y_len[i]])
+            sum_log_probs = sum(np.log(history[i][:y_len[i]]))
+            
+            res.append([words, topk_pairs, history_probs, sum_log_probs, list(entropy[i])])
+            
+        return res
 
 
 class TextEncoder():

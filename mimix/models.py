@@ -584,9 +584,13 @@ class TransformerLM(nn.Module):
         """
         """
         y = inputs[0]
-        dec_self_attn_mask = self.get_subsequent_mask(y)
-
-        dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y, y)
+        
+        if len(inputs) == 1 or inputs[1] is None:
+            dec_self_attn_mask = self.get_subsequent_mask(y)
+            dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y, y)
+        else:
+            dec_self_attn_mask = inputs[1]
+            
         self_pos_ids = y.ne(self.PAD).cumsum(-1) - 1
         dec_outputs = self.decoder(y, 
                                    self_attn_mask=dec_self_attn_mask,
@@ -686,13 +690,15 @@ class TransformerEncoder(nn.Module):
         """
         """
         super(TransformerEncoder, self).__init__()
-        self.PAD = kwargs["symbol2id"]["_pad_"]
-        self.BOS = kwargs["symbol2id"]["_bos_"]
-        self.EOS = kwargs["symbol2id"]["_eos_"]
-        self.UNK = kwargs["symbol2id"]["_unk_"]
-        self.SEP = kwargs["symbol2id"]["_sep_"]
-        self.CLS = kwargs["symbol2id"]["_cls_"]
-        self.MASK = kwargs["symbol2id"]["_mask_"]
+        self.use_vit_encoder = kwargs.get("use_vit_encoder", False)
+        if self.use_vit_encoder == False:
+            self.PAD = kwargs["symbol2id"]["_pad_"]
+            self.BOS = kwargs["symbol2id"]["_bos_"]
+            self.EOS = kwargs["symbol2id"]["_eos_"]
+            self.UNK = kwargs["symbol2id"]["_unk_"]
+            self.SEP = kwargs["symbol2id"]["_sep_"]
+            self.CLS = kwargs["symbol2id"]["_cls_"]
+            self.MASK = kwargs["symbol2id"]["_mask_"]
         self.MAX_LOGITS = 10000.
         self.MIN_LOGITS = -10000.
         
@@ -700,7 +706,7 @@ class TransformerEncoder(nn.Module):
         self.d_model = kwargs["d_model"]
         
         enc_config = kwargs.copy()
-        self.use_vit_encoder = kwargs.get("use_vit_encoder", False)
+        
         if self.use_vit_encoder == True:
             img_h,img_w = kwargs["img_h"], kwargs["img_w"]
             ph,pw = kwargs["patch_h"], kwargs["patch_w"]
