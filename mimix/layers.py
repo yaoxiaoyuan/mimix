@@ -133,8 +133,7 @@ class Embedding(nn.Module):
     def reset_parameters(self):
         """
         """
-        stdv = 1.0 / np.sqrt(self.embedding_size)
-        #stdv = np.log(self.vocab_size) / self.embedding_size
+        stdv = 1.0 / np.sqrt(self.vocab_size)
         for weight in self.parameters():
             weight.data.uniform_(-math.sqrt(3)*stdv, math.sqrt(3)*stdv)
 
