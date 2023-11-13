@@ -133,10 +133,10 @@ class Embedding(nn.Module):
     def reset_parameters(self):
         """
         """
-        #stdv = 1.0 / np.sqrt(self.embedding_size)
-        stdv = np.log(self.vocab_size) / self.embedding_size
+        stdv = 1.0 / np.sqrt(self.embedding_size)
+        #stdv = np.log(self.vocab_size) / self.embedding_size
         for weight in self.parameters():
-            weight.data.uniform_(-stdv, stdv)
+            weight.data.uniform_(-math.sqrt(3)*stdv, math.sqrt(3)*stdv)
 
     def forward(self, x):
         """
@@ -178,7 +178,7 @@ class PositionEmbedding(nn.Module):
         """
         stdv = 1.0 / np.sqrt(self.embedding_size)
         for weight in self.parameters():
-            weight.data.uniform_(-stdv, stdv)
+            weight.data.uniform_(-math.sqrt(3)*stdv, math.sqrt(3)*stdv)
         
     def forward(self, pos_ids):
         """
@@ -217,7 +217,7 @@ class RelativePositionEmbedding(nn.Module):
         """
         stdv = 1.0 / np.sqrt(self.embedding_size)
         for weight in self.parameters():
-            weight.data.uniform_(-stdv, stdv)
+            weight.data.uniform_(-math.sqrt(3)*stdv, math.sqrt(3)*stdv)
         
     def forward(self, relative_dis):
         """
@@ -299,7 +299,7 @@ class FeedForward(nn.Module):
         if self.use_glu:
             w_list.append(self.W3)
         for weight in w_list:
-            weight.data.uniform_(-stdv, stdv)
+            weight.data.uniform_(-math.sqrt(3)*stdv, math.sqrt(3)*stdv)
         if self.use_bias == True:
             b_list = [self.b1, self.b2]
             if self.use_glu == True:
@@ -492,7 +492,7 @@ class MultiHeadAttention(nn.Module):
         """
         stdv = 1.0 / np.sqrt(self.d_model)
         for weight in [self.W_q, self.W_k, self.W_v, self.W_o]:
-            weight.data.uniform_(-stdv, stdv)
+            weight.data.uniform_(-math.sqrt(3)*stdv, math.sqrt(3)*stdv)
         if self.use_bias == True:
             for weight in [self.b_q, self.b_k, self.b_v, self.b_o]:
                 weight.data.zero_()

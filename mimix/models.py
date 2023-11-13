@@ -4,6 +4,7 @@ Created on Sun Aug 18 11:15:01 2019
 
 @author: Xiaoyuan Yao
 """
+import math
 import numpy as np
 import torch
 import torch.nn as nn
@@ -774,7 +775,7 @@ class TransformerEncoder(nn.Module):
         stdv = 1.0 / np.sqrt(self.d_model)
         for weight in [self.W_pool, self.W_out, self.W_mlm, self.W_out_mlm]:
             if weight is not None:
-                weight.data.uniform_(-stdv, stdv)
+                weight.data.uniform_(-math.sqrt(3)*stdv, math.sqrt(3)*stdv)
         for weight in [self.b_pool, self.b_out, self.b_mlm, self.b_out_mlm]:
             if weight is not None:
                 weight.data.zero_()
