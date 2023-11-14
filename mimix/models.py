@@ -586,13 +586,17 @@ class TransformerLM(nn.Module):
         """
         y = inputs[0]
         
-        if len(inputs) == 1 or inputs[1] is None:
-            dec_self_attn_mask = self.get_subsequent_mask(y)
-            dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y, y)
-        else:
+        if len(inputs) > 1 and inputs[1] is not None:
             dec_self_attn_mask = inputs[1]
+        else:
+            dec_self_attn_mask = self.get_subsequent_mask(y)
+            dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y, y)            
             
-        self_pos_ids = y.ne(self.PAD).cumsum(-1) - 1
+        if len(inputs) > 2 and inputs[2] is not None:
+            self_pos_ids = inputs[2]
+        else:
+            self_pos_ids = y.ne(self.PAD).cumsum(-1) - 1
+        
         dec_outputs = self.decoder(y, 
                                    self_attn_mask=dec_self_attn_mask,
                                    self_pos_ids=self_pos_ids,
