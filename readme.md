@@ -87,7 +87,7 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
 
 3. run: 
 
-   1. Chinese chitchat generation: python interact.py --model_conf conf/chitchat_base_conf
+   1. Chinese chitchat generation: python interact.py --model_conf conf/chitchat_small_conf
 
       1. input:今天天气好热啊
 
@@ -115,7 +115,7 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
 
          
 
-   2. Chinese shiciqulian generation: python interact.py --model_conf conf/shi_base_conf
+   2. Chinese shiciqulian generation: python interact.py --model_conf conf/shi_small_conf
 
       1. input: \_shi\_ \_xinyun\_ \_7lv\_ \_title\_
 
@@ -123,7 +123,7 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
 
          
 
-   3. Chinese summarization generation interact.py --model_conf conf/sum_base_conf
+   3. Chinese summarization generation interact.py --model_conf conf/summ_small_conf
 
       1. input: 6月21日，河北省公安厅发布唐山打人案情况通报：经查，2022年6月7日，陈某亮（男，43岁）等4人从江苏驾车至河北唐山，与陈某志（男，41岁）等人合谋实施网络赌博洗钱违法犯罪活动。6月10日凌晨，陈某志等5人与陈某亮等4人在唐山市路北区某烧烤店聚餐饮酒。期 间，2时40分，陈某志对下班后在同店就餐的王某某（女，31岁）进行骚扰，遭拒后伙同马某齐（男，25岁）、陈某亮等人，对王某某、 刘某某（女，29岁）等4人进行殴打，2时47分逃离，2时55分4名被害人由120送医。2时41分接群众报警后，唐山市公安局路北分局机场路派出所民警率辅警于3时09分赶到现场开展处置工作。据通报，2时40分陈某志对女孩进行骚扰，2时41分警方接到群众报警，冲突发生1分钟即有人报警。2时47分陈某志及其同伙逃离，从骚扰到逃离，共计7分钟。
 
@@ -251,7 +251,7 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
 
           
        
-   11. Chinese qa generation: python interact.py --model_conf conf/qa_base_conf
+   11. Chinese qa generation: python interact.py --model_conf conf/qa_small_conf
 
        1. input: 失恋了怎么办
 
