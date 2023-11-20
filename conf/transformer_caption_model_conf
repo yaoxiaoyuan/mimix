@@ -1,0 +1,38 @@
+[int]
+src_max_len = xx
+trg_max_len = xx
+n_heads = xx
+d_model = xx
+d_ff = xx
+n_enc_layers = xx
+n_dec_layers = xx
+trg_vocab_size = xx
+beam_size = xx
+max_decode_steps = xx
+img_h = xx
+img_w = xx
+patch_h = xx
+patch_w = xx
+n_channels = xx
+
+[float]
+dropout = 0
+
+[str]
+trg_vocab = xxx
+load_model = xxx
+search_strategy = beam_search
+src_tokenizer = default
+trg_tokenizer = default
+model = transformer
+task = enc_dec
+activation = relu
+
+[bool]
+use_cuda = True
+share_src_trg_emb = False
+share_emb_out_proj = True
+use_pre_norm = True
+norm_after_embedding = False
+norm_before_pred = True
+use_vit_encoder = True

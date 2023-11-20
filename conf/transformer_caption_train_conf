@@ -1,0 +1,15 @@
+[int]
+max_epoch = xxx
+batch_size = xxx
+save_steps = xxx
+
+[float]
+lr = xxx
+
+[str]
+model_dir = test_data/model/caption
+model_name = xxx
+optimizer = adamW
+
+[bool]
+use_cuda = True
