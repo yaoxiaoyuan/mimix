@@ -30,13 +30,6 @@ class MNIST():
         self.device = device
         self.idx = list(range(0, len(self.data)))
         random.shuffle(self.idx)
-        
-    
-    def local_shuffle(self):
-        """
-        """
-        random.shuffle(self.idx)
-
 
     def __call__(self, steps=0):
         """
