@@ -42,10 +42,10 @@ Several pretrained models are listed below.  ~~**Some models are not available f
 
 | model name                           | architecture                    | n_params  | n_layers | d_model | n_heads | n_samples | data size | open for download |
 | ------------------------------------ | ---- | ---- | :--- | ---- | ---- | ------------------------------------ | ------------------------------------ | ------------------------------------ |
-| Chinese chitchat generation           | transformer enc-dec | 100m | 12 | 512 | 8 | 400m | 76GB | True |
-| Chinese shi,ci,duilian generation     | transformer dec-only lm | 49m | 12 | 512 | 8 | 6m | 1GB | True |
+| Chinese chitchat generation small/base | transformer enc-dec | 100m/216m | 12 | 512/768 | 8/12 | 400m | 76GB | True |
+| Chinese shi,ci,duilian generation small/base | transformer dec-only lm | 49m/103m | 12 | 512/768 | 8/12 | 6m | 1GB | True |
 | Chinese news summarization generation | transformer enc-dec | 100m | 12 | 512 | 8 | 18m | 42GB | True |
-| Chinese qa generation | transformer enc-dec     | 100m     | 12       | 512     | 8       | 66m       | 12.8GB    | True |
+| Chinese qa generation small/base | transformer enc-dec     | 100m/216m | 12       | 512/768 | 8/12    | 66m       | 12.8GB    | True |
 | Chinese modern poet, lyric generation    | transformer dec-only lm | 103m     | 12       | 768     | 12      | 2m        | 1GB       | True          |
 | Chinese question paraphrase generation   | transformer enc-dec     | 216m     | 12       | 768     | 12      | 32m       | 25GB      | True          |
 | Chinese question similarity tool        | transformer enc         | 103m     | 12       | 768     | 12      | 32m       | 25GB      | True          |
@@ -66,6 +66,7 @@ Several pretrained models are listed below.  ~~**Some models are not available f
 | Chinese Traditional Medicine classification | VIT                     | 88m      | 12       | 768     | 12      | 267k      | 5G        | True |
 | Chinese image caption | transformer enc-dec | 219m | 12 | 768 | 12 | 356k | 34G | True |
 | Chinese CLIP | dual encoder | 192m | 12 | 768 | 12 | 3m | 300G | True |
+| Chinese VQA | transformer enc-dec | 219m | 12 | 768 | 12 | 240k | 19G | True |
 
 ~~Download link:  https://pan.baidu.com/s/18UmwOwbN2u_J0ym382SxAA?pwd=bxka~~ 
 
@@ -87,7 +88,7 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
 
 3. run: 
 
-   1. Chinese chitchat generation: python interact.py --model_conf conf/chitchat_small_conf
+   1. Chinese chitchat generation: python interact.py --model_conf conf/chitchat_base_conf
 
       1. input:今天天气好热啊
 
@@ -115,11 +116,15 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
 
          
 
-   2. Chinese shiciqulian generation: python interact.py --model_conf conf/shi_small_conf
+   2. Chinese shiciqulian generation: python interact.py --model_conf conf/shi_base_conf
 
       1. input: \_shi\_ \_xinyun\_ \_7lv\_ \_title\_
 
       2. output: \_shi\_ \_xinyun\_ \_7lv\_ \_title\_ 题赠友人 \_content\_ 曾经万里隔寒霜，梦寐三更到谢娘。一朵白云飘故旧，千丝玉絮送清凉。天涯雁影南方去，海角归心北地伤。岁月蹉跎尘念久，年华虚度鬓如霜。
+
+      3. input: \_ci\_ \_ancient\_ \_title\_ 如梦令
+
+      4. output: \_ci\_ \_ancient\_ \_title\_ 如梦令 \_content\_ 帘外落花飞絮。天气薄寒如许。人瘦底衣单，深院日长无绪。愁去。愁去。砌下啼鹃红雨。  -1.6334530512491863
 
          
 
@@ -148,6 +153,10 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
       1. input: \_poet\_ \_title\_ 寒江雪 \_content\_
 
       2. output: \_poet\_ \_title\_ 寒江雪 \_content\_ 冬夜 \_nl\_ 没有月亮 \_nl\_ 只剩下 \_nl\_ 一片 \_nl\_ 孤独的白 \_nl\_ 风 \_nl\_ 把满山野林 \_nl\_ 吹得 \_nl\_ 更加 \_nl\_ 清凉 \_nl\_ 而我 _nl\_ 正倚着窗 \_nl\_ 听 \_nl\_ 那 \_nl\_ 簌簌 落英 \_nl\_ 和 \_nl\_ 天地 \_nl\_ 对话
+
+      3. input: \_lyric\_ \_title\_ 红颜如霜 \_content\_
+
+      4. output: \_lyric\_ \_title\_ 红颜如霜 \_content\_ 迷雾中央 \_nl\_ 好像看到惺忪的回望 \_nl\_ 怀念儿时顽皮地欢笑模样 \_nl\_ 疼爱依旧在我身旁 \_nl\_ 回忆无处安放 \_nl\_ 当岁月压弯记忆的肩膀 \_nl\_  烛火未熄心中仍然挥手衷望 \_nl\_ 恐怕此生百劫有缘再难往 \_nl\_ 恐怕未来潮汐翻卷又依然还来得迟一半 \_nl\_ 孤单咀嚼玫瑰芬芳又咀嚼玫瑰落发雪飘扬 \_nl\_ 又渴望又忧伤一个在身旁温暖守望 \_nl\_ 又渴望又彷徨痴妄何时才能为我转伤 \_nl\_ 红颜如霜 \_nl\_ 酒越浓香越醉越苦越闯 \_nl\_ 又渴望又忧伤一个在身旁温暖守望 \_nl\_ 又渴望又彷徨痴妄何时才能为我转伤 \_nl\_ 红颜如霜 \_nl\_ 清冷眼眸留不住泪光 \_nl\_ 物换星移移锦书寄远方 \_nl\_ 忍受往事如烟沧茫茫远望疯乱 \_nl\_ 日斜犹见香藤青满窗长夜漫长 \_nl\_ 痴心已破浪辗转反侧难以入梦乡 \_nl\_ 唯愿你好梦永长常  -810.559326171875 
 
          
 
@@ -216,33 +225,33 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
        2. output:
 
          夕阳依傍着终南山慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色看完,就应该再登上更高的一层城楼。 -5.487918376922607
-
+   
          夕阳依傍着山峦慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色看完,就应该再登上更高的一层城楼。 -5.857359886169434
-
+   
          夕阳依傍着高山慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色看完,就应该再登上更高的一层城楼。 -5.87897253036499
 
          夕阳依傍着终南山慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色尽情欣赏,就应该再登上更高的一层城楼。 -6.974221706390381
 
          夕阳依傍着终南山慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色尽情地观赏,就应该再登上更高的一层城楼。 -7.131397724151611
+    
        
-       
-       
+    
    9. Chinese comment generation: python interact.py --model_conf conf/comment_base_conf
 
        1. input:  今天（9月27日），中国空军新闻发言人申进科大校在第14届中国航展新闻发布会上表示，歼-20已经遍布东南西北中，列装越来越多、飞得越来越远。
-
+   
        2. output: 
-
+   
           中国军工加油！ -9.743780136108398
 
           中国军工加油 -9.822992324829102
 
           中国人民解放军万岁！ -10.73838996887207
+    
        
-       
-       
+    
    10. Chinese essay generation: python interact.py --model_conf conf/essay_base_conf
-
+   
        1. input: 春天
 
        2. output:
@@ -250,8 +259,8 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
           春天来了 \_sep\_ “春天在哪里呀，春天在哪？春天在那小朋友的眼睛里。”随着春风和歌声，春姑娘催促我们赶紧出门寻找春天来。一 走进花园，闻见浓浓的花香和泥土的芳香，在向前走几步，就能闻到鲜花的芳香，看到满地的小野花，有红色的、黄色的、蓝色的、紫的，五颜六色，美丽极了！早晨，坐上妈妈送我的自行车去上学，虽然很冷，但是在妈妈的带领下，我真的很开心。回到家，给妈妈说：“妈妈，春天在我家的小院里，我要到院子里去了。”她顺口答应了，去给我买小礼物了。到了院子里，我看见两边的杨树发芽了，枝头也长出了一片小嫩芽。忽然我们的院子里多了一种植物，爸爸说：“那是桃树。”我兴奋地说：“这块地就是桃树的家了！这里的桃树叫桃中四君子呢！”田野里的花真多呀，把山上的树木都覆盖住了；那些紫粉的花，像婴儿睡在妈妈的肚子里、还有那些展开小翅膀的花，像眼睛里放着光；这些花朵很大，很大，像一个个白色的大绒球，在风中翩翩起舞。田野里的油菜花更美了！大地被油菜花染成黄色，风一吹，油菜荚上的金光闪闪，好像在跳一支动人的芭蕾。田野里的春天真美呀！春天真神奇呀！我爱春天！ [-736.4401]
 
           
-       
-   11. Chinese qa generation: python interact.py --model_conf conf/qa_small_conf
+    
+   11. Chinese qa generation: python interact.py --model_conf conf/qa_base_conf
 
        1. input: 失恋了怎么办
 
@@ -324,13 +333,13 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
           
 
    15. Chinese-English translation: python interact.py --model_conf conf/nmt_base_conf
-
+   
        1. input:
-
+   
           \_zhen\_ 2023年元旦刚过，菲律宾总统马科斯对中国进行了国事访问，他因此成为新年第一位访华的外国领导人。
-
+   
        2. output:
-
+   
           on new year's day, 2023, president marcos of the philippines paid a state visit to china, making him the first foreign leader to visit china in the new year.  -0.3184391975402832
        
           on new year's day, 2023, president marcos of the philippines paid a state visit to china, making him the first foreign leader to visit china.  -0.34901772605048287
@@ -353,62 +362,62 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
           
           新西兰领导人雅辛达·阿尔德林在即将到来的选举前宣布了震惊辞职。  -0.2606537640094757
        
-          新西兰领导人阿尔德林在即将举行的选举前宣布辞职。  -0.2731153869628906
+       新西兰领导人阿尔德林在即将举行的选举前宣布辞职。  -0.2731153869628906
        
-          新西兰领导人阿尔德林在即将到来的选举前宣布辞职。  -0.2777881622314453
-          
-          
+       新西兰领导人阿尔德林在即将到来的选举前宣布辞职。  -0.2777881622314453
           
        
+          
+    
    16. Chinese paper generation: python interact.py --model_conf conf/paper_base_conf
-
+   
        1. input:
-
+   
           中日韩 \_sep\_ 自贸区
-
+   
        2. output:
-
-          中日韩自贸区发展的制约因素分析 \_sep\_ 发展中日韩自贸区的对策是自贸区的大幅提高。以签订《自由贸易协定》为契机,将各成员国 签订自贸协定作为中日韩自贸区发展的制约因素的内容,本文分析了中日韩自贸区制度的特点,提出了加强中日韩自贸区建设的建议。 -136.17562866210938
+   
+       中日韩自贸区发展的制约因素分析 \_sep\_ 发展中日韩自贸区的对策是自贸区的大幅提高。以签订《自由贸易协定》为契机,将各成员国 签订自贸协定作为中日韩自贸区发展的制约因素的内容,本文分析了中日韩自贸区制度的特点,提出了加强中日韩自贸区建设的建议。 -136.17562866210938
           
-          发展自贸区:中日韩自贸区面临的机遇与挑战 \_sep\_ 金融危机以后,中日韩的自贸区得以提升。自贸区作为自贸区的重要组成部分,将有 力推动中日韩各国的经贸合作与交流。但是,由于自贸区自身存在内外部条件不协调、自贸区机制不完善、自贸区本身存在诸多问题,解 决自贸区发展问题成为全球一体化的关键问题。促进自贸区发展,中日韩自贸区的建设与发展需要充分调研,借鉴其成功经验,提出解决问题的对策。 -233.56361389160156
+       发展自贸区:中日韩自贸区面临的机遇与挑战 \_sep\_ 金融危机以后,中日韩的自贸区得以提升。自贸区作为自贸区的重要组成部分,将有 力推动中日韩各国的经贸合作与交流。但是,由于自贸区自身存在内外部条件不协调、自贸区机制不完善、自贸区本身存在诸多问题,解 决自贸区发展问题成为全球一体化的关键问题。促进自贸区发展,中日韩自贸区的建设与发展需要充分调研,借鉴其成功经验,提出解决问题的对策。 -233.56361389160156
           
-          中日韩自贸区与韩国新自贸区若干问题探析 \_sep\_ 自2005年日本政府最近在韩国举行调查示范活动后,由韩国自由贸易区(garthge aurantifiation,api)于2007年启动,正式于2008年建立了中日韩自贸区。在自贸区的建立、保护、协调等方面,中日韩三国及其相关部门在经贸领域取得了宝贵的成果。但是,由于签订协议不够透明,各自制度较为模糊,使中日韩自贸区的发展有今天的困境。 -316.9208068847656
+       中日韩自贸区与韩国新自贸区若干问题探析 \_sep\_ 自2005年日本政府最近在韩国举行调查示范活动后,由韩国自由贸易区(garthge aurantifiation,api)于2007年启动,正式于2008年建立了中日韩自贸区。在自贸区的建立、保护、协调等方面,中日韩三国及其相关部门在经贸领域取得了宝贵的成果。但是,由于签订协议不够透明,各自制度较为模糊,使中日韩自贸区的发展有今天的困境。 -316.9208068847656
           
-       
+    
    17. Chinese tag generation: python interact.py --model_conf conf/tag_base_conf
-
-       1. input:
-
-          近日，由国家感染性疾病临床医学研究中心、中国人民解放军总医院第五医学中心主办的国家感染性疾病临床医学研究中心2023年学术 年会在北京召开。《每日经济新闻》记者在现场注意到，中科院院士高福等专家学者就长新冠、疫苗和药物研发等话题展开交流。后新 冠时期既不能"恐冠"也不能"轻冠"针对新冠病毒，高福表示，在后新冠时期，大家开始讨论人类已经走出了新冠病毒的阴影，但我们不 能只看新冠病毒带来的挑战，也要看到它给我们提供的机遇，以及让人类如何重新思考。后新冠时期既不能"恐冠"也不能"轻冠"。
-
-       2. output:
-
-          医学 \_sep\_ 临床医学 \_sep\_ 新型冠状病毒 -7.32832670211792
+   
+    1. input:
+   
+       近日，由国家感染性疾病临床医学研究中心、中国人民解放军总医院第五医学中心主办的国家感染性疾病临床医学研究中心2023年学术 年会在北京召开。《每日经济新闻》记者在现场注意到，中科院院士高福等专家学者就长新冠、疫苗和药物研发等话题展开交流。后新 冠时期既不能"恐冠"也不能"轻冠"针对新冠病毒，高福表示，在后新冠时期，大家开始讨论人类已经走出了新冠病毒的阴影，但我们不 能只看新冠病毒带来的挑战，也要看到它给我们提供的机遇，以及让人类如何重新思考。后新冠时期既不能"恐冠"也不能"轻冠"。
+   
+    2. output:
+   
+       医学 \_sep\_ 临床医学 \_sep\_ 新型冠状病毒 -7.32832670211792
           
 
    18. Chinese medical qa generation: python interact.py --model_conf conf/med_base_conf
-
+   
        1. input:
-
+   
           最近老是犯困全身乏力腰酸背痛
-
-       2. output:
-
-          就您的情况考虑是气血虚弱,植物神经功能紊乱导致的,建议用归脾丸治疗。 -29.775508880615234
+   
+    2. output:
+   
+       就您的情况考虑是气血虚弱,植物神经功能紊乱导致的,建议用归脾丸治疗。 -29.775508880615234
           
-          这种情况可能是由于多种原因引起的,例如疲劳、压力过大、饮食不规律等。建议您注意休息,适当进行体育锻炼,保持良好的心态和饮食习惯,同时也要注意补充足够的营养物质, 如蛋白质、维生素及矿物质等。如果症状持续存在或加重,建议您咨询医生进行检查和治疗。 -50.89771270751953
+       这种情况可能是由于多种原因引起的,例如疲劳、压力过大、饮食不规律等。建议您注意休息,适当进行体育锻炼,保持良好的心态和饮食习惯,同时也要注意补充足够的营养物质, 如蛋白质、维生素及矿物质等。如果症状持续存在或加重,建议您咨询医生进行检查和治疗。 -50.89771270751953
           
-          这样的情况要考虑是否有肾虚或者腰椎疾病引起的,建议你去医院做一下检查看看。可以吃点六味地黄丸和金锁固精丸来治疗,注意休息,不要过度劳累 -53.82005310058594
+       这样的情况要考虑是否有肾虚或者腰椎疾病引起的,建议你去医院做一下检查看看。可以吃点六味地黄丸和金锁固精丸来治疗,注意休息,不要过度劳累 -53.82005310058594
           
 
    19. Chinese doc2query generation: python interact.py --model_conf conf/doc2query_base_conf
-
+   
        1. input:
-
+   
           "五一"假期过后，社交媒体上出现了许多关于二阳的讨论。据北京疾控公布的第19周 （5月8日-14日）的数据，全市共报告法定传染病16种18081例。新冠感染连续3周超越流感，重返法定传染病病种排名第一。
-
+   
        2. output:
-
+   
           北京二阳是什么意思 -4.803812503814697
           
           北京新冠病毒多少 -6.473724365234375

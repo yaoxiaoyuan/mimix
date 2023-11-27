@@ -32,7 +32,7 @@ def text_gen_app(model):
         beam_size = st.number_input("beam_size", min_value=0, max_value=10, value=model.beam_size)
         group_size = st.number_input("group_size", min_value=0, max_value=5, value=model.group_size)
         max_decode_steps = st.number_input("max_decode_steps", min_value=0, max_value=512, value=model.max_decode_steps, step=1)
-        repetition_penalty = st.slider("repetition_penalty", min_value=0.0, max_value=10.0, value=model.repetition_penalty, step=0.1)
+        repetition_penalty = st.slider("repetition_penalty", min_value=-10.0, max_value=0.0, value=model.repetition_penalty, step=0.1)
         temperature = st.slider("temperature", min_value=0., max_value=10.0, value=model.top_p, step=0.01)
         top_k = st.number_input("top_k", min_value=0, max_value=100, value=model.top_k, step=1)
         top_p = st.slider("top_p", min_value=0., max_value=1.0, value=model.top_p, step=0.01)
@@ -84,13 +84,13 @@ def image_caption_app(model):
     
     with st.form(key='my_form'):
         uploaded_file = st.file_uploader("Choose a image file", type="jpg")
-        
+        prefix = st.text_area("input text, can be empty", max_chars=512)
         values = ('beam_search', 'sample')
         strategy = st.selectbox('strategy', values, index=values.index(model.strategy))
         beam_size = st.number_input("beam_size", min_value=0, max_value=10, value=model.beam_size)
         group_size = st.number_input("group_size", min_value=0, max_value=5, value=model.group_size)
         max_decode_steps = st.number_input("max_decode_steps", min_value=0, max_value=512, value=model.max_decode_steps, step=1)
-        repetition_penalty = st.slider("repetition_penalty", min_value=0.0, max_value=10.0, value=model.repetition_penalty, step=0.1)
+        repetition_penalty = st.slider("repetition_penalty", min_value=-10.0, max_value=0.0, value=model.repetition_penalty, step=0.1)
         temperature = st.slider("temperature", min_value=0., max_value=10.0, value=model.top_p, step=0.01)
         top_k = st.number_input("top_k", min_value=0, max_value=100, value=model.top_k, step=1)
         top_p = st.slider("top_p", min_value=0., max_value=1.0, value=model.top_p, step=0.01)
@@ -114,7 +114,10 @@ def image_caption_app(model):
                 start_message.write("generating...")
                 start_time = time.time()
                 
-                res = model.predict([image])
+                prefix_list = None
+                if prefix is not None and len(prefix) > 0:
+                    prefix_list = [prefix]
+                res = model.predict([image], prefix_list)
                 image.close()
         
                 end_time = time.time()
