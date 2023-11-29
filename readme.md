@@ -18,7 +18,7 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 
    ![streamlit](image/streamlit3.png)
 
-6. Although LLM achieve remarkable performance in recent years, this project focus on training model useful but not that large.  Training LLM cost too much for individuals. Also, there already exists many projects for finetune large LLM  at low cost. However, I may boost Chinese text generation models trained before by leveraging the new LLM model.  New models may be released in the future.
+6. Although LLM achieve remarkable performance in recent years, this project focus on training model useful but not that large(less than 1.5B).  Training LLM cost too much for individuals. Also, there already exists many projects for finetune large LLM  at low cost. However, I may boost Chinese text generation models trained before by leveraging the new LLM model.  New models may be released in the future.
 
 7. RNN-seq2seq code has been removed in new code. You can still check the code on branch v1. But it won't be maintained.
 

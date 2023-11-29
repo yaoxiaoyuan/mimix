@@ -371,7 +371,7 @@ def scaled_dot_product_attention(query,
                                  dropout=None, 
                                  pos_key=None, 
                                  pos_value=None,
-                                 alibi_bias=None,
+                                 pos_bias=None,
                                  attention_residual=None,
                                  talk_w=None):
     """
@@ -386,7 +386,7 @@ def scaled_dot_product_attention(query,
         #p_k:L_q x L_k x d_qk
         scores += torch.einsum("bqnd,bqkd->bnqk", query, pos_key)
         
-    if alibi_bias is not None:        
+    if pos_bias is not None:        
         scores += alibi_bias
 
     if talk_w is not None:
@@ -431,7 +431,8 @@ class MultiHeadAttention(nn.Module):
                  use_rel_pos_value=False,
                  rel_pos_type="learned",
                  use_multi_query_attention=False,
-                 use_alibi_bias=False,
+                 use_pos_bias=False,
+                 pos_bias_type=None,
                  use_talking_attention=False):
         """
         """
@@ -476,7 +477,8 @@ class MultiHeadAttention(nn.Module):
             if use_rel_pos_value == True:
                 self.rel_pos_v_emb = RelativePositionEmbedding(max_relative_len, self.d_v, rel_pos_type)
         
-        self.use_alibi_bias = use_alibi_bias
+        self.use_pos_bias = use_pos_bias
+        self.pos_bias_type = pos_bias_type
         
         self.talking_w = None
         self.use_talking_attention = use_talking_attention
@@ -536,7 +538,7 @@ class MultiHeadAttention(nn.Module):
             attn_mask = attn_mask.unsqueeze(1).repeat(1, self.n_heads, 1, 1)
         
         relative_dis = None
-        if self.max_relative_len > 0 or self.use_alibi_bias == True:
+        if self.max_relative_len > 0 or self.use_pos_bias == True:
             relative_dis = q_pos_ids[:,:,None] - kv_pos_ids[:,None,:]
         
         pos_key = None
@@ -546,16 +548,17 @@ class MultiHeadAttention(nn.Module):
             if self.use_rel_pos_value == True:
                 pos_value = self.rel_pos_k_emb(relative_dis=relative_dis)
         
-        alibi_bias = None
-        if self.use_alibi_bias == True:
-            start = (2**(-2**-(math.log2(self.n_heads)-3)))
-            ratio = start
-            #slopes: n_heads
-            #relative_dis : B x L_q x L_k
-            #alibi_bias: B x n_heads x L_q x L_k
-            slopes = torch.tensor([start*ratio**i for i in range(self.n_heads)]).to(query.device, dtype=query.dtype)
-            relative_dis[relative_dis<0] = -relative_dis[relative_dis<0]
-            alibi_bias = torch.einsum("bqk,n->bnqk", relative_dis, slopes)
+        pos_bias = None
+        if self.use_pos_bias == True:
+            if self.pos_bias_type == "alibi":
+                start = (2**(-2**-(math.log2(self.n_heads)-3)))
+                ratio = start
+                #slopes: n_heads
+                #relative_dis : B x L_q x L_k
+                #alibi_bias: B x n_heads x L_q x L_k
+                slopes = torch.tensor([start*ratio**i for i in range(self.n_heads)]).to(query.device, dtype=query.dtype)
+                relative_dis[relative_dis<0] = -relative_dis[relative_dis<0]
+                pos_bias = torch.einsum("bqk,n->bnqk", relative_dis, slopes)
             
         output, attn_scores,scores = scaled_dot_product_attention(query, 
                                                                   key, 
@@ -564,7 +567,7 @@ class MultiHeadAttention(nn.Module):
                                                                   self.attn_dropout,
                                                                   pos_key,
                                                                   pos_value,
-                                                                  alibi_bias,
+                                                                  pos_bias,
                                                                   attention_residual,
                                                                   self.talking_w)
         
@@ -625,7 +628,8 @@ class TransformerLayer(nn.Module):
         self.use_attention_bias = kwargs.get("use_attention_bias", True)
         self.use_ffn_bias = kwargs.get("use_ffn_bias", True)
         self.use_multi_query_attention = kwargs.get("use_multi_query_attention", False)
-        self.use_alibi_bias = kwargs.get("use_alibi_bias", False)
+        self.use_pos_bias = kwargs.get("use_pos_bias", False)
+        self.pos_bias_type = kwargs.get("pos_bias_type", None)
         self.max_relative_len = kwargs.get("max_relative_len", -1)
         self.use_rel_pos_value = kwargs.get("use_rel_pos_value", False)
         self.rel_pos_type = kwargs.get("rel_pos_type", "learned")
@@ -646,7 +650,8 @@ class TransformerLayer(nn.Module):
                                                  self.use_rel_pos_value,
                                                  self.rel_pos_type,
                                                  self.use_multi_query_attention,
-                                                 self.use_alibi_bias,
+                                                 self.use_pos_bias,
+                                                 self.pos_bias_type,
                                                  self.use_talking_attention)
         
         self.norm_1 = LayerNorm(self.d_model,self.ln_eps,self.use_rms_norm,self.use_ln_scale,self.use_ln_bias)
@@ -664,6 +669,7 @@ class TransformerLayer(nn.Module):
                                                     self.rel_pos_type,
                                                     self.use_multi_query_attention,
                                                     False,
+                                                    None,
                                                     self.use_talking_attention)
         
             self.norm_2 = LayerNorm(self.d_model,self.ln_eps,self.use_rms_norm,self.use_ln_scale,self.use_ln_bias)
