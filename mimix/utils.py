@@ -267,7 +267,7 @@ def convert_tokens_to_midi(tokens, output_path):
     
     event = {}
     for token in tokens:
-        print(token, event)
+        
         if token.startswith("note_on_note_"):
             add_event(new_midi_file.tracks[0], event)
             event = {}
