@@ -367,7 +367,7 @@ class TransformerSeq2seq(nn.Module):
         x, y = inputs
 
         enc_self_attn_mask = None
-        if self.use_vit_encoder == False:
+        if self.use_vit_encoder == False and self.use_word_embedding == True:
             enc_self_attn_mask = self.get_attn_mask(x, x)
         
         dec_self_attn_mask = self.get_subsequent_mask(y)
@@ -819,7 +819,7 @@ class TransformerEncoder(nn.Module):
         if self.n_types is not None:
             type_ids = inputs[1]
 
-        if self.use_vit_encoder == False:
+        if self.use_vit_encoder == False and self.src_vocab_size is not None:
             enc_self_attn_mask = self.get_attn_mask(x, x)
             self_pos_ids = x.ne(self.PAD).cumsum(-1)-1
             enc_outputs = self.encoder(x, 
@@ -846,7 +846,7 @@ class TransformerEncoder(nn.Module):
         if self.out_dim is not None or self.n_class is not None:
             enc_output = torch.matmul(enc_output, self.W_out) + self.b_out
 
-            outputs = [enc_output[:,0,:]]
+            outputs = [enc_output[:,0,:], enc_output]
             
         if self.crf is not None:
             mask = x.ne(self.PAD).to(enc_output.dtype)
