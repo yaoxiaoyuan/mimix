@@ -457,21 +457,19 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
    
         大家要努力学习aigc知识。 -0.0025362607557326555
    
-       
-   
-   23. streamlit run app.py -- --model_conf conf/cfn_base_conf
+   23. Chinese food clasification: streamlit run app.py -- --model_conf conf/cfn_base_conf
          ![streamlit](image/streamlit.png)
    
-   24. streamlit run app.py -- --model_conf conf/caption_base_conf
+   24. Chinese image caption: streamlit run app.py -- --model_conf conf/caption_base_conf
          ![streamlit](image/streamlit2.png)
    
-   25. streamlit run app.py -- --model_conf   conf/clip_base_conf
+   25. Chinese clip: streamlit run app.py -- --model_conf   conf/clip_base_conf
          ![streamlit](image/streamlit3.png)
    
-   26. streamlit run app.py -- --model_conf   conf/vqa_base_conf
+   26. Chinese vqa:  streamlit run app.py -- --model_conf   conf/vqa_base_conf
          ![streamlit](image/streamlit4.png)
    
-   27. streamlit run app.py -- --model_conf   conf/midi_base_conf
+   27. python interact  --model_conf   conf/midi_base_conf
    
         It will generate a midi file in current directory. A generated sample is here: [test.mid](test.mid)        
 
