@@ -12,15 +12,11 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 
 3. I added some example code and config files for training. The training code is flexible and can be easily modified. If use training code, it is better to read the model kwargs in code. Documentation may be improved in the future. 
 
-4. Now MIMIX support image classification,  Image caption and image-text match task. I have trained image classification model on ChineseFoodNet dataset. By using the pretrained VIT model, it can easily beats the single resnet152 model (VIT get top1 acc 0.7967 on test data set, ResNet152 get top1 acc 0.7900 on test data set) .  
+4. Now MIMIX support image classification,  Image caption/image vqa and image-text match task. I have trained image classification model on ChineseFoodNet dataset. By using the pretrained VIT model, it can easily beats the single resnet152 model (VIT get top1 acc 0.7967 on test data set, ResNet152 get top1 acc 0.7900 on test data set) .  
 
-5. I also add a streamlit script to better play with the text generation task and multimodal task. To run the demo, you can run streamlit run app.py -- --model_conf /your/model/conf/path![streamlit](image/streamlit.png)![streamlit](image/streamlit2.png)
+5. Although LLM achieve remarkable performance in recent years, this project focus on training model useful but not that large(less than 1.5B).  Training LLM cost too much for individuals. Also, there already exists many projects for finetune large LLM  at low cost. However, I may boost Chinese text generation models trained before by leveraging the new LLM model.  New models may be released in the future.
 
-   ![streamlit](image/streamlit3.png)
-
-6. Although LLM achieve remarkable performance in recent years, this project focus on training model useful but not that large(less than 1.5B).  Training LLM cost too much for individuals. Also, there already exists many projects for finetune large LLM  at low cost. However, I may boost Chinese text generation models trained before by leveraging the new LLM model.  New models may be released in the future.
-
-7. RNN-seq2seq code has been removed in new code. You can still check the code on branch v1. But it won't be maintained.
+6. RNN-seq2seq code has been removed in new code. You can still check the code on branch v1. But it won't be maintained.
 
 
 
@@ -55,6 +51,7 @@ Several pretrained models are listed below.  ~~**Some models are not available f
 | Chinese product description generation  | transformer enc-dec     | 216m     | 12       | 768     | 12      | 2m        | 0.7GB      | True          |
 | Chinese product review generation       | transformer enc-dec     | 216m     | 12       | 768     | 12      | 10m       | 2.4GB     | True          |
 | Chinese wuxia novel generation | transformer dec-only lm | 369m | 24 | 1024 | 16 | 830k | 1.2G | True |
+| Chinese novel generation | transformer dec-only lm | 369m | 24 | 1024 | 16 | 21m | 20G | True |
 | Chinese-English translation | transformer enc-dec | 216m | 12 | 768 | 12 | 60m | 16GB | True |
 | Chinese paper generation                 | transformer enc-dec     | 216m     | 12       | 768     | 12      | 4m        | 4.8GB     | True              |
 | Chinese tag generation                   | transformer enc-dec     | 216m     | 12       | 768     | 12      | 22m       | 24GB      | True              |
@@ -67,6 +64,7 @@ Several pretrained models are listed below.  ~~**Some models are not available f
 | Chinese image caption | transformer enc-dec | 219m | 12 | 768 | 12 | 356k | 34G | True |
 | Chinese CLIP | dual encoder | 192m | 12 | 768 | 12 | 3m | 300G | True |
 | Chinese VQA | transformer enc-dec | 219m | 12 | 768 | 12 | 240k | 19G | True |
+| piano midi generation | transformer dec-only lm | 89m       | 12       | 768     | 12      | 11k       | 350m      | True |
 
 ~~Download link:  https://pan.baidu.com/s/18UmwOwbN2u_J0ym382SxAA?pwd=bxka~~ 
 
@@ -120,11 +118,15 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
 
       1. input: \_shi\_ \_xinyun\_ \_7lv\_ \_title\_
 
-      2. output: \_shi\_ \_xinyun\_ \_7lv\_ \_title\_ 题赠友人 \_content\_ 曾经万里隔寒霜，梦寐三更到谢娘。一朵白云飘故旧，千丝玉絮送清凉。天涯雁影南方去，海角归心北地伤。岁月蹉跎尘念久，年华虚度鬓如霜。
+      2. output: 
+
+         \_shi\_ \_xinyun\_ \_7lv\_ \_title\_ 题赠友人 \_content\_ 曾经万里隔寒霜，梦寐三更到谢娘。一朵白云飘故旧，千丝玉絮送清凉。天涯雁影南方去，海角归心北地伤。岁月蹉跎尘念久，年华虚度鬓如霜。
 
       3. input: \_ci\_ \_ancient\_ \_title\_ 如梦令
 
-      4. output: \_ci\_ \_ancient\_ \_title\_ 如梦令 \_content\_ 帘外落花飞絮。天气薄寒如许。人瘦底衣单，深院日长无绪。愁去。愁去。砌下啼鹃红雨。  -1.6334530512491863
+      4. output: 
+
+         \_ci\_ \_ancient\_ \_title\_ 如梦令 \_content\_ 帘外落花飞絮。天气薄寒如许。人瘦底衣单，深院日长无绪。愁去。愁去。砌下啼鹃红雨。  -1.6334530512491863
 
          
 
@@ -152,11 +154,15 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
 
       1. input: \_poet\_ \_title\_ 寒江雪 \_content\_
 
-      2. output: \_poet\_ \_title\_ 寒江雪 \_content\_ 冬夜 \_nl\_ 没有月亮 \_nl\_ 只剩下 \_nl\_ 一片 \_nl\_ 孤独的白 \_nl\_ 风 \_nl\_ 把满山野林 \_nl\_ 吹得 \_nl\_ 更加 \_nl\_ 清凉 \_nl\_ 而我 _nl\_ 正倚着窗 \_nl\_ 听 \_nl\_ 那 \_nl\_ 簌簌 落英 \_nl\_ 和 \_nl\_ 天地 \_nl\_ 对话
+      2. output: 
+
+         \_poet\_ \_title\_ 寒江雪 \_content\_ 冬夜 \_nl\_ 没有月亮 \_nl\_ 只剩下 \_nl\_ 一片 \_nl\_ 孤独的白 \_nl\_ 风 \_nl\_ 把满山野林 \_nl\_ 吹得 \_nl\_ 更加 \_nl\_ 清凉 \_nl\_ 而我 _nl\_ 正倚着窗 \_nl\_ 听 \_nl\_ 那 \_nl\_ 簌簌 落英 \_nl\_ 和 \_nl\_ 天地 \_nl\_ 对话
 
       3. input: \_lyric\_ \_title\_ 红颜如霜 \_content\_
 
-      4. output: \_lyric\_ \_title\_ 红颜如霜 \_content\_ 迷雾中央 \_nl\_ 好像看到惺忪的回望 \_nl\_ 怀念儿时顽皮地欢笑模样 \_nl\_ 疼爱依旧在我身旁 \_nl\_ 回忆无处安放 \_nl\_ 当岁月压弯记忆的肩膀 \_nl\_  烛火未熄心中仍然挥手衷望 \_nl\_ 恐怕此生百劫有缘再难往 \_nl\_ 恐怕未来潮汐翻卷又依然还来得迟一半 \_nl\_ 孤单咀嚼玫瑰芬芳又咀嚼玫瑰落发雪飘扬 \_nl\_ 又渴望又忧伤一个在身旁温暖守望 \_nl\_ 又渴望又彷徨痴妄何时才能为我转伤 \_nl\_ 红颜如霜 \_nl\_ 酒越浓香越醉越苦越闯 \_nl\_ 又渴望又忧伤一个在身旁温暖守望 \_nl\_ 又渴望又彷徨痴妄何时才能为我转伤 \_nl\_ 红颜如霜 \_nl\_ 清冷眼眸留不住泪光 \_nl\_ 物换星移移锦书寄远方 \_nl\_ 忍受往事如烟沧茫茫远望疯乱 \_nl\_ 日斜犹见香藤青满窗长夜漫长 \_nl\_ 痴心已破浪辗转反侧难以入梦乡 \_nl\_ 唯愿你好梦永长常  -810.559326171875 
+      4. output: 
+
+         \_lyric\_ \_title\_ 红颜如霜 \_content\_ 迷雾中央 \_nl\_ 好像看到惺忪的回望 \_nl\_ 怀念儿时顽皮地欢笑模样 \_nl\_ 疼爱依旧在我身旁 \_nl\_ 回忆无处安放 \_nl\_ 当岁月压弯记忆的肩膀 \_nl\_  烛火未熄心中仍然挥手衷望 \_nl\_ 恐怕此生百劫有缘再难往 \_nl\_ 恐怕未来潮汐翻卷又依然还来得迟一半 \_nl\_ 孤单咀嚼玫瑰芬芳又咀嚼玫瑰落发雪飘扬 \_nl\_ 又渴望又忧伤一个在身旁温暖守望 \_nl\_ 又渴望又彷徨痴妄何时才能为我转伤 \_nl\_ 红颜如霜 \_nl\_ 酒越浓香越醉越苦越闯 \_nl\_ 又渴望又忧伤一个在身旁温暖守望 \_nl\_ 又渴望又彷徨痴妄何时才能为我转伤 \_nl\_ 红颜如霜 \_nl\_ 清冷眼眸留不住泪光 \_nl\_ 物换星移移锦书寄远方 \_nl\_ 忍受往事如烟沧茫茫远望疯乱 \_nl\_ 日斜犹见香藤青满窗长夜漫长 \_nl\_ 痴心已破浪辗转反侧难以入梦乡 \_nl\_ 唯愿你好梦永长常  -810.559326171875 
 
          
 
@@ -217,9 +223,9 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
          孙皓 \_sep\_ 玫瑰之战是谁执导的。 -6.365093231201172
 
          
-
+   
    8. Chinese ancient translation: python interact.py --model_conf conf/a2m_base_conf
-
+   
        1. input:  白日依山尽,黄河入海流。欲穷千里目,更上一层楼。
 
        2. output:
@@ -231,11 +237,11 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
          夕阳依傍着高山慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色看完,就应该再登上更高的一层城楼。 -5.87897253036499
 
          夕阳依傍着终南山慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色尽情欣赏,就应该再登上更高的一层城楼。 -6.974221706390381
-
+   
          夕阳依傍着终南山慢慢地西沉,滔滔黄河奔腾向东流入大海。想要把千里之外的景色尽情地观赏,就应该再登上更高的一层城楼。 -7.131397724151611
    
        
-   
+
    9. Chinese comment generation: python interact.py --model_conf conf/comment_base_conf
 
        1. input:  今天（9月27日），中国空军新闻发言人申进科大校在第14届中国航展新闻发布会上表示，歼-20已经遍布东南西北中，列装越来越多、飞得越来越远。
@@ -243,13 +249,13 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
        2. output: 
    
           中国军工加油！ -9.743780136108398
-
+   
           中国军工加油 -9.822992324829102
 
           中国人民解放军万岁！ -10.73838996887207
-   
+
        
-   
+
    10. Chinese essay generation: python interact.py --model_conf conf/essay_base_conf
    
        1. input: 春天
@@ -259,7 +265,7 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
           春天来了 \_sep\_ “春天在哪里呀，春天在哪？春天在那小朋友的眼睛里。”随着春风和歌声，春姑娘催促我们赶紧出门寻找春天来。一 走进花园，闻见浓浓的花香和泥土的芳香，在向前走几步，就能闻到鲜花的芳香，看到满地的小野花，有红色的、黄色的、蓝色的、紫的，五颜六色，美丽极了！早晨，坐上妈妈送我的自行车去上学，虽然很冷，但是在妈妈的带领下，我真的很开心。回到家，给妈妈说：“妈妈，春天在我家的小院里，我要到院子里去了。”她顺口答应了，去给我买小礼物了。到了院子里，我看见两边的杨树发芽了，枝头也长出了一片小嫩芽。忽然我们的院子里多了一种植物，爸爸说：“那是桃树。”我兴奋地说：“这块地就是桃树的家了！这里的桃树叫桃中四君子呢！”田野里的花真多呀，把山上的树木都覆盖住了；那些紫粉的花，像婴儿睡在妈妈的肚子里、还有那些展开小翅膀的花，像眼睛里放着光；这些花朵很大，很大，像一个个白色的大绒球，在风中翩翩起舞。田野里的油菜花更美了！大地被油菜花染成黄色，风一吹，油菜荚上的金光闪闪，好像在跳一支动人的芭蕾。田野里的春天真美呀！春天真神奇呀！我爱春天！ [-736.4401]
 
           
-   
+
    11. Chinese qa generation: python interact.py --model_conf conf/qa_base_conf
 
        1. input: 失恋了怎么办
@@ -325,109 +331,147 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
        2. output:
 
           小船转过一排垂柳，远远看见水边一丛花树映水而红，灿若云霞。段誉"啊"的一声低呼。木婉清和全金发对他似乎颇为悦眼,三人跨出小船,游到水边。木婉 清骂道:“死贼,又著了人家的道儿。”那花树旁边系著一只小船,段誉顺著花树,向左一看,只见花丛影里一个少女倚树而坐,正在倚树而歌,正是段仇世的女儿段天德。此时她歌声清脆,唱起了一首小调:南峰山舍忘词,曾经借问少白头。 \_nl\_ 三更双弦意满楼,征囊终不归。 \_nl\_ 美冠一行惟顾此,寒啸了一为身。 \_nl\_ 但愿人头云鬓和曳,何结同心千里随。 \_nl\_ 此情只在飞鸿迹,生死何必萦怀?只期玉箫一曲牵牛筋。 \_nl\_ 段誉一听歌声,脸上微微一红。只听吴天德叹 道:“我段天德生平以风流自炫,有时不免大意,却也只图一时快意。那是谁到了姑苏,听这歌词,果然是个一表人才的姑娘,我出来斟酒时,仍是将款,那里想得 到她会暗中加害于我了。侥幸令狐大哥吉人天相,报了大仇,咱们可得快些回来。” \_nl\_ 原来吴天德的妻子乃是江湖有名的“飞刀娘子”萧飞英,以一柄柳叶飞刀,在打中大名鼎鼎的“姑苏慕容”后,杀死了慕容复,雍和之位,秦晋云南,大享富贵,他夫妻双双归隐大理,直到廿四年之前,他夫妻两人路过姑苏,在姑苏最大的一间酒楼见到了段天德夫妇两个。那时他夫人仍穿着原服,段天德的妻子换上男装,他却略显道貌岸然,以示江湖儿女,不去理会他妻子。可是段天德夫妻 一看在他眼里,却心中暗暗纳罕:“她左颊明明是多刺了一粒小痣的,怎么这时忽然多了一颗大痣?”他虽情知萧飞英并不是什么好人,神态之间,总不免甚是小 心。 [-1582.4723]
-
+   
           小船转过一排垂柳，远远看见水边一丛花树映水而红，灿若云霞。段誉"啊"的一声低呼。只听得段誉笑著道:“姊姊,快开船走吧,再耽一刻,天就要黑了。”柔声说道:“莫怕,莫怕……”忽听得呜咽之声,听那声音似是啼哭。段誉背向船舷,正好树丛中伸出一只犹似羊脂白玉的手 来。段誉道:“啊,姊姊,吓了你……”王玉燕紧紧搂住了他,斥道:“又瞎起上来!”段誉道:“姊姊……”王玉燕道:“嗯,是谁先开船的?说!”段誉叹道:“说 来话长,待我慢慢的跟你说。你先别走,我慢慢说。”王玉燕道:“些须小事,便说了了不成?”段誉道:“嗯,是……是许多事不便跟你动手。”玉燕突然想起, 他一个大男人跟著自己说话,半边身子情不自禁的移开了些,说道:“嗯,那你小心些不捱。”声音极是温柔。 \_nl\_ 段誉见她神态豁达,心下对她又增了几分爱慕,突然之间,觉得有一个出色的女子,即使是在镜中画图,在花间听风,也是和她一模一样,于是他心中又想:“王姑娘常说,这次金盆洗手,承玄难大师等各派英雄以为首领,算定那晦明禅师会乘机捣乱丐帮不成,故尔金盆洗手,将门派人物都归降了丐帮。此刻瞧他心情,倒像当教主的人,原是座下游客。倘若他当了帮主,那就……格格格,那可够瞧上老大一阵子啦。”从此他对王玉燕庄敬有加,十分顺从。 \_nl\_ 王玉燕见他又爱上了自己,不自禁耳根红透,两人虽是男女有别, 他这一句话都说了出来。王玉燕展眉微笑,道:“你瞧着我干么?”段誉道:“嗯,瞧著。 [-1303.9319]
-
+   
           小船转过一排垂柳，远远看见水边一丛花树映水而红，灿若云霞。段誉"啊"的一声低呼。阿朱看得明白,原来是他在海中栖息,这才不觉奇怪。她笑道:“相公,怎么了?”段誉道:“没什么。” \_nl\_ 阿朱又道:“你这两日来很累了么?那你想打什么火?”段誉大口吸水,不答真文。阿朱也喝了两口,笑道:“这远处有座山,你可不由得和我拌嘴。”段誉抬头向她瞧了一眼,道:“你说那山。”阿朱道:“可不是么?隔山望见那山上山走来了两人,谁也不相识,原来是几个捉鬼的和尚。两人唠唠叨叨的说了一会儿子,也不知什么,两个和尚就跳到那座山上去。”段誉听到这里,突然手掌在水中一拍,高声叫道:“你瞧上了热闹没有?”阿朱 道:“什么热闹?”段誉道:“我在一张棺村之前撞见两条绿线……;什么绿线?快快给我招来。”他一面大叫,一面将这张形如巨棺的船板向外一推,便向那两艘绿线划去。阿朱伸手拦住了他,笑道:“不是两条,是四个!”她扯过段誉手中的短桨,运稳了桨桨,便催著船向山边驶去,果然越向山上去,那小径越形狭窄,好几次段誉都几乎要从船头跌将下去。阿朱又将船划得渐渐加快,呼呼风响,两岸山峦渐不相闻。 \_nl\_ 不片刻便到了阿湾,那阿湾只是零落的垂柳,有一条小径自 山坡蜿蜒而下,蜿蜒入丛林之中。阿朱把船划入丛林,驶入了一片石级小径,段誉负手站在钓摊之旁,一瞬不瞬的望著棋盘大声说那一集目两轸的棋局。他内功 虽然已经极有限,却也是个识货的行家,一见棋盘上黑白,便知阿朱兜了个大大的圈。 [-1382.7443]
-
+   
           
-
-   15. Chinese-English translation: python interact.py --model_conf conf/nmt_base_conf
    
-       1. input:
+   15. Chinese novel generation: python interact.py --model_conf conf/novel_base_conf
    
-          \_zhen\_ 2023年元旦刚过，菲律宾总统马科斯对中国进行了国事访问，他因此成为新年第一位访华的外国领导人。
+        1. input:
+       
+        以琛看着她，略略讽刺地说："如果我刚刚没听错的话，你似乎是想红杏出墙，而我很荣幸地成为你看中的……"他停住没说，可默笙完全知道他想说的是什么。
+       
+        2. output:
+       
+           以琛看着她，略略讽刺地说："如果我刚刚没听错的话，你似乎是想红杏出墙，而我很荣幸地成为你看中的……"他停住没说，可默笙完全知道他想说的是什么。所以,她脸色一变了然地追问:" 你想说什么?"他笑道:"我只是好奇而已。你长得这么好看,可以说是a城最漂亮的女人了,如果再给你来一个正常点的男人我怕我会承受不住。"默笙狠狠地瞪着他,又拿起筷子夹了一筷子菜:"你 要是敢……我不会放过你的!"说罢起身出去了。 \_nl\_ 事情有蹊跷,一切都好像顺理成章的样子。 \_nl\_ 可是他觉得异常的别扭……本来是不打算把事情闹大,故意说得这么暧昧,让人很难接受的。 \_nl\_ 到底哪里不对? \_nl\_ 于是他又坐下来,忽然觉得胳膊上一紧,原来是她缩进了桌子里。 \_nl\_ 他往下看去,默笙正搂着自己的胳膊。 \_nl\_ 对了,她一直缩在桌子下面,不是说因为不喜欢看地吗?为什么她还赖在上面不肯下来。 \_nl\_ 他放下筷子,伸手去抱她:"默笙,我很好。"他的手碰到了她的肩膀,那是明显颤抖的。 \_nl\_ 默笙听到他在说:"你觉得不喜欢我吗?"她当然知道他是什么意思,脸唰地一下红了。 \_nl\_ 可是为什么要说这种话呢?难道是他也觉得这姿势不雅吗? \_nl\_ 默笙很快把头低下去,耳朵里只听到他在说:"你要知道,你的身材很好。虽然我对这些不大感冒,可是……"她不敢抬头看他,又是难堪又是愤怒:"你说什么?"语气有点紧张,身体也开始不受控制地颤抖。 \_nl\_ 他收回手,眼睛直勾勾地看着她,目光游离。 \_nl\_ 他突然低笑起来:"我在说什么?你的身材很好,也很美。可是,我对别人的眼睛是不感兴趣的。"默笙蓦然抬起头,一副看怪物的样子看着他。 \_nl\_ 那男人轻轻一笑:"你这是在自我陶醉吗?我就站在这里,外面还有一个女生。你也看到了,我有多漂亮?还不就是看人家。"说着又把视线移回了默笙的脸上,那神情仿佛真的在看一只小虫子。 \_nl\_ 默笙气极,可还是抵不过他的眼光:"你……"男人眯起了眼睛,看进她的眼里:"你生气啦?又什么事生这么大的气啊?告诉我,要不……"默笙使劲掐了他一下:"我为什么要生这么大气的气?你这个人,总是没个正形。"男人很轻蔑地看了她一眼,嘴撇一撇:"真小气。"然后伸手拿过她的手,轻轻一用力,默笙就惨叫出声。 \_nl\_ 男人神色不变:"你不是生气了吧?刚才是不是很奇怪我为什么没找男朋友啊?"默笙的脸变得铁青,可还是不甘心地大吼:"放手!你这个登徒子,别碰我!"可是不喊他还好。一喊更是歇斯底里,怎么 也控制不住自己的声音了:"你去死!我要叫……呜呜呜..."她还没说完,男人忽然轻笑出声:"真是少见呢。呵呵,不知道我有没有那么可爱?你和他很相配呢。"说完突然一把扣住她的腰,微微笑着说:"我想你现在也一定很好奇我是什么人。因为,就算告诉你真相了,你也不一定愿意相信我是同性恋。"默笙没敢挣扎,双手死死地抓住他的衣角。 \_nl\_ "不过……我可以告诉你,其实是真的。"他在她耳边轻轻地说:"你根本就没有喜欢过我,也对我没什么感觉。因为这样子反而会刺激到你。这不像你了,所以我……"他的语气越轻,她就越觉得自 己像被钉在十字架上一样。 \_nl\_ 默笙呆住,只有眼怔怔地看着他,不敢置信。 \_nl\_ 这就是自己喜欢的男人? \_nl\_ 他的脸那么柔和,眉目间一片祥和,这么好的男人竟然是自己所喜欢的? \_nl\_ 他轻轻地说:"既然你对我没有感觉,那么……"他的眼睛轻轻眯起了起来,光芒。 \_nl\_ 她也在看到他的眼睛看不见他修长的眼睛,阳光下模糊了起来。 \_nl\_ 然后对着别人和她不知道: -1902.04248046875
+           
+        
    
-       2. output:
    
-          on new year's day, 2023, president marcos of the philippines paid a state visit to china, making him the first foreign leader to visit china in the new year.  -0.3184391975402832
-       
-          on new year's day, 2023, president marcos of the philippines paid a state visit to china, making him the first foreign leader to visit china.  -0.34901772605048287
-       
-          on new year's day, 2023, president marcos of the philippines made his first foreign visit to china.  -0.3811599291287936
-       
-          on new year's day, 2023, philippine president marcos made his first foreign visit to china.  -0.3870043357213338
-       
-          on new year's day 2023, philippine president marcos made his first foreign visit to china.  -0.41778796652088995
-          
-       3. input:
-       
-          \_enzh\_ New Zealand leader Jacinda Ardern announces shock resignation before upcoming election
-       
-       4. output:
-       
-          新西兰领导人雅辛达·阿尔德林在即将举行的选举前宣布辞职。  -0.2518916130065918
-          
-          新西兰领导人雅辛达·阿尔德林在即将到来的选举前宣布辞职。  -0.25208149285152043
-          
-          新西兰领导人雅辛达·阿尔德林在即将到来的选举前宣布了震惊辞职。  -0.2606537640094757
-       
-       新西兰领导人阿尔德林在即将举行的选举前宣布辞职。  -0.2731153869628906
-       
-       新西兰领导人阿尔德林在即将到来的选举前宣布辞职。  -0.2777881622314453
-       
-       
-       
-   16. Chinese paper generation: python interact.py --model_conf conf/paper_base_conf
+   17. Chinese-English translation: python interact.py --model_conf conf/nmt_base_conf
    
-       1. input:
+        1. input:
    
-          中日韩 \_sep\_ 自贸区
+           \_zhen\_ 2023年元旦刚过，菲律宾总统马科斯对中国进行了国事访问，他因此成为新年第一位访华的外国领导人。
    
-       2. output:
+        2. output:
    
-       中日韩自贸区发展的制约因素分析 \_sep\_ 发展中日韩自贸区的对策是自贸区的大幅提高。以签订《自由贸易协定》为契机,将各成员国 签订自贸协定作为中日韩自贸区发展的制约因素的内容,本文分析了中日韩自贸区制度的特点,提出了加强中日韩自贸区建设的建议。 -136.17562866210938
+           on new year's day, 2023, president marcos of the philippines paid a state visit to china, making him the first foreign leader to visit china in the new year.  -0.3184391975402832
+   
+           on new year's day, 2023, president marcos of the philippines paid a state visit to china, making him the first foreign leader to visit china.  -0.34901772605048287
+   
+           on new year's day, 2023, president marcos of the philippines made his first foreign visit to china.  -0.3811599291287936
+   
+           on new year's day, 2023, philippine president marcos made his first foreign visit to china.  -0.3870043357213338
+   
+           on new year's day 2023, philippine president marcos made his first foreign visit to china.  -0.41778796652088995
+           
+        3. input:
+   
+           \_enzh\_ New Zealand leader Jacinda Ardern announces shock resignation before upcoming election
+   
+        4. output:
+   
+           新西兰领导人雅辛达·阿尔德林在即将举行的选举前宣布辞职。  -0.2518916130065918
+           
+           新西兰领导人雅辛达·阿尔德林在即将到来的选举前宣布辞职。  -0.25208149285152043
+           
+           新西兰领导人雅辛达·阿尔德林在即将到来的选举前宣布了震惊辞职。  -0.2606537640094757
+   
+        新西兰领导人阿尔德林在即将举行的选举前宣布辞职。  -0.2731153869628906
+   
+        新西兰领导人阿尔德林在即将到来的选举前宣布辞职。  -0.2777881622314453
+   
+        
+   
+   18. Chinese paper generation: python interact.py --model_conf conf/paper_base_conf
+   
+        1. input:
+   
+           中日韩 \_sep\_ 自贸区
+   
+        2. output:
+   
+        中日韩自贸区发展的制约因素分析 \_sep\_ 发展中日韩自贸区的对策是自贸区的大幅提高。以签订《自由贸易协定》为契机,将各成员国 签订自贸协定作为中日韩自贸区发展的制约因素的内容,本文分析了中日韩自贸区制度的特点,提出了加强中日韩自贸区建设的建议。 -136.17562866210938
+   
+        发展自贸区:中日韩自贸区面临的机遇与挑战 \_sep\_ 金融危机以后,中日韩的自贸区得以提升。自贸区作为自贸区的重要组成部分,将有 力推动中日韩各国的经贸合作与交流。但是,由于自贸区自身存在内外部条件不协调、自贸区机制不完善、自贸区本身存在诸多问题,解 决自贸区发展问题成为全球一体化的关键问题。促进自贸区发展,中日韩自贸区的建设与发展需要充分调研,借鉴其成功经验,提出解决问题的对策。 -233.56361389160156
+   
+        中日韩自贸区与韩国新自贸区若干问题探析 \_sep\_ 自2005年日本政府最近在韩国举行调查示范活动后,由韩国自由贸易区(garthge aurantifiation,api)于2007年启动,正式于2008年建立了中日韩自贸区。在自贸区的建立、保护、协调等方面,中日韩三国及其相关部门在经贸领域取得了宝贵的成果。但是,由于签订协议不够透明,各自制度较为模糊,使中日韩自贸区的发展有今天的困境。 -316.9208068847656
+   
        
-       发展自贸区:中日韩自贸区面临的机遇与挑战 \_sep\_ 金融危机以后,中日韩的自贸区得以提升。自贸区作为自贸区的重要组成部分,将有 力推动中日韩各国的经贸合作与交流。但是,由于自贸区自身存在内外部条件不协调、自贸区机制不完善、自贸区本身存在诸多问题,解 决自贸区发展问题成为全球一体化的关键问题。促进自贸区发展,中日韩自贸区的建设与发展需要充分调研,借鉴其成功经验,提出解决问题的对策。 -233.56361389160156
+   
+   19. Chinese tag generation: python interact.py --model_conf conf/tag_base_conf
+   
+        1. input:
+   
+           近日，由国家感染性疾病临床医学研究中心、中国人民解放军总医院第五医学中心主办的国家感染性疾病临床医学研究中心2023年学术 年会在北京召开。《每日经济新闻》记者在现场注意到，中科院院士高福等专家学者就长新冠、疫苗和药物研发等话题展开交流。后新 冠时期既不能"恐冠"也不能"轻冠"针对新冠病毒，高福表示，在后新冠时期，大家开始讨论人类已经走出了新冠病毒的阴影，但我们不 能只看新冠病毒带来的挑战，也要看到它给我们提供的机遇，以及让人类如何重新思考。后新冠时期既不能"恐冠"也不能"轻冠"。
+   
+        2. output:
+   
+           医学 \_sep\_ 临床医学 \_sep\_ 新型冠状病毒 -7.32832670211792
+           
+           
+   
+   20. Chinese medical qa generation: python interact.py --model_conf conf/med_base_conf
+   
+        1. input:
+   
+           最近老是犯困全身乏力腰酸背痛
+   
+           output:
+   
+        2. 就您的情况考虑是气血虚弱,植物神经功能紊乱导致的,建议用归脾丸治疗。 -29.775508880615234
+   
+           这种情况可能是由于多种原因引起的,例如疲劳、压力过大、饮食不规律等。建议您注意休息,适当进行体育锻炼,保持良好的心态和饮食习惯,同时也要注意补充足够的营养物质, 如蛋白质、维生素及矿物质等。如果症状持续存在或加重,建议您咨询医生进行检查和治疗。 -50.89771270751953
+   
+           这样的情况要考虑是否有肾虚或者腰椎疾病引起的,建议你去医院做一下检查看看。可以吃点六味地黄丸和金锁固精丸来治疗,注意休息,不要过度劳累 -53.82005310058594
+           
+           
+   
+   21. Chinese doc2query generation: python interact.py --model_conf conf/doc2query_base_conf
+   
+        1. input:
+   
+           "五一"假期过后，社交媒体上出现了许多关于二阳的讨论。据北京疾控公布的第19周 （5月8日-14日）的数据，全市共报告法定传染病16种18081例。新冠感染连续3周超越流感，重返法定传染病病种排名第一。
+   
+        2. output:
+   
+        北京二阳是什么意思 -4.803812503814697
+   
+        北京新冠病毒多少 -6.473724365234375
+   
+        北京新冠病毒感染数量 -6.521775245666504
+   
        
-       中日韩自贸区与韩国新自贸区若干问题探析 \_sep\_ 自2005年日本政府最近在韩国举行调查示范活动后,由韩国自由贸易区(garthge aurantifiation,api)于2007年启动,正式于2008年建立了中日韩自贸区。在自贸区的建立、保护、协调等方面,中日韩三国及其相关部门在经贸领域取得了宝贵的成果。但是,由于签订协议不够透明,各自制度较为模糊,使中日韩自贸区的发展有今天的困境。 -316.9208068847656
+   
+   22. Chinese spelling correction: python interact.py --model_conf conf/csc_base_conf
+   
+        1. input:
+   
+           大家要努力鞋习aigc只是。
+   
+        2. output:
+   
+        大家要努力学习aigc知识。 -0.0025362607557326555
+   
        
-   17. Chinese tag generation: python interact.py --model_conf conf/tag_base_conf
    
-    1. input:
+   23. streamlit run app.py -- --model_conf conf/cfn_base_conf
+         ![streamlit](image/streamlit.png)
    
-       近日，由国家感染性疾病临床医学研究中心、中国人民解放军总医院第五医学中心主办的国家感染性疾病临床医学研究中心2023年学术 年会在北京召开。《每日经济新闻》记者在现场注意到，中科院院士高福等专家学者就长新冠、疫苗和药物研发等话题展开交流。后新 冠时期既不能"恐冠"也不能"轻冠"针对新冠病毒，高福表示，在后新冠时期，大家开始讨论人类已经走出了新冠病毒的阴影，但我们不 能只看新冠病毒带来的挑战，也要看到它给我们提供的机遇，以及让人类如何重新思考。后新冠时期既不能"恐冠"也不能"轻冠"。
+   24. streamlit run app.py -- --model_conf conf/caption_base_conf
+         ![streamlit](image/streamlit2.png)
    
-    2. output:
+   25. streamlit run app.py -- --model_conf   conf/clip_base_conf
+         ![streamlit](image/streamlit3.png)
    
-       医学 \_sep\_ 临床医学 \_sep\_ 新型冠状病毒 -7.32832670211792
-       
-   18. Chinese medical qa generation: python interact.py --model_conf conf/med_base_conf
+   26. streamlit run app.py -- --model_conf   conf/vqa_base_conf
+         ![streamlit](image/streamlit4.png)
    
-    1. input:
+   27. streamlit run app.py -- --model_conf   conf/midi_base_conf
    
-          最近老是犯困全身乏力腰酸背痛
-   
-    2. output:
-   
-       就您的情况考虑是气血虚弱,植物神经功能紊乱导致的,建议用归脾丸治疗。 -29.775508880615234
-       
-       这种情况可能是由于多种原因引起的,例如疲劳、压力过大、饮食不规律等。建议您注意休息,适当进行体育锻炼,保持良好的心态和饮食习惯,同时也要注意补充足够的营养物质, 如蛋白质、维生素及矿物质等。如果症状持续存在或加重,建议您咨询医生进行检查和治疗。 -50.89771270751953
-       
-       这样的情况要考虑是否有肾虚或者腰椎疾病引起的,建议你去医院做一下检查看看。可以吃点六味地黄丸和金锁固精丸来治疗,注意休息,不要过度劳累 -53.82005310058594
-       
-   19. Chinese doc2query generation: python interact.py --model_conf conf/doc2query_base_conf
-   
-       1. input:
-
-          "五一"假期过后，社交媒体上出现了许多关于二阳的讨论。据北京疾控公布的第19周 （5月8日-14日）的数据，全市共报告法定传染病16种18081例。新冠感染连续3周超越流感，重返法定传染病病种排名第一。
-   
-       2. output:
-   
-          北京二阳是什么意思 -4.803812503814697
-          
-          北京新冠病毒多少 -6.473724365234375
-          
-          北京新冠病毒感染数量 -6.521775245666504
-
-
-   20. Chinese spelling correction: python interact.py --model_conf conf/csc_base_conf
-
-       1. input:
-
-          大家要努力鞋习aigc只是。
-
-       2. output:
-
-          大家要努力学习aigc知识。 -0.0025362607557326555
+        It will generate a midi file in current directory. A generated sample is here: [test.mid](test.mid)        
 

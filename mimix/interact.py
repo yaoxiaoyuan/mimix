@@ -10,7 +10,7 @@ import time
 from PIL import Image
 from mimix.predictor import EncDecGenerator,LMGenerator,TextEncoder
 from mimix.predictor import ImageEncoder, ClipMatcher
-from mimix.utils import real_path, load_model_config
+from mimix.utils import real_path, load_model_config, convert_tokens_to_midi
 
 
 def pretty_print(res):
@@ -73,10 +73,14 @@ def lm_demo(config):
         
         start = time.time()
         search_res = lm_gen.predict(prefix_list=prefix_list) 
+
+        if config.get("convert2midi", False) == True:
+            tokens = search_res[0][1][0][0].split()
+            convert_tokens_to_midi(tokens, "test.mid")
         
         search_res = [{"src":x, "predict":y} for x,y in search_res]
         pretty_print(search_res)
-
+        
         end = time.time()
         cost = end - start
         print("-----cost time: %s s-----" % cost)

@@ -38,7 +38,7 @@ def init_search(model, batch_size, use_cuda):
     return states
 
 
-def process_logits(model, logits, states, repetition_penalty):
+def process_logits(model, logits, states, repetition_penalty, repetition_window_size):
     """ 
     """
     mask_unk = torch.zeros_like(logits)
@@ -52,7 +52,8 @@ def process_logits(model, logits, states, repetition_penalty):
                            device = hypothesis.device)
         mask.scatter_(1, hypothesis.view(-1, 1), 1)
         mask = mask.view(hypothesis.shape[0], hypothesis.shape[1], model.trg_vocab_size)
-
+        
+        mask = mask[:,-repetition_window_size:,:]
         mask = torch.sum(mask, 1)
     
         logits = logits + mask * repetition_penalty
@@ -73,7 +74,7 @@ def top_k_top_p_sampling(logits,
     
     if top_k > 0 or top_p > 0:
         _logits, _indices = torch.sort(logits, descending=True)
-    
+        
         if top_k > 0:
             probs[logits < _logits[:, top_k, None]] = 0 
 
@@ -86,7 +87,7 @@ def top_k_top_p_sampling(logits,
 
             filter_indice = need_filter.scatter(1, _indices, need_filter)
             probs[filter_indice] = 0
-
+        
         probs /= torch.sum(probs, dim=-1, keepdim=True) 
 
     samples = torch.multinomial(probs, n_samples, replacement=replacement)
@@ -106,6 +107,7 @@ def search(model,
            eos=None,
            group_size=-1, 
            repetition_penalty=0,
+           repetition_window_size=0,
            use_mask_unk=False,
            max_decode_steps=None):
     """
@@ -137,7 +139,7 @@ def search(model,
         
         #logits: (B x last_beam_size) x V
         #probs: (B x last_beam_size) x V
-        logits = process_logits(model, logits, states, repetition_penalty)
+        logits = process_logits(model, logits, states, repetition_penalty, repetition_window_size)
         probs = torch.softmax(logits, -1)  
         
         if strategy == "beam_search":
@@ -189,7 +191,7 @@ def search(model,
             finished = finished[beam_id,:]
             hypothesis = hypothesis[beam_id,:]
             history_probs = history_probs[beam_id, :] 
-                
+       
         finished = (finished | y.eq(eos).byte())        
         hypothesis = torch.cat([hypothesis, y], 1)
         history_probs = torch.cat([history_probs, probs], 1)

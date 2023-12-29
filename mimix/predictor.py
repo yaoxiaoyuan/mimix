@@ -75,6 +75,7 @@ class EncDecGenerator():
         self.top_k = config.get("top_k", 0)
         self.top_p = config.get("top_p", 0.)
         self.repetition_penalty = config.get("repetition_penalty", 0.)
+        self.repetition_window_size = config.get("repetition_window_size", 0)
         self.normalize = config.get("normalize", "none")
         self.use_mask_unk =  config.get("use_mask_unk", False)
         self.use_cuda = config["use_cuda"] 
@@ -147,6 +148,7 @@ class EncDecGenerator():
                                        eos=self.model.EOS,
                                        group_size=self.group_size, 
                                        repetition_penalty=self.repetition_penalty,
+                                       repetition_window_size=self.repetition_window_size,
                                        use_mask_unk=self.use_mask_unk,
                                        max_decode_steps=self.max_decode_steps)
                 hypothesis,scores = states[4], states[1]
@@ -349,6 +351,7 @@ class LMGenerator():
         self.top_k = config.get("top_k", 0)
         self.top_p = config.get("top_p", 0.)
         self.repetition_penalty = config.get("repetition_penalty", 0.)
+        self.repetition_window_size = config.get("repetition_window_size", 0)
         self.normalize = config.get("normalize", "none")
         self.use_mask_unk =  config.get("use_mask_unk", False)
         self.use_cuda = config["use_cuda"] 
@@ -401,6 +404,7 @@ class LMGenerator():
                                        eos=self.model.EOS,
                                        group_size=self.group_size, 
                                        repetition_penalty=self.repetition_penalty,
+                                       repetition_window_size=self.repetition_window_size,
                                        use_mask_unk=self.use_mask_unk,
                                        max_decode_steps=self.max_decode_steps)
                 hypothesis,scores = states[4], states[1]

@@ -1,3 +1,4 @@
-torch==2.01
-streamlit==1.25.0
-torchvision==0.15.2
+torch>=1.13
+streamlit
+torchvision
+mido 
