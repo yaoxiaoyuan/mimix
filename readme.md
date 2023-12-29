@@ -469,7 +469,7 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
    26. Chinese vqa:  streamlit run app.py -- --model_conf   conf/vqa_base_conf
          ![streamlit](image/streamlit4.png)
    
-   27. python interact  --model_conf   conf/midi_base_conf
+   27. Piano midi generation: python interact  --model_conf   conf/midi_base_conf
    
         It will generate a midi file in current directory. A generated sample is here: [test.mid](test.mid)        
 
