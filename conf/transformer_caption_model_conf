@@ -25,7 +25,7 @@ search_strategy = beam_search
 src_tokenizer = default
 trg_tokenizer = default
 model = transformer
-task = enc_dec
+task = image2text
 activation = relu
 
 [bool]
