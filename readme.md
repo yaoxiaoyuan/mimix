@@ -461,15 +461,21 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
          ![streamlit](image/streamlit.png)
    
    24. Chinese image caption: streamlit run app.py -- --model_conf conf/caption_base_conf
-         ![streamlit](image/streamlit2.png)
-   
+       v2: The v2 version of the model can generate more detailed descriptions.
+       ![streamlit](image/streamlit5.png)
+       v1:
+       ![streamlit](image/streamlit2.png)
    25. Chinese clip: streamlit run app.py -- --model_conf   conf/clip_base_conf
          ![streamlit](image/streamlit3.png)
    
    26. Chinese vqa:  streamlit run app.py -- --model_conf   conf/vqa_base_conf
-         ![streamlit](image/streamlit4.png)
-   
-   27. Piano midi generation: python interact  --model_conf   conf/midi_base_conf
+       v2: The v2 version of the model can generate more detailed descriptions.
+       ![streamlit](image/streamlit6.png)
+       v1:
+       ![streamlit](image/streamlit4.png)
+   27. Chinese product image description generation:  streamlit run app.py -- --model_conf conf/prodimg_base_conf
+       ![streamlit](image/streamlit7.png)
+   28. Piano midi generation: python interact  --model_conf   conf/midi_base_conf
    
         It will generate a midi file in current directory. A generated sample is here: [test.mid](test.mid)        
 

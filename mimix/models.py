@@ -102,14 +102,14 @@ class Transformer(nn.Module):
     def reset_parameters(self):
         """
         """
-        stdv = 1.0 / np.sqrt(self.d_model)
         if self.output_next_word_logits == True:
             if self.share_emb_out_proj == False: 
+                stdv = 1.0 / np.sqrt(self.vocab_size)
                 self.W.data.uniform_(-stdv, stdv)
             if self.use_output_bias == True:
                 self.b.data.zero_()
         if self.use_vit_encoder == True:
-            self.cls.data.uniform_(-stdv, stdv)
+            self.cls.data.uniform_(0, 1)
             
             
     def forward(self, 
@@ -953,7 +953,7 @@ def load_model_weights(model, weights_path):
 def build_model(config, load_model_path=None):
     """
     """
-    if config["task"] in ["enc_dec", "image_caption"]:
+    if config["task"] in ["enc_dec", "image2text"]:
         if config["model"] == "transformer":
             model = TransformerSeq2seq(**config)
         else:

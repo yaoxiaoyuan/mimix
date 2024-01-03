@@ -73,7 +73,7 @@ def image_classification_app(model):
             st.text_area("top {} result".format(i + 1), label + " " + str(score))
 
 
-def image_caption_app(model):
+def image2text_app(model):
     """
     """
     st.markdown(
@@ -207,9 +207,9 @@ def run_app():
     elif model_config["task"] == "image_classification":
         model = ImageEncoder(model_config)
         image_classification_app(model)
-    elif model_config["task"] == "image_caption":
+    elif model_config["task"] == "image2text":
         model = EncDecGenerator(model_config)
-        image_caption_app(model)
+        image2text_app(model)
     elif model_config["task"] == "image_text_match":
         model = ClipMatcher(model_config)
         image_text_match_app(model)

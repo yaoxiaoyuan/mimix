@@ -293,12 +293,12 @@ class FeedForward(nn.Module):
     def reset_parameters(self):
         """
         """
-        stdv = 1.0 / np.sqrt(self.d_model)
+        stdv = 1.0 / np.sqrt(self.d_model + self.d_ff)
         w_list = [self.W1, self.W2]
         if self.use_glu:
             w_list.append(self.W3)
         for weight in w_list:
-            weight.data.uniform_(-math.sqrt(3)*stdv, math.sqrt(3)*stdv)
+            weight.data.uniform_(-math.sqrt(6)*stdv, math.sqrt(6)*stdv)
         if self.use_bias == True:
             b_list = [self.b1, self.b2]
             if self.use_glu == True:
@@ -499,7 +499,7 @@ class MultiHeadAttention(nn.Module):
                 weight.data.zero_()
         if self.use_talking_attention == True:
             stdv = 1.0 / np.sqrt(self.n_heads)
-            self.talking_w.data.uniform_(-stdv, stdv)
+            self.talking_w.data.uniform_(-math.sqrt(3)*stdv, math.sqrt(3)*stdv)
     
     def forward(self, 
                 query, 

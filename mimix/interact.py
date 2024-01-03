@@ -330,7 +330,7 @@ def image_classification_demo(config):
         print("-----cost time: %s s-----" % cost)
 
 
-def image_caption_demo(config):
+def image2text_demo(config):
     """
     """
     if config["model"] == "transformer":
@@ -418,8 +418,8 @@ def run_interactive():
             match_text_demo(config)
         elif config["task"] == "image_classification":
             image_classification_demo(config)
-        elif config["task"] == "image_caption":
-            image_caption_demo(config)
+        elif config["task"] == "image2text":
+            image2text_demo(config)
         elif config["task"] == "image_text_match":
             text_image_match_demo(config)
     elif args.mode == "debug":
