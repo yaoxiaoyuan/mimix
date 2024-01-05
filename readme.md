@@ -359,8 +359,15 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
        
            却说曹操乘袁绍之败，整顿军马，迤逦追袭。前至下邑,忽一阵狂风大作,飞砂蔽天而下。张飞大惊曰:“贼至矣!”急叫军师吴德护守后寨,自己与李律、许褚引三千人马,伏于寨外。少顷风定天清,风沙亦息。曹操立马大骂曰:“曹贼如何这等无礼!我若不生擒汝,誓不回兵!”于是令曹兵安营。是夜分粮设炮,伺便攻城。张飞与李律商议曰:“此风不入寨,其将必吕布也。主公可点计策擒之。”李律曰:“将军所见,正合吾意。可令人一裹粮食于车上,吾乘之入城。” \_nl\_ 不移时,一人乘马于车上。李律叱曰:“汝何人,敢来夺粮?”吕布应曰:“吾乃张公瑾也。”律曰:“我与汝 同受曹公厚恩,义不共戴天。今欲来夺我之粮草,安得无罪!”操曰:“你既不守吾戒,何不出城一战?”律曰:“既蒙将军不杀之恩,我遂出战。”操曰:“将军可依吾计,我却于中接应。”遂分兵五万,吕布一人也。李律见操分兵,于中道候交战。少顷风息,粮食车至。李律于车上大叫:“张公瑾休走!”操曰:“吾料你必入我计中。”遂将兵马分作三路而出:李律引军居中,许褚在左,孙静护 从。操与李傕在中军调度,令人先去请吕布来。正是:中原忽失两英雄,青州借得偏兵来。未知吕布肯降否,且看下文分解。 \_nl\_ \~\~\~start|23-第二十回 解羽德重兴青州\|start\~\~\~ 第二十回 解羽德重兴青州 却说李律于正东路中大叫吕布曰:“我等久知你是虎将,因恨不见面。今日可再会一遭!”吕布正欲厮杀,后面李傕催军追来。操回马而迎,大骂曰:“逆贼敢拒将军乎!”遂于马上欠身,躬身施礼曰:“曹兵慢来,请将军回马。”李傕大怒,挺枪骤马杀来。吕布纵马来迎,不三合,被操一枪刺于马下。李律措手不及,被许褚一戟刺死。于是曹操大军皆败,各奔回本寨。曹操勒马走入,心闷不乐。李傕曰:“曹操太寡恩义,当以兵袭之。”操曰:“吾亦疑此贼不从。”李傕曰:“可先使人去请吕布来。”操即遣荀攸,星夜往请吕布。原来这人最有口才,先至曹操寨中。操设酒 相待,令左右奏乐侑觞。饮至半酣,操唤吕布曰:“吾观汝好位英雄,意欲委用于你。吾有一言,不知公肯依否?” \_nl\_ 吕布曰:“将军既知狂臣贼子,望公提掇挈带。”操曰:“我与汝同出屠奴,不比他人。”遂取出玉玺送之,曰:“此吾先人所为也。”吕布曰:“既蒙厚爱,敢不受命!”遂将印接在手中,上马引兵而行。有诗为证:玉玺送还李傕,自是英雄效武能。 \_nl\_ 收吕布河北去,威震 幽燕定天下。 \_nl\_ 却说吕布既收,屯扎寨中。李傕曰:“吕布在此久矣,必有谋臣在外。”操曰:“吾亦疑之,未敢动。”忽人报:“吕布搦战。”操提刀上马,引数十骑出寨迎敌。吕布见操兵少,亦引军至寨。两马相交,战到二十合不分胜败。操佯输,引军回寨;唤吕布曰:“汝父托孤于吾,情性极厚。今日我与你势不两立,幸为吾而决一雌雄。”吕布曰:“吾虽不才,颇知礼义。今奉公命而来,理当听汝所令。”于是二人各 -1408.430419921875
            
+   17. Chinese story generation: python interact.py --model_conf conf/story_base_conf
+        1. input:
    
-   17. Chinese-English translation: python interact.py --model_conf conf/nmt_base_conf
+           写一个关于“爱”、“勇气”与“希望”的故事，主角是一个魔法少女。 \_sep\_
+   
+        2. output:
+           写一个关于“爱”、“勇气”与“希望”的故事，主角是一个魔法少女。 _sep_ 在一个遥远的王国里，住着一位名叫艾米莉亚的女孩。她拥有一颗善良而勇敢的心，总是带着希望去面对生活 中的困难。有一天，王国被邪恶巫师用黑暗魔法束缚住了他们的家园。艾米莉亚决定挺身而出，寻找解除黑暗魔法的方法。 _nl_ 在冒险之旅中，艾米莉亚遇到了许多困难，但她从未放弃过希望。在一次偶然的机会下，艾米莉亚找到了一本古老的魔法书。这本书上记载着一种神秘的咒语，可以破除黑暗魔法。艾米莉亚鼓足勇气念出了咒语，成功解除了笼罩王国的黑暗魔法。 _nl_ 从此以后，艾米莉亚成为了国王最信任的朋友和领袖。她用智慧和勇气带领人民重建家园，让整个王国重新焕发生机。而艾米莉亚也因为她的勇敢和坚定信念，赢得了所有人的尊敬和爱戴。 _nl_ 这个故事告诉我们，无论面对多大的困难，只要有希望和勇气去追求梦想，就一定能够克服一切。同时，我们也应该珍视身边的人和事物，因为它们都是我们成长过程中最重要的支持。  -142.99069213867188
+           
+   18. Chinese-English translation: python interact.py --model_conf conf/nmt_base_conf
    
         1. input:
    
@@ -395,7 +402,7 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
            新西兰领导人阿尔德林在即将到来的选举前宣布辞职。  -0.2777881622314453
         
    
-   18. Chinese paper generation: python interact.py --model_conf conf/paper_base_conf
+   19. Chinese paper generation: python interact.py --model_conf conf/paper_base_conf
    
         1. input:
    
@@ -411,7 +418,7 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
    
        
    
-   19. Chinese tag generation: python interact.py --model_conf conf/tag_base_conf
+   20. Chinese tag generation: python interact.py --model_conf conf/tag_base_conf
    
         1. input:
    
@@ -423,7 +430,7 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
            
            
    
-   20. Chinese medical qa generation: python interact.py --model_conf conf/med_base_conf
+   21. Chinese medical qa generation: python interact.py --model_conf conf/med_base_conf
    
         1. input:
    
@@ -439,7 +446,7 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
            
            
    
-   21. Chinese doc2query generation: python interact.py --model_conf conf/doc2query_base_conf
+   22. Chinese doc2query generation: python interact.py --model_conf conf/doc2query_base_conf
    
         1. input:
    
@@ -455,7 +462,7 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
    
        
    
-   22. Chinese spelling correction: python interact.py --model_conf conf/csc_base_conf
+   23. Chinese spelling correction: python interact.py --model_conf conf/csc_base_conf
    
         1. input:
    
@@ -465,25 +472,25 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
    
         大家要努力学习aigc知识。 -0.0025362607557326555
    
-   23. Chinese food clasification: streamlit run app.py -- --model_conf conf/cfn_base_conf
+   24. Chinese food clasification: streamlit run app.py -- --model_conf conf/cfn_base_conf
          ![streamlit](image/streamlit.png)
    
-   24. Chinese image caption: streamlit run app.py -- --model_conf conf/caption_base_conf
+   25. Chinese image caption: streamlit run app.py -- --model_conf conf/caption_base_conf
        v2: The v2 version of the model can generate more detailed descriptions.
        ![streamlit](image/streamlit5.png)
        v1:
        ![streamlit](image/streamlit2.png)
-   25. Chinese clip: streamlit run app.py -- --model_conf   conf/clip_base_conf
+   26. Chinese clip: streamlit run app.py -- --model_conf   conf/clip_base_conf
          ![streamlit](image/streamlit3.png)
    
-   26. Chinese vqa:  streamlit run app.py -- --model_conf   conf/vqa_base_conf
+   27. Chinese vqa:  streamlit run app.py -- --model_conf   conf/vqa_base_conf
        v2: The v2 version of the model can generate more detailed descriptions.
        ![streamlit](image/streamlit6.png)
        v1:
        ![streamlit](image/streamlit4.png)
-   27. Chinese product image description generation:  streamlit run app.py -- --model_conf conf/prodimg_base_conf
+   28. Chinese product image description generation:  streamlit run app.py -- --model_conf conf/prodimg_base_conf
        ![streamlit](image/streamlit7.png)
-   28. Piano midi generation: python interact  --model_conf   conf/midi_base_conf
+   29. Piano midi generation: python interact  --model_conf   conf/midi_base_conf
    
         It will generate a midi file in current directory. A generated sample is here: [test.mid](test.mid)        
 
