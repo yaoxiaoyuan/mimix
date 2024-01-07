@@ -718,7 +718,7 @@ class TransformerLayer(nn.Module):
         
     def forward(self, 
                 output,  
-                self_attn_mask, 
+                self_attn_mask=None, 
                 cached_kv=False, 
                 self_keys=None, 
                 self_values=None,

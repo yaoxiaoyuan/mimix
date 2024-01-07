@@ -955,7 +955,7 @@ class MAE():
         
         from torchvision import transforms
         self.transform = transforms.Compose([
-            transforms.Resize((config["img_w"], config["img_h"])),
+            transforms.Resize((config["enc_img_w"], config["enc_img_h"])),
             transforms.ToTensor(),
             transforms.Normalize(self.mean, self.std),
             ])

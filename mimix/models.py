@@ -111,7 +111,71 @@ class Transformer(nn.Module):
         if self.use_vit_encoder == True:
             self.cls.data.uniform_(0, 1)
             
+
+    def random_masking(self, x, mask_ratio):
+        """
+        Perform per-sample random masking by per-sample shuffling.
+        Per-sample shuffling is done by argsort random noise.
+        x: [N, L, D], sequence
+        """
+        N, L, D = x.shape  # batch, length, dim
+        len_keep = int(L * (1 - mask_ratio))
+        
+        noise = torch.rand(N, L, device=x.device)  # noise in [0, 1]
+        
+        # sort noise for each sample
+        ids_shuffle = torch.argsort(noise, dim=1)  # ascend: small is keep, large is remove
+        ids_restore = torch.argsort(ids_shuffle, dim=1)
+
+        # keep the first subset
+        ids_keep = ids_shuffle[:, :len_keep]
+        x_masked = torch.gather(x, dim=1, index=ids_keep.unsqueeze(-1).repeat(1, 1, D))
+
+        # generate the binary mask: 0 is keep, 1 is remove
+        mask = torch.ones([N, L], device=x.device)
+        mask[:, :len_keep] = 0
+        # unshuffle to get the binary mask
+        mask = torch.gather(mask, dim=1, index=ids_restore)
+        
+        return x_masked, mask, ids_restore, ids_keep
+
+
+    def get_mask_image_enc(self, x, mask_ratio):
+        """
+        """
+        embeded = self.patch_embedding(x).flatten(2).transpose(1, 2)
+        embeded_masked, mask, ids_restore, ids_keep = self.random_masking(embeded, mask_ratio)
+        
+        cls = self.cls.repeat(embeded_masked.shape[0], 1, 1)
+        cls_pos_ids = torch.zeros([embeded_masked.shape[0], 1], dtype=torch.long, device=ids_keep.device)
+        enc_pos_ids = torch.cat([cls_pos_ids, 1+ids_keep], 1)
+        embeded_masked = torch.cat([cls, embeded_masked], 1)
+
+        embeded = embeded_masked + self.pos_embedding(enc_pos_ids)
+        output = embeded
+        attention_residual = None
+        for i in range(self.n_layers):
             
+            if self.share_layer_params == False:
+                layer = self.layers[i]
+            else:
+                layer = self.layers[i // self.n_share_across_layers]
+                
+            outputs = layer(output,
+                            self_pos_ids=enc_pos_ids,
+                            past_pos_ids=enc_pos_ids,
+                            attention_residual=attention_residual if self.use_attention_residual else None)
+            
+            output, self_attn_scores, attention_residual = outputs[:3]
+            
+        if self.norm_before_pred == True:
+            output = self.norm(output)
+        
+        outputs = [output, mask, ids_restore]
+        
+        return outputs            
+
+        
     def forward(self, 
                 x, 
                 self_attn_mask=None,
@@ -939,17 +1003,15 @@ class MAE(nn.Module):
         """
         super(MAE, self).__init__()
 
-        img_h,img_w = kwargs["img_h"], kwargs["img_w"]
-        ph,pw = kwargs["patch_h"], kwargs["patch_w"]
+        img_h,img_w = kwargs["enc_img_h"], kwargs["enc_img_w"]
+        ph,pw = kwargs["enc_patch_h"], kwargs["enc_patch_w"]
         self.img_h = img_h
         self.img_w = img_w
         self.ph = ph
         self.pw = pw
-        self.n_channels = kwargs["n_channels"]
+        self.n_channels = kwargs["enc_n_channels"]
         
         self.max_len = img_h // ph * img_w // pw + 1
-        self.patch_embedding = nn.Conv2d(self.n_channels, kwargs["enc_d_model"], kernel_size=(ph, pw), stride=(ph, pw))
-        self.cls = nn.Parameter(torch.Tensor(kwargs["enc_d_model"]))
         
         enc_config = {}
         for k in kwargs:
@@ -970,54 +1032,14 @@ class MAE(nn.Module):
         self.decoder = Transformer(**dec_config)
 
         self.out_proj = Linear(kwargs["dec_d_model"], self.ph*self.pw*self.n_channels)
-
-
-    def random_masking(self, x, mask_ratio):
-        """
-        Perform per-sample random masking by per-sample shuffling.
-        Per-sample shuffling is done by argsort random noise.
-        x: [N, L, D], sequence
-        """
-        N, L, D = x.shape  # batch, length, dim
-        len_keep = int(L * (1 - mask_ratio))
         
-        noise = torch.rand(N, L, device=x.device)  # noise in [0, 1]
-        
-        # sort noise for each sample
-        ids_shuffle = torch.argsort(noise, dim=1)  # ascend: small is keep, large is remove
-        ids_restore = torch.argsort(ids_shuffle, dim=1)
-
-        # keep the first subset
-        ids_keep = ids_shuffle[:, :len_keep]
-        x_masked = torch.gather(x, dim=1, index=ids_keep.unsqueeze(-1).repeat(1, 1, D))
-
-        # generate the binary mask: 0 is keep, 1 is remove
-        mask = torch.ones([N, L], device=x.device)
-        mask[:, :len_keep] = 0
-        # unshuffle to get the binary mask
-        mask = torch.gather(mask, dim=1, index=ids_restore)
-        
-        return x_masked, mask, ids_restore, ids_keep
-
 
     def forward(self, inputs, return_states=False, targets=None, compute_loss=False):
         """
         """
         x, mask_ratio = inputs[:2]
         
-        embeded = self.patch_embedding(x).flatten(2).transpose(1, 2)
-        embeded_masked, mask, ids_restore, ids_keep = self.random_masking(embeded, mask_ratio)
-        
-        cls = self.cls.repeat(embeded_masked.shape[0], 1, 1)
-        cls_pos_ids = torch.zeros([embeded_masked.shape[0], 1], dtype=torch.long, device=ids_keep.device)
-        enc_pos_ids = torch.cat([cls_pos_ids, 1+ids_keep], 1)
-        embeded_masked = torch.cat([cls, embeded_masked], 1)
-
-        enc_outputs = self.encoder(embeded_masked, 
-                                   self_pos_ids=enc_pos_ids,
-                                   past_pos_ids=enc_pos_ids,
-                                   return_states=return_states)
-        enc_output = enc_outputs[0]
+        enc_output, mask, ids_restore = self.encoder.get_mask_image_enc(x, mask_ratio)
         
         dec_embeded = self.dec_embedding(enc_output)
         
