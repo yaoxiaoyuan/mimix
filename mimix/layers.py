@@ -418,7 +418,7 @@ def scaled_dot_product_attention(query,
         scores += alibi_bias
 
     if talk_w is not None:
-        scores = torch.einsum("bnqk,nm->bmqk", scores, talk_w)
+        scores = torch.einsum("bnqk,nm->bmqk", scores, talk_w[0])
 
     if attention_residual is not None:
         scores += attention_residual
@@ -430,6 +430,9 @@ def scaled_dot_product_attention(query,
         scores = scores.masked_fill(attn_mask, -1e4)
     
     attn_scores = F.softmax(scores, dim = -1)
+    
+    if talk_w is not None:
+        scores = torch.einsum("bmqk,mn->bnqk", scores, talk_w[1])
     
     if dropout is not None:
         attn_scores = dropout(attn_scores)
@@ -511,8 +514,10 @@ class MultiHeadAttention(nn.Module):
         self.talking_w = None
         self.use_talking_attention = use_talking_attention
         if use_talking_attention == True:
-            self.talking_w = nn.Parameter(torch.Tensor(n_heads, n_heads))
-        
+            self.talking_w_pre_softmax = nn.Parameter(torch.Tensor(n_heads, n_heads))
+            self.talking_w_post_softmax = nn.Parameter(torch.Tensor(n_heads, n_heads))
+            self.talking_w = [self.talking_w_pre_softmax, self.talking_w_post_softmax]
+            
         self.reset_parameters()
         
     
@@ -527,7 +532,8 @@ class MultiHeadAttention(nn.Module):
                 weight.data.zero_()
         if self.use_talking_attention == True:
             stdv = 1.0 / np.sqrt(self.n_heads)
-            self.talking_w.data.uniform_(-math.sqrt(3)*stdv, math.sqrt(3)*stdv)
+            self.talking_w_pre_softmax.data.uniform_(-math.sqrt(3)*stdv, math.sqrt(3)*stdv)
+            self.talking_w_after_softmax.data.uniform_(-math.sqrt(3)*stdv, math.sqrt(3)*stdv)
     
     def forward(self, 
                 query, 
