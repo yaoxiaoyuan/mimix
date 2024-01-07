@@ -37,12 +37,16 @@ class EncDecGenerator():
                     tokenizer=config["src_tokenizer"],
                     vocab_file=config["src_vocab"])
         else:
+            self.mean = np.array([float(x) for x in config.get("mean", "0.5,0.5,0.5").split(",")])
+            self.std = np.array([float(x) for x in config.get("std", "0.5,0.5,0.5").split(",")])
+        
             from torchvision import transforms
             self.transform = transforms.Compose([
                 transforms.Resize((config["img_w"], config["img_h"])),
                 transforms.ToTensor(),
-                transforms.Normalize(0.5, 0.5, 0.5),
-            ])
+                transforms.Normalize(self.mean, self.std),
+                ])
+            
         self.trg_tokenizer = build_tokenizer(
                 tokenizer=config["trg_tokenizer"],
                 vocab_file=config["trg_vocab"])
@@ -739,11 +743,14 @@ class ImageEncoder():
             self.id2label = invert_dict(self.label2id)
         self.num_class = config.get("n_class", None)
 
+        self.mean = np.array([float(x) for x in config.get("mean", "0.5,0.5,0.5").split(",")])
+        self.std = np.array([float(x) for x in config.get("std", "0.5,0.5,0.5").split(",")])
+        
         from torchvision import transforms
         self.transform = transforms.Compose([
             transforms.Resize((config["img_w"], config["img_h"])),
             transforms.ToTensor(),
-            transforms.Normalize(0.5, 0.5, 0.5),
+            transforms.Normalize(self.mean, self.std),
             ])
 
 
