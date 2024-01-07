@@ -413,7 +413,9 @@ def scaled_dot_product_attention(query,
     if pos_key is not None:
         #p_k:L_q x L_k x d_qk
         scores += torch.einsum("bqnd,bqkd->bnqk", query, pos_key)
-        
+            
+    scores = scores / np.sqrt(d)
+
     if pos_bias is not None:        
         scores += alibi_bias
 
@@ -423,8 +425,6 @@ def scaled_dot_product_attention(query,
     if attention_residual is not None:
         scores += attention_residual
         
-    scores = scores / np.sqrt(d)
-    
     if attn_mask is not None:
         attn_mask = attn_mask.bool()
         scores = scores.masked_fill(attn_mask, -1e4)
