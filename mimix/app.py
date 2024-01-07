@@ -7,11 +7,12 @@ Created on Sun Aug  6 20:54:44 2023
 import time
 import sys
 from argparse import ArgumentParser
+import numpy as np
 from PIL import Image
 import io
 import streamlit as st
 from mimix.predictor import EncDecGenerator,LMGenerator,TextEncoder
-from mimix.predictor import ImageEncoder, ClipMatcher
+from mimix.predictor import ImageEncoder, ClipMatcher, MAE
 from mimix.utils import real_path, load_model_config
 
 st.set_page_config(page_title="Mimix Demo", initial_sidebar_state="auto", layout="wide")
@@ -187,6 +188,29 @@ def image_text_match_app(model):
                 st.text(info) 
         '''
 
+
+def mae_app(model):
+    """
+    """
+    uploaded_file = st.file_uploader("Choose a image file", type="jpg")
+
+    if uploaded_file is not None:
+        image = Image.open(io.BytesIO(uploaded_file.getvalue()))
+        st.image(image, width=224)
+        origin, reconstruct, im_masked, im_paste = model.visualize(image)
+        
+        origin = Image.fromarray(origin.astype(np.uint8))
+        reconstruct = Image.fromarray(reconstruct.astype(np.uint8))
+        im_masked = Image.fromarray(im_masked.astype(np.uint8))
+        im_paste = Image.fromarray(im_paste.astype(np.uint8))
+        
+        st.text("masked")
+        st.image(im_masked, width=224)
+        st.text("reconstruct")
+        st.image(reconstruct, width=224)
+        st.text("reconstruction + visible")
+        st.image(im_paste, width=224)
+
 def run_app():
     """
     """
@@ -213,6 +237,9 @@ def run_app():
     elif model_config["task"] == "image_text_match":
         model = ClipMatcher(model_config)
         image_text_match_app(model)
+    elif model_config["task"] == "masked_auto_encoder":
+        model = MAE(model_config)
+        mae_app(model)
         
 if __name__ == "__main__":
     run_app()

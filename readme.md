@@ -490,7 +490,9 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
        ![streamlit](image/streamlit4.png)
    28. Chinese product image description generation:  streamlit run app.py -- --model_conf conf/prodimg_base_conf
        ![streamlit](image/streamlit7.png)
-   29. Piano midi generation: python interact  --model_conf   conf/midi_base_conf
+   29. Masked Autoencoders:  streamlit run app.py -- --model_conf conf/mae_base_conf
+       ![streamlit](image/streamlit8.png)
+   30. Piano midi generation: python interact  --model_conf   conf/midi_base_conf
    
         It will generate a midi file in current directory. A generated sample is here: [test.mid](test.mid)        
 

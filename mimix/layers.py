@@ -10,6 +10,34 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+
+class Linear(nn.Module):
+    """
+    """
+    def __init__(self, d_in, d_out, use_bias=True):
+        """
+        """
+        super(Linear, self).__init__()
+        self.d_in = d_in
+        self.d_out = d_out
+        self.W = nn.Parameter(torch.Tensor(d_out, d_in))
+        self.b = nn.Parameter(torch.Tensor(d_out))
+        self.reset_parameters()
+        
+    
+    def reset_parameters(self):
+        """
+        """
+        stdv = math.sqrt(6) / np.sqrt(self.d_in + self.d_out)
+        self.W.data.uniform_(-0.1, 0.1)
+        self.b.data.fill_(0)
+
+
+    def forward(self, x):
+        """
+        """
+        return F.linear(x, self.W) + self.b
+    
     
 class CRF(nn.Module):
     """
@@ -293,12 +321,12 @@ class FeedForward(nn.Module):
     def reset_parameters(self):
         """
         """
-        stdv = 1.0 / np.sqrt(self.d_model + self.d_ff)
+        stdv = math.sqrt(6) / np.sqrt(self.d_model + self.d_ff)
         w_list = [self.W1, self.W2]
         if self.use_glu:
             w_list.append(self.W3)
         for weight in w_list:
-            weight.data.uniform_(-math.sqrt(6)*stdv, math.sqrt(6)*stdv)
+            weight.data.uniform_(-stdv, stdv)
         if self.use_bias == True:
             b_list = [self.b1, self.b2]
             if self.use_glu == True:
@@ -559,7 +587,7 @@ class MultiHeadAttention(nn.Module):
                 slopes = torch.tensor([start*ratio**i for i in range(self.n_heads)]).to(query.device, dtype=query.dtype)
                 relative_dis[relative_dis<0] = -relative_dis[relative_dis<0]
                 pos_bias = torch.einsum("bqk,n->bnqk", relative_dis, slopes)
-            
+
         output, attn_scores,scores = scaled_dot_product_attention(query, 
                                                                   key, 
                                                                   value, 
@@ -575,13 +603,15 @@ class MultiHeadAttention(nn.Module):
         output = output.transpose(1,2)
         output = output.contiguous().view(batch_size, -1, 
                                   self.n_heads*self.d_v)
+
+        
         output = F.linear(output, self.W_o)
         if self.use_bias == True:
             output = output + self.b_o
             
         if self.attn_dropout is not None:
             output = self.dropout(output)
-            
+
         return output, attn_scores, scores
 
 
@@ -729,9 +759,9 @@ class TransformerLayer(nn.Module):
                                                                     cached_kv,
                                                                     self_pos_ids,
                                                                     past_pos_ids,
-                                                                    attention_residual)
-        
+                                                                attention_residual)
         output = residual + output
+        
         if self.use_pre_norm == False:
             output = self.norm_1(output)
         
@@ -762,6 +792,7 @@ class TransformerLayer(nn.Module):
             else:
                 output = self.norm_2(output)
         output = self.ffn(output)
+
         output = residual + output
         if self.use_pre_norm == False:
             if self.with_across_attention == True:

@@ -802,12 +802,15 @@ class ClipMatcher():
             device_id = config.get("device_id", "0")
             self.device = torch.device('cuda:%s' % device_id)
             self.model = self.model.to(self.device)
-
+        
+        mean = [float(x) for x in config.get("mean", "0.5,0.5,0.5").split(",")]
+        std = [float(x) for x in config.get("std", "0.5,0.5,0.5").split(",")]
+        
         from torchvision import transforms
         self.transform = transforms.Compose([
             transforms.Resize((config["image_img_w"], config["image_img_h"])),
             transforms.ToTensor(),
-            transforms.Normalize(0.5, 0.5, 0.5),
+            transforms.Normalize(mean, std),
             ])
 
 
@@ -924,3 +927,76 @@ class ClipMatcher():
         prob = prob.cpu().numpy()
         
         return sim,prob
+
+
+class MAE():
+    """
+    """
+    def __init__(self, config):
+        """
+        """
+        self.model = build_model(config, real_path(config["load_model"]))
+        self.use_cuda = config.get("use_cuda", False)
+        self.device = torch.device('cpu')
+        if self.use_cuda == True:
+            device_id = config.get("device_id", "0")
+            self.device = torch.device('cuda:%s' % device_id)
+            self.model = self.model.to(self.device)
+        
+        self.mean = np.array([float(x) for x in config.get("mean", "0.5,0.5,0.5").split(",")])
+        self.std = np.array([float(x) for x in config.get("std", "0.5,0.5,0.5").split(",")])
+        
+        from torchvision import transforms
+        self.transform = transforms.Compose([
+            transforms.Resize((config["img_w"], config["img_h"])),
+            transforms.ToTensor(),
+            transforms.Normalize(self.mean, self.std),
+            ])
+        
+        self.mask_ratio = config["mask_ratio"]
+    
+    
+    def visualize(self, img):
+        """
+        """
+        x = self.transform(img)
+        if self.use_cuda == True:
+            x = x.to(self.device)
+        
+        x = x.unsqueeze(dim=0)
+
+        self.model.eval()
+        with torch.no_grad():
+            dec_output, reconstruct, mask, patchify_x = self.model([x.float(), self.mask_ratio])
+            y = torch.einsum('nchw->nhwc', reconstruct)
+    
+            mask = mask.detach()
+            mask = mask.unsqueeze(-1).repeat(1, 1, self.model.pw*self.model.ph*self.model.n_channels)  
+    
+            h = self.model.img_h // self.model.ph
+            w = self.model.img_w // self.model.pw     
+            mask = mask.reshape(shape=(mask.shape[0], h, w, self.model.ph, self.model.pw, self.model.n_channels))
+
+            mask = torch.einsum('nhwpqc->nchpwq', mask)
+            mask = mask.reshape(shape=(mask.shape[0], self.model.n_channels, self.model.img_h, self.model.img_w))
+            mask = torch.einsum('nchw->nhwc', mask).detach().cpu()
+
+            x = torch.einsum('nchw->nhwc', x)
+
+            im_masked = x * (1 - mask)
+
+            im_paste = x * (1 - mask) + y * mask
+        
+            origin = torch.clip((x[0] * self.std + self.mean) * 255, 0, 255).int()
+            reconstruct = torch.clip((y[0] * self.std + self.mean) * 255, 0, 255).int()
+            im_masked = torch.clip((im_masked[0] * self.std + self.mean) * 255, 0, 255).int()
+            im_paste = torch.clip((im_paste[0] * self.std + self.mean) * 255, 0, 255).int() 
+
+        origin = origin.cpu().numpy()
+        reconstruct = reconstruct.cpu().numpy()
+        im_masked = im_masked.cpu().numpy()
+        im_paste = im_paste.cpu().numpy()
+        
+        return origin, reconstruct, im_masked, im_paste
+        
+        

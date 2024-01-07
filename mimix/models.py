@@ -9,7 +9,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from mimix.layers import Embedding,Dropout,LayerNorm,act2fn,PositionEmbedding,CRF
+from mimix.layers import Linear,Embedding,Dropout,LayerNorm,act2fn,PositionEmbedding,CRF
 from mimix.layers import TransformerLayer
 from mimix.utils import real_path
 
@@ -78,7 +78,7 @@ class Transformer(nn.Module):
         
         if self.use_pos_embedding == True:    
             self.pos_embedding = PositionEmbedding(self.max_len, self.d_model, self.pos_type)
-
+            
         if self.n_types is not None:    
             self.type_embedding = Embedding(self.n_types, self.d_model, self.factorized_size)
         
@@ -931,6 +931,132 @@ class CLIP(nn.Module):
         return outputs
 
 
+class MAE(nn.Module):
+    """
+    """
+    def __init__(self, **kwargs):
+        """
+        """
+        super(MAE, self).__init__()
+
+        img_h,img_w = kwargs["img_h"], kwargs["img_w"]
+        ph,pw = kwargs["patch_h"], kwargs["patch_w"]
+        self.img_h = img_h
+        self.img_w = img_w
+        self.ph = ph
+        self.pw = pw
+        self.n_channels = kwargs["n_channels"]
+        
+        self.max_len = img_h // ph * img_w // pw + 1
+        self.patch_embedding = nn.Conv2d(self.n_channels, kwargs["enc_d_model"], kernel_size=(ph, pw), stride=(ph, pw))
+        self.cls = nn.Parameter(torch.Tensor(kwargs["enc_d_model"]))
+        
+        enc_config = {}
+        for k in kwargs:
+            if k.startswith("enc_"):
+                enc_config[k[4:]] = kwargs[k]
+        enc_config["max_len"] = self.max_len
+        enc_config["use_word_embedding"] = False
+        self.encoder = Transformer(**enc_config)
+        
+        self.dec_embedding = Linear(kwargs["enc_d_model"], kwargs["dec_d_model"])
+        self.mask = nn.Parameter(torch.zeros(kwargs["dec_d_model"]))
+        dec_config = {}
+        for k in kwargs:
+            if k.startswith("dec_"):
+                dec_config[k[4:]] = kwargs[k]
+        dec_config["max_len"] = self.max_len
+        dec_config["use_word_embedding"] = False
+        self.decoder = Transformer(**dec_config)
+
+        self.out_proj = Linear(kwargs["dec_d_model"], self.ph*self.pw*self.n_channels)
+
+
+    def random_masking(self, x, mask_ratio):
+        """
+        Perform per-sample random masking by per-sample shuffling.
+        Per-sample shuffling is done by argsort random noise.
+        x: [N, L, D], sequence
+        """
+        N, L, D = x.shape  # batch, length, dim
+        len_keep = int(L * (1 - mask_ratio))
+        
+        noise = torch.rand(N, L, device=x.device)  # noise in [0, 1]
+        
+        # sort noise for each sample
+        ids_shuffle = torch.argsort(noise, dim=1)  # ascend: small is keep, large is remove
+        ids_restore = torch.argsort(ids_shuffle, dim=1)
+
+        # keep the first subset
+        ids_keep = ids_shuffle[:, :len_keep]
+        x_masked = torch.gather(x, dim=1, index=ids_keep.unsqueeze(-1).repeat(1, 1, D))
+
+        # generate the binary mask: 0 is keep, 1 is remove
+        mask = torch.ones([N, L], device=x.device)
+        mask[:, :len_keep] = 0
+        # unshuffle to get the binary mask
+        mask = torch.gather(mask, dim=1, index=ids_restore)
+        
+        return x_masked, mask, ids_restore, ids_keep
+
+
+    def forward(self, inputs, return_states=False, targets=None, compute_loss=False):
+        """
+        """
+        x, mask_ratio = inputs[:2]
+        
+        embeded = self.patch_embedding(x).flatten(2).transpose(1, 2)
+        embeded_masked, mask, ids_restore, ids_keep = self.random_masking(embeded, mask_ratio)
+        
+        cls = self.cls.repeat(embeded_masked.shape[0], 1, 1)
+        cls_pos_ids = torch.zeros([embeded_masked.shape[0], 1], dtype=torch.long, device=ids_keep.device)
+        enc_pos_ids = torch.cat([cls_pos_ids, 1+ids_keep], 1)
+        embeded_masked = torch.cat([cls, embeded_masked], 1)
+
+        enc_outputs = self.encoder(embeded_masked, 
+                                   self_pos_ids=enc_pos_ids,
+                                   past_pos_ids=enc_pos_ids,
+                                   return_states=return_states)
+        enc_output = enc_outputs[0]
+        
+        dec_embeded = self.dec_embedding(enc_output)
+        
+        mask_tokens = self.mask.repeat(dec_embeded.shape[0], ids_restore.shape[1] + 1 - dec_embeded.shape[1], 1)
+        
+        dec_embeded_ = torch.cat([dec_embeded[:, 1:, :], mask_tokens], dim=1)  
+        dec_embeded_ = torch.gather(dec_embeded_, dim=1, index=ids_restore.unsqueeze(-1).repeat(1, 1, dec_embeded_.shape[2]))  
+        dec_embeded = torch.cat([dec_embeded[:, :1, :], dec_embeded_], dim=1)  
+        
+        dec_pos_ids = torch.arange(dec_embeded.shape[1], device=dec_embeded.device).repeat([dec_embeded.shape[0],1])
+        dec_output = self.decoder(dec_embeded, 
+                                  self_pos_ids=dec_pos_ids,
+                                  past_pos_ids=dec_pos_ids,
+                                  return_states=return_states)
+        
+        dec_output = self.out_proj(dec_output[0][:,1:,:])
+        
+        h = self.img_h // self.ph
+        w = self.img_w // self.pw
+        reconstruct = dec_output.reshape(shape=(dec_output.shape[0], h, w, self.ph, self.pw, self.n_channels))
+        reconstruct = torch.einsum('nhwpqc->nchpwq', reconstruct)
+        reconstruct = reconstruct.reshape(shape=(dec_output.shape[0], self.n_channels,self.img_h, self.img_w))
+        
+        patchify_x = x.reshape(shape=(x.shape[0], 3, h, self.ph, w, self.pw))
+        patchify_x = torch.einsum('nchpwq->nhwpqc', patchify_x)
+        patchify_x = patchify_x.reshape(shape=(patchify_x.shape[0], h * w, self.ph * self.pw * 3))
+        
+        outputs = [dec_output, reconstruct, mask, patchify_x]
+        
+        if compute_loss == True:            
+            loss = self.loss_fn(outputs, targets)
+            outputs = [loss] + outputs
+
+        if return_states == True:
+            outputs = outputs + enc_outputs
+
+        return outputs
+        
+
 def load_model_weights(model, weights_path):
     """
     """
@@ -978,7 +1104,12 @@ def build_model(config, load_model_path=None):
             model = CLIP(**config)
         else:
             raise ValueError("model not correct!")  
-
+    elif config["task"] in ["masked_auto_encoder"]:
+        if config["model"] == "transformer":
+            model = MAE(**config)
+        else:
+            raise ValueError("model not correct!")  
+            
     if load_model_path is not None:
         model = load_model_weights(model, load_model_path)
      
