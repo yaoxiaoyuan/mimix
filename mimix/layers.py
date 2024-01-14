@@ -674,6 +674,7 @@ class TransformerLayer(nn.Module):
         self.use_glu = kwargs.get("use_glu", False)
         self.use_ln_scale = kwargs.get("use_ln_scale", True)
         self.use_ln_bias = kwargs.get("use_ln_bias", True)
+        self.layer_scale = kwargs.get("layer_scale", None)
         
         self.self_attention = MultiHeadAttention(self.n_heads,
                                                  self.d_model, 
@@ -720,6 +721,14 @@ class TransformerLayer(nn.Module):
             self.norm_3 = LayerNorm(self.d_model,self.ln_eps,self.use_rms_norm,self.use_ln_scale,self.use_ln_bias)
         else:
             self.norm_2 = LayerNorm(self.d_model,self.ln_eps,self.use_rms_norm,self.use_ln_scale,self.use_ln_bias)
+
+
+        if self.layer_scale == "learned":
+            init_layer_scale = kwargs.get("init_layer_scale", 1)
+            self.gamma_1 = nn.Parameter(init_values * torch.ones((dim)), requires_grad=True)
+            self.gamma_2 = nn.Parameter(init_values * torch.ones((dim)), requires_grad=True)
+            if self.with_across_attention == True:
+                self.gamma_3 = nn.Parameter(init_values * torch.ones((dim)), requires_grad=True)
         
         
     def forward(self, 
@@ -766,8 +775,11 @@ class TransformerLayer(nn.Module):
                                                                     self_pos_ids,
                                                                     past_pos_ids,
                                                                 attention_residual)
-        output = residual + output
-        
+        if self.layer_scale is None:
+            output = residual + output
+        else:
+            output = residual + self.gamma_1 * output
+            
         if self.use_pre_norm == False:
             output = self.norm_1(output)
         
@@ -786,7 +798,11 @@ class TransformerLayer(nn.Module):
                                                                      enc_pos_ids,
                                                                      enc_attention_residual)
 
-            output = residual + output
+            if self.layer_scale is None:
+                output = residual + output
+            else:
+                output = residual + self.gamma_2 * output
+            
             if self.use_pre_norm == False:
                 output = self.norm_2(output)
             
@@ -799,7 +815,14 @@ class TransformerLayer(nn.Module):
                 output = self.norm_2(output)
         output = self.ffn(output)
 
-        output = residual + output
+        if self.layer_scale is None:
+            output = residual + output
+        else:
+            if self.with_across_attention == True:
+                output = residual + self.gamma_3 * output
+            else:
+                output = residual + self.gamma_2 * output
+            
         if self.use_pre_norm == False:
             if self.with_across_attention == True:
                 output = self.norm_3(output)
