@@ -322,6 +322,9 @@ class LMGenerator():
         """
         self.model = build_model(config, real_path(config["load_model"]))
 
+        if config.get("use_fp16", False) == True:
+            self.model = self.model.half()
+
         self.use_cuda = config.get("use_cuda", False)
         self.device = torch.device("cpu")
         if self.use_cuda == True:

@@ -732,7 +732,7 @@ class TransformerLayer(nn.Module):
         
         
     def forward(self, 
-                output,  
+                x,  
                 self_attn_mask=None, 
                 cached_kv=False, 
                 self_keys=None, 
@@ -747,6 +747,8 @@ class TransformerLayer(nn.Module):
                 enc_attention_residual=None):
         """
         """
+        output = x
+        
         residual = output
         if self.use_pre_norm == True:
             output = self.norm_1(output)
