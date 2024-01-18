@@ -130,7 +130,7 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
 
          \_ci\_ \_ancient\_ \_title\_ 如梦令 \_content\_ 帘外落花飞絮。天气薄寒如许。人瘦底衣单，深院日长无绪。愁去。愁去。砌下啼鹃红雨。  -1.6334530512491863
 
-      5. input: 金木水火土
+      5. input: \_lian\_ 金木水火土
 
       6. output: 
          \_lian\_ 金木水火土 \_sep\_ 东西南北中  -0.13197459624363825
