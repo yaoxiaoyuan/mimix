@@ -417,7 +417,7 @@ def scaled_dot_product_attention(query,
     scores = scores / np.sqrt(d)
 
     if pos_bias is not None:        
-        scores += alibi_bias
+        scores += pos_bias
 
     if talk_w is not None:
         scores = torch.einsum("bnqk,nm->bmqk", scores, talk_w[0])
