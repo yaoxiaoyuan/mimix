@@ -193,8 +193,8 @@ class PositionEmbedding(nn.Module):
             W = torch.zeros(max_len, d_model)
             for i in range(max_len):
                 for j in range(0, d_model, 2):
-                    W[i, j] = np.sin(i / np.power(10000, 2 * j / d_model))
-                    W[i, j + 1] = np.cos(i / np.power(10000, 2 * j / d_model))
+                    W[i, j] = np.sin(i / np.power(10000, j / d_model))
+                    W[i, j + 1] = np.cos(i / np.power(10000, j / d_model))
             self.register_buffer('W', W)
         elif pos_type == "learned":
             self.W = nn.Parameter(torch.Tensor(max_len, d_model))
@@ -216,6 +216,63 @@ class PositionEmbedding(nn.Module):
             return pe
         elif self.pos_type == "learned":
             return self.W[pos_ids]
+
+
+class RoPE(nn.Module):
+    """
+    """
+    def __init__(self, max_len, d_qk, pos_type="sinusoidal"):
+        super(RoPE, self).__init__()
+        self.max_len = max_len
+        self.embedding_size = d_qk
+        self.pos_type = pos_type
+        if pos_type == "sinusoidal":
+            W = torch.zeros(max_len, d_qk)
+            for i in range(max_len):
+                for j in range(0, d_qk, 2):
+                    W[i, j] = np.sin(i / np.power(10000, j / d_qk))
+                    W[i, j + 1] = np.cos(i / np.power(10000, j / d_qk))
+            self.register_buffer('W', W)
+        elif pos_type == "learned":
+            self.W = nn.Parameter(torch.Tensor(max_len, d_qk))
+            self.reset_parameters()
+    
+    def reset_parameters(self):
+        """
+        """
+        stdv = 1.0 / np.sqrt(self.max_len + self.embedding_size)
+        for weight in self.parameters():
+            weight.data.uniform_(-math.sqrt(6)*stdv, math.sqrt(6)*stdv)
+       
+
+    def apply_rope(self, x, pos_ids):
+        """
+        """
+        if self.pos_type == "sinusoidal":
+            pe = Variable(self.W[pos_ids], requires_grad=False)
+        elif self.pos_type == "learned":
+            pe = self.W[pos_ids]
+        
+        #B x L x d_qk -> B x L x 1 x d_qk
+        cos_pos = pe[:, :, 1::2].repeat([1, 1, 2]).unsqueeze(2)
+        sin_pos = pe[:, :, 0::2].repeat([1, 1, 2]).unsqueeze(2)
+         
+        #B x L x n x d_qk -> B x L x n x d_qk
+        x2 = torch.cat([-q[..., self.embedding_size//2:], q[..., :self.embedding_size//2]], -1)
+        
+        x = x * cos_pos + x2 * sin_pos
+        
+        return x
+        
+
+    def forward(self, q, q_pos_ids, k=None, k_pos_ids=None):
+        """
+        """
+        qw = self.apply_rope(q, q_pos_ids)
+        if k is not None:
+            kw = self.apply_rope(k, k_pos_ids)
+            return qw, kw
+        return qw
 
 
 class RelativePositionEmbedding(nn.Module):
@@ -395,7 +452,8 @@ class LayerNorm(nn.Module):
 def scaled_dot_product_attention(query, 
                                  key, 
                                  value, 
-                                 attn_mask=None, 
+                                 attn_mask=None,
+                                 attn_scale=None,
                                  dropout=None, 
                                  pos_key=None, 
                                  pos_value=None,
@@ -413,9 +471,10 @@ def scaled_dot_product_attention(query,
     if pos_key is not None:
         #p_k:L_q x L_k x d_qk
         scores += torch.einsum("bqnd,bqkd->bnqk", query, pos_key)
-            
-    scores = scores / np.sqrt(d)
-
+    
+    if attn_scale is not None:
+        scores = scores / attn_scale
+ 
     if pos_bias is not None:        
         scores += pos_bias
 
@@ -457,7 +516,10 @@ class MultiHeadAttention(nn.Module):
                  d_v, 
                  dropout=0, 
                  attn_dropout=0, 
-                 use_bias=True, 
+                 use_bias=True,
+                 attn_scale=None,
+                 use_rope_embedding=False,
+                 max_rope_len=-1,
                  max_relative_len=-1,
                  use_rel_pos_value=False,
                  rel_pos_type="learned",
@@ -499,6 +561,13 @@ class MultiHeadAttention(nn.Module):
                 self.b_k = nn.Parameter(torch.Tensor(n_heads*d_qk))
                 self.b_v = nn.Parameter(torch.Tensor(n_heads*d_v))
             self.b_o = nn.Parameter(torch.Tensor(d_model))
+        
+        self.attn_scale = attn_scale
+        
+        self.use_rope_embedding = use_rope_embedding
+        if self.use_rope_embedding == True:
+            self.max_rope_len = max_rope_len
+            self.rope_emb = RoPE(self.max_rope_len, self.d_qk)
         
         self.rel_pos_k_emb = None
         self.rel_pos_v_emb = None
@@ -556,7 +625,7 @@ class MultiHeadAttention(nn.Module):
             if self.use_bias == True:
                 key = key + self.b_k
                 value = value + self.b_v
-
+                        
         batch_size = query.size(0)
         #B x l x (d*n_heads) -> B x L x n_heads x d_qk
         query = query.view(batch_size, -1, self.n_heads, self.d_qk)
@@ -567,6 +636,12 @@ class MultiHeadAttention(nn.Module):
             else:
                 key = key.view(batch_size, -1, self.n_heads, self.d_qk)
                 value = value.view(batch_size, -1, self.n_heads, self.d_v)
+
+        if self.use_rope_embedding == True:
+            if cached_kv == False:
+                query, key = self.rope_emb(query, q_pos_ids, key, kv_pos_ids)
+            else:
+                query = self.rope_emb(query, q_pos_ids)
         
         if attn_mask is not None:
             attn_mask = attn_mask.unsqueeze(1).repeat(1, self.n_heads, 1, 1)
@@ -598,6 +673,7 @@ class MultiHeadAttention(nn.Module):
                                                                   key, 
                                                                   value, 
                                                                   attn_mask,
+                                                                  self.attn_scale,
                                                                   self.attn_dropout,
                                                                   pos_key,
                                                                   pos_value,
@@ -621,7 +697,7 @@ class MultiHeadAttention(nn.Module):
         return output, attn_scores, scores
 
 
-    def cache_kv(self, x):
+    def cache_kv(self, x, pos_ids=None):
         """
         """
         batch_size = x.size(0)
@@ -638,6 +714,9 @@ class MultiHeadAttention(nn.Module):
         else:   
             key = key.view(batch_size, -1, self.n_heads, self.d_qk)
             value = value.view(batch_size, -1, self.n_heads, self.d_v)
+        
+        if self.use_rope_embedding == True:
+            key = self.rope_emb(key, pos_ids)
         
         return [key, value]
 
@@ -664,6 +743,8 @@ class TransformerLayer(nn.Module):
         self.use_attention_bias = kwargs.get("use_attention_bias", True)
         self.use_ffn_bias = kwargs.get("use_ffn_bias", True)
         self.use_multi_query_attention = kwargs.get("use_multi_query_attention", False)
+        self.use_rope_embedding = kwargs.get("use_rope_embedding", False)
+        self.max_rope_len = kwargs.get("max_rope_len", -1)
         self.use_pos_bias = kwargs.get("use_pos_bias", False)
         self.pos_bias_type = kwargs.get("pos_bias_type", None)
         self.max_relative_len = kwargs.get("max_relative_len", -1)
@@ -675,6 +756,7 @@ class TransformerLayer(nn.Module):
         self.use_ln_scale = kwargs.get("use_ln_scale", True)
         self.use_ln_bias = kwargs.get("use_ln_bias", True)
         self.layer_scale = kwargs.get("layer_scale", None)
+        self.attn_scale = kwargs.get("attn_scale", np.sqrt(self.d_qk))
         
         self.self_attention = MultiHeadAttention(self.n_heads,
                                                  self.d_model, 
@@ -683,6 +765,9 @@ class TransformerLayer(nn.Module):
                                                  self.dropout,
                                                  self.attn_dropout,
                                                  self.use_attention_bias,
+                                                 self.attn_scale,
+                                                 self.use_rope_embedding,
+                                                 self.max_rope_len,
                                                  self.max_relative_len,
                                                  self.use_rel_pos_value,
                                                  self.rel_pos_type,
@@ -701,6 +786,9 @@ class TransformerLayer(nn.Module):
                                                     self.dropout,
                                                     self.attn_dropout,
                                                     self.use_attention_bias,
+                                                    self.attn_scale,
+                                                    self.use_rope_embedding,
+                                                    self.max_rope_len,
                                                     self.max_relative_len,
                                                     self.use_rel_pos_value,
                                                     self.rel_pos_type,
@@ -754,7 +842,7 @@ class TransformerLayer(nn.Module):
             output = self.norm_1(output)
         
         if cached_kv == True:
-            kv = self.cache_dec_kv(output)
+            kv = self.cache_dec_kv(output, past_pos_ids)
             
             if self_keys is None:
                 self_keys = kv[0]                
@@ -840,15 +928,15 @@ class TransformerLayer(nn.Module):
         
         return outputs
 
-    def cache_enc_kv(self, enc_output):
+    def cache_enc_kv(self, enc_output, enc_pos_ids=None):
         """
         """
-        return self.enc_attention.cache_kv(enc_output)
+        return self.enc_attention.cache_kv(enc_output, enc_pos_ids)
 
 
-    def cache_dec_kv(self, dec_output):
+    def cache_dec_kv(self, dec_output, past_pos_ids=None):
         """
         """
-        return self.self_attention.cache_kv(dec_output)
+        return self.self_attention.cache_kv(dec_output, past_pos_ids)
 
 

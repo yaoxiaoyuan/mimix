@@ -283,17 +283,17 @@ class Transformer(nn.Module):
         return outputs
 
 
-    def cache_enc_kv(self, enc_output):
+    def cache_enc_kv(self, enc_output, pos_ids=None):
         """
         """
         kv_list = []
         for i in range(self.n_layers):
             if not self.share_layer_params:
                 layer = self.layers[i]
-                cached_kv = layer.cache_enc_kv(enc_output)
+                cached_kv = layer.cache_enc_kv(enc_output, pos_ids)
             elif i % self.n_share_across_layers == 0:
                 layer = self.layers[i // self.n_share_across_layers]
-                cached_kv = layer.cache_enc_kv(enc_output)
+                cached_kv = layer.cache_enc_kv(enc_output, pos_ids)
             else:
                 cached_kv = kv_list[-1]
             kv_list.append(cached_kv)
@@ -497,7 +497,7 @@ class TransformerSeq2seq(nn.Module):
                                    self_pos_ids=enc_pos_ids,
                                    past_pos_ids=enc_pos_ids)      
         enc_output = enc_outputs[0]
-        enc_kv_list = self.decoder.cache_enc_kv(enc_output)
+        enc_kv_list = self.decoder.cache_enc_kv(enc_output, enc_pos_ids)
         
         dec_pos_ids = states[0].ne(self.PAD).cumsum(-1) - 1         
         dec_kv_list = self.decoder.cache_dec_kv()
