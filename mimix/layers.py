@@ -258,7 +258,7 @@ class RoPE(nn.Module):
         sin_pos = pe[:, :, 0::2].repeat([1, 1, 2]).unsqueeze(2)
          
         #B x L x n x d_qk -> B x L x n x d_qk
-        x2 = torch.cat([-q[..., self.embedding_size//2:], q[..., :self.embedding_size//2]], -1)
+        x2 = torch.cat([-x[..., self.embedding_size//2:], x[..., :self.embedding_size//2]], -1)
         
         x = x * cos_pos + x2 * sin_pos
         
@@ -483,7 +483,7 @@ def scaled_dot_product_attention(query,
 
     if attention_residual is not None:
         scores += attention_residual
-        
+    
     if attn_mask is not None:
         attn_mask = attn_mask.bool()
         scores = scores.masked_fill(attn_mask, -1e4)
@@ -668,7 +668,7 @@ class MultiHeadAttention(nn.Module):
                 slopes = torch.tensor([start*ratio**i for i in range(self.n_heads)]).to(query.device, dtype=query.dtype)
                 relative_dis[relative_dis<0] = -relative_dis[relative_dis<0]
                 pos_bias = torch.einsum("bqk,n->bnqk", relative_dis, slopes)
-
+        
         output, attn_scores,scores = scaled_dot_product_attention(query, 
                                                                   key, 
                                                                   value, 
@@ -842,7 +842,7 @@ class TransformerLayer(nn.Module):
             output = self.norm_1(output)
         
         if cached_kv == True:
-            kv = self.cache_dec_kv(output, past_pos_ids)
+            kv = self.cache_dec_kv(output, self_pos_ids)
             
             if self_keys is None:
                 self_keys = kv[0]                
@@ -864,7 +864,7 @@ class TransformerLayer(nn.Module):
                                                                     cached_kv,
                                                                     self_pos_ids,
                                                                     past_pos_ids,
-                                                                attention_residual)
+                                                                    attention_residual)
         if self.layer_scale is None:
             output = residual + output
         else:
@@ -934,9 +934,9 @@ class TransformerLayer(nn.Module):
         return self.enc_attention.cache_kv(enc_output, enc_pos_ids)
 
 
-    def cache_dec_kv(self, dec_output, past_pos_ids=None):
+    def cache_dec_kv(self, dec_output, self_pos_ids=None):
         """
         """
-        return self.self_attention.cache_kv(dec_output, past_pos_ids)
+        return self.self_attention.cache_kv(dec_output, self_pos_ids)
 
 

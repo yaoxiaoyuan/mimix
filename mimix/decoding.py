@@ -128,7 +128,6 @@ def search(model,
         cur_beam_size = group_size
     
     while True:
-        
         y, log_probs, finished, mask_finished, hypothesis, history_probs = states
         
         

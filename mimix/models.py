@@ -431,7 +431,7 @@ class TransformerSeq2seq(nn.Module):
         x, y = inputs
 
         enc_self_attn_mask = None
-        if self.use_vit_encoder == False and self.use_word_embedding == True:
+        if self.use_vit_encoder == False and self.encoder.use_word_embedding == True:
             enc_self_attn_mask = self.get_attn_mask(x, x)
         
         dec_self_attn_mask = self.get_subsequent_mask(y)
