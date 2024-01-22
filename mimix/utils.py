@@ -15,13 +15,13 @@ from abc import ABC, abstractmethod
 home_dir = os.path.abspath(os.getcwd())
 
 
-SYMBOLS = {"PAD_TOK" : "_pad_",
-           "BOS_TOK" : "_bos_",
-           "EOS_TOK" : "_eos_",
-           "UNK_TOK" : "_unk_",
-           "SEP_TOK" : "_sep_",
-           "CLS_TOK" : "_cls_",
-           "MASK_TOK" : "_mask_"}
+SYMBOLS = {"_pad_" : "_pad_",
+           "_bos_" : "_bos_",
+           "_eos_" : "_eos_",
+           "_unk_" : "_unk_",
+           "_sep_" : "_sep_",
+           "_cls_" : "_cls_",
+           "_mask_" : "_mask_"}
            
 SYMBOL2ID = {"_pad_":0,
              "_bos_":1,

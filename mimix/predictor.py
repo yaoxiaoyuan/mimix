@@ -61,9 +61,9 @@ class EncDecGenerator():
             self.src_id2word = {vocab[word]:word for word in vocab}
         
         self.add_tokens = config.get("add_tokens", "")
-        self.bos_tok = config["symbols"]["BOS_TOK"]
-        self.eos_tok = config["symbols"]["EOS_TOK"]
-        self.pad_tok = config["symbols"]["PAD_TOK"]
+        self.bos_tok = config["symbols"]["_bos_"]
+        self.eos_tok = config["symbols"]["_eos_"]
+        self.pad_tok = config["symbols"]["_pad_"]
         
         if self.use_vit_encoder == False:     
             self.src_max_len = config["src_max_len"]
@@ -347,9 +347,9 @@ class LMGenerator():
         self.max_decode_steps = config["max_decode_steps"]
         self.use_cuda = config["use_cuda"]
         
-        self.bos_tok = config["symbols"]["BOS_TOK"]
-        self.eos_tok = config["symbols"]["EOS_TOK"]
-        self.pad_tok = config["symbols"]["PAD_TOK"]
+        self.bos_tok = config["symbols"]["_bos_"]
+        self.eos_tok = config["symbols"]["_eos_"]
+        self.pad_tok = config["symbols"]["_pad_"]
         
         self.beam_size = config.get("beam_size", 3)
         self.group_size = config.get("group_size", 0)
@@ -557,7 +557,7 @@ class TextEncoder():
                 vocab_file=config["src_vocab"])
         self.add_tokens = config.get("add_tokens", "")
         
-        self.mask_id = config["symbol2id"][config["symbols"]["MASK_TOK"]]
+        self.mask_id = config["symbol2id"]["_mask_"]
         
         self.src_vocab_size = config["src_vocab_size"]
         self.use_cuda = config["use_cuda"]
@@ -569,6 +569,7 @@ class TextEncoder():
             self.label2id = load_vocab(real_path(config["label2id"]))
             self.id2label = invert_dict(self.label2id)
         self.num_class = config.get("n_class", None)
+        self.return_k = config.get("return_k", 10)
     
     
     def encode_inputs(self, src_list):
@@ -604,9 +605,10 @@ class TextEncoder():
         return outputs[0]
 
 
-    def predict_mlm(self, src_list, top_k=-1, top_p=-1, return_k=10):
+    def predict_mlm(self, src_list, top_k=-1, top_p=-1):
         """
         """
+        return_k = self.return_k
         y = self.encode_inputs(src_list)
 
         self.model.eval()
