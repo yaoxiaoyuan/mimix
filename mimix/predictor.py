@@ -570,14 +570,15 @@ class TextEncoder():
             self.id2label = invert_dict(self.label2id)
         self.num_class = config.get("n_class", None)
         self.return_k = config.get("return_k", 10)
+        self.return_all = config.get("return_all", False)
     
     
     def encode_inputs(self, src_list):
         """
         """  
-        src_list = [self.add_tokens + src for src in src_list]
+        add_ids = self.src_tokenizer.tokenize_to_ids(self.add_tokens)
         src_ids = list(map(self.src_tokenizer.tokenize_to_ids, src_list))
-
+        src_ids = [add_ids + ids for ids in src_ids]
         y = cut_and_pad_seq_list(src_ids,
                                  self.src_max_len, 
                                  self.model.PAD,
@@ -626,7 +627,7 @@ class TextEncoder():
             res.append([src_list[i], []])
             for j,ww in enumerate(src):
 
-                if ww == self.mask_id:
+                if ww == self.mask_id or self.return_all:
                     pred = []
                     for k in range(return_k):
                         pair = [self.src_id2word[indice[i][j][k]], score[i][j][k]]
