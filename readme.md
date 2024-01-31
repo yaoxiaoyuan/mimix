@@ -299,11 +299,11 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
          
          最重要的是，给自己时间和空间来处理情感上的挑战。失恋是一种成长，需要时间来愈合。相信自己会度过难关，迎接更好的未来。 -131.62425231933594
    
-     python interact.py --model_conf conf/qa_base_conf
+        python interact.py --model_conf conf/qa_base_conf
    
-      1. input: 失恋了怎么办
+         1. input: 失恋了怎么办
    
-      2. output:
+         2. output:
    
          找个新欢 -6.095271110534668
    
