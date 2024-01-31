@@ -7,7 +7,6 @@ Created on Fri Nov 20 17:40:07 2020
 import re
 from abc import abstractmethod
 from mimix.utils import load_vocab
-from mimix.bert_tokenizer import FullTokenizer as bert_tokenizer
 
 def is_alphabet(ch):
     """
@@ -122,12 +121,23 @@ class Tokenizer():
         return word_ids
     
     
-    def detokenize_ids(self, word_ids):
+    def detokenize_ids(self, word_ids, remove_special_symbols=False):
         """
         """
         tokens = self.convert_ids_to_tokens(word_ids)
         text = self.detokenize(tokens)
         
+        if remove_special_symbols == True:
+            for word in self.vocab:
+                if word == "_unk_":
+                    continue
+                elif word == "_s_":
+                    text = text.replace(word, " ")
+                elif word == "_nl_" or word == "_sep_":
+                    text = text.replace(word, "\n")
+                elif re.search("^_[^_]+_$", word):
+                    text = text.replace(word, "")
+                    
         return text
 
 
@@ -429,6 +439,7 @@ def build_tokenizer(**args):
     elif args["tokenizer"] == "mimix":
         tokenizer = MimixTokenizer(vocab_file=args["vocab_file"])
     elif args["tokenizer"] == "bert":
+        from mimix.bert_tokenizer import FullTokenizer as bert_tokenizer
         tokenizer = BertTokenizer(vocab_file=args["vocab_file"])
     else:
         raise ValueError("tokenizer not correct!")
