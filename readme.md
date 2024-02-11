@@ -527,8 +527,8 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
          ![streamlit](image/streamlit7.png)
    
    29. Chinese text recognition: The model is designed for Chinese text recognition of single line and is suitable for scene, web and document data. It may not works well with handwriting data . For multiple lines text image, You need to use a text detector.
-       
-   streamlit run app.py -- --model_conf conf/tr_base_conf
+   
+          streamlit run app.py -- --model_conf conf/tr_base_conf
    
    ![streamlit](image/streamlit9.png)
    
@@ -536,8 +536,8 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
          ![streamlit](image/streamlit8.png)
 
 23. Piano midi generation: python interact  --model_conf   conf/midi_base_conf
-
-        It will generate a midi file in current directory. A generated sample is here: [test.mid](test.mid)        
+   
+          It will generate a midi file in current directory. A generated sample is here: [test.mid](test.mid)        
 
       
 
