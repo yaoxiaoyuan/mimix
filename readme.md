@@ -539,7 +539,7 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
        It will generate a midi file in current directory. A generated sample is here: [test.mid](test.mid)
    
 
-24. Sudoku BERT: python sudoku.py
+   24. Sudoku BERT: python sudoku.py
 
      (It may failed/get wrong answer on very hard puzzles. Model achieve 92% success rate on hard puzzles test)
 
