@@ -14,7 +14,7 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 
 4. Now MIMIX support image classification,  Image caption/image vqa and image-text match task. I have trained image classification model on ChineseFoodNet dataset. By using the pretrained VIT model, it can easily beats the single resnet152 model (VIT get top1 acc 0.7967 on test data set, ResNet152 get top1 acc 0.7900 on test data set) .  
 
-5. Although LLM achieve remarkable performance in recent years, this project focus on training model useful but not that large(less than 1.5B).  Training LLM cost too much for individuals. Also, there already exists many projects for finetune large LLM  at low cost. However, I may boost Chinese text generation models trained before by leveraging the new LLM model.  New models may be released in the future.
+5. Although LLM achieve remarkable performance in recent years, this project focus on training model useful but not that large(less than 1.5B).  All the models can be trained on 1x-8x 3090 in hours to weeks. Training LLM cost too much for individuals. Also, there already exists many projects for finetune large LLM  at low cost. However, I may boost Chinese text generation models trained before by leveraging the new LLM model.  New models may be released in the future.
 
 6. RNN-seq2seq code has been removed in new code. You can still check the code on branch v1. But it won't be maintained.
 
@@ -79,6 +79,12 @@ Several pretrained models are listed below.  ~~**Some models are not available f
 The old weights and configs are not compatible with new code. Please download new model data with below link. Old weights links may become invalid in the future.
 
 Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z 
+
+### TODO LIST
+
+* [ ] Swin Transformer
+
+* [ ] Comformer
 
 ### HOW TO RUN MODEL
 
@@ -359,25 +365,25 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
    14. Chinese wuxia novel generation: python interact.py --model_conf conf/wx_base_conf
    
          1. input:
-      
+               
             小船转过一排垂柳，远远看见水边一丛花树映水而红，灿若云霞。段誉"啊"的一声低呼。
-      
+           
          2. output:
-      
+               
             小船转过一排垂柳，远远看见水边一丛花树映水而红，灿若云霞。段誉"啊"的一声低呼。木婉清和全金发对他似乎颇为悦眼,三人跨出小船,游到水边。木婉 清骂道:“死贼,又著了人家的道儿。”那花树旁边系著一只小船,段誉顺著花树,向左一看,只见花丛影里一个少女倚树而坐,正在倚树而歌,正是段仇世的女儿段天德。此时她歌声清脆,唱起了一首小调:南峰山舍忘词,曾经借问少白头。 \_nl\_ 三更双弦意满楼,征囊终不归。 \_nl\_ 美冠一行惟顾此,寒啸了一为身。 \_nl\_ 但愿人头云鬓和曳,何结同心千里随。 \_nl\_ 此情只在飞鸿迹,生死何必萦怀?只期玉箫一曲牵牛筋。 \_nl\_ 段誉一听歌声,脸上微微一红。只听吴天德叹 道:“我段天德生平以风流自炫,有时不免大意,却也只图一时快意。那是谁到了姑苏,听这歌词,果然是个一表人才的姑娘,我出来斟酒时,仍是将款,那里想得 到她会暗中加害于我了。侥幸令狐大哥吉人天相,报了大仇,咱们可得快些回来。” \_nl\_ 原来吴天德的妻子乃是江湖有名的“飞刀娘子”萧飞英,以一柄柳叶飞刀,在打中大名鼎鼎的“姑苏慕容”后,杀死了慕容复,雍和之位,秦晋云南,大享富贵,他夫妻双双归隐大理,直到廿四年之前,他夫妻两人路过姑苏,在姑苏最大的一间酒楼见到了段天德夫妇两个。那时他夫人仍穿着原服,段天德的妻子换上男装,他却略显道貌岸然,以示江湖儿女,不去理会他妻子。可是段天德夫妻 一看在他眼里,却心中暗暗纳罕:“她左颊明明是多刺了一粒小痣的,怎么这时忽然多了一颗大痣?”他虽情知萧飞英并不是什么好人,神态之间,总不免甚是小 心。 [-1582.4723]
-      
+               
             小船转过一排垂柳，远远看见水边一丛花树映水而红，灿若云霞。段誉"啊"的一声低呼。只听得段誉笑著道:“姊姊,快开船走吧,再耽一刻,天就要黑了。”柔声说道:“莫怕,莫怕……”忽听得呜咽之声,听那声音似是啼哭。段誉背向船舷,正好树丛中伸出一只犹似羊脂白玉的手 来。段誉道:“啊,姊姊,吓了你……”王玉燕紧紧搂住了他,斥道:“又瞎起上来!”段誉道:“姊姊……”王玉燕道:“嗯,是谁先开船的?说!”段誉叹道:“说 来话长,待我慢慢的跟你说。你先别走,我慢慢说。”王玉燕道:“些须小事,便说了了不成?”段誉道:“嗯,是……是许多事不便跟你动手。”玉燕突然想起, 他一个大男人跟著自己说话,半边身子情不自禁的移开了些,说道:“嗯,那你小心些不捱。”声音极是温柔。 \_nl\_ 段誉见她神态豁达,心下对她又增了几分爱慕,突然之间,觉得有一个出色的女子,即使是在镜中画图,在花间听风,也是和她一模一样,于是他心中又想:“王姑娘常说,这次金盆洗手,承玄难大师等各派英雄以为首领,算定那晦明禅师会乘机捣乱丐帮不成,故尔金盆洗手,将门派人物都归降了丐帮。此刻瞧他心情,倒像当教主的人,原是座下游客。倘若他当了帮主,那就……格格格,那可够瞧上老大一阵子啦。”从此他对王玉燕庄敬有加,十分顺从。 \_nl\_ 王玉燕见他又爱上了自己,不自禁耳根红透,两人虽是男女有别, 他这一句话都说了出来。王玉燕展眉微笑,道:“你瞧着我干么?”段誉道:“嗯,瞧著。 [-1303.9319]
-      
+               
             小船转过一排垂柳，远远看见水边一丛花树映水而红，灿若云霞。段誉"啊"的一声低呼。阿朱看得明白,原来是他在海中栖息,这才不觉奇怪。她笑道:“相公,怎么了?”段誉道:“没什么。” \_nl\_ 阿朱又道:“你这两日来很累了么?那你想打什么火?”段誉大口吸水,不答真文。阿朱也喝了两口,笑道:“这远处有座山,你可不由得和我拌嘴。”段誉抬头向她瞧了一眼,道:“你说那山。”阿朱道:“可不是么?隔山望见那山上山走来了两人,谁也不相识,原来是几个捉鬼的和尚。两人唠唠叨叨的说了一会儿子,也不知什么,两个和尚就跳到那座山上去。”段誉听到这里,突然手掌在水中一拍,高声叫道:“你瞧上了热闹没有?”阿朱 道:“什么热闹?”段誉道:“我在一张棺村之前撞见两条绿线……;什么绿线?快快给我招来。”他一面大叫,一面将这张形如巨棺的船板向外一推,便向那两艘绿线划去。阿朱伸手拦住了他,笑道:“不是两条,是四个!”她扯过段誉手中的短桨,运稳了桨桨,便催著船向山边驶去,果然越向山上去,那小径越形狭窄,好几次段誉都几乎要从船头跌将下去。阿朱又将船划得渐渐加快,呼呼风响,两岸山峦渐不相闻。 \_nl\_ 不片刻便到了阿湾,那阿湾只是零落的垂柳,有一条小径自 山坡蜿蜒而下,蜿蜒入丛林之中。阿朱把船划入丛林,驶入了一片石级小径,段誉负手站在钓摊之旁,一瞬不瞬的望著棋盘大声说那一集目两轸的棋局。他内功 虽然已经极有限,却也是个识货的行家,一见棋盘上黑白,便知阿朱兜了个大大的圈。 [-1382.7443]
-      
+               
             
    
    15. Chinese novel generation: python interact.py --model_conf conf/novel_base_conf
    
           1. input:
-      
+                 
              以琛看着她，略略讽刺地说："如果我刚刚没听错的话，你似乎是想红杏出墙，而我很荣幸地成为你看中的……"他停住没说，可默笙完全知道他想说的是什么。
-      
+            
           2. output:
    
           以琛看着她，略略讽刺地说："如果我刚刚没听错的话，你似乎是想红杏出墙，而我很荣幸地成为你看中的……"他停住没说，可默笙完全知道他想说的是什么。所以,她脸色一变了然地追问:" 你想说什么?"他笑道:"我只是好奇而已。你长得这么好看,可以说是a城最漂亮的女人了,如果再给你来一个正常点的男人我怕我会承受不住。"默笙狠狠地瞪着他,又拿起筷子夹了一筷子菜:"你 要是敢……我不会放过你的!"说罢起身出去了。 \_nl\_ 事情有蹊跷,一切都好像顺理成章的样子。 \_nl\_ 可是他觉得异常的别扭……本来是不打算把事情闹大,故意说得这么暧昧,让人很难接受的。 \_nl\_ 到底哪里不对? \_nl\_ 于是他又坐下来,忽然觉得胳膊上一紧,原来是她缩进了桌子里。 \_nl\_ 他往下看去,默笙正搂着自己的胳膊。 \_nl\_ 对了,她一直缩在桌子下面,不是说因为不喜欢看地吗?为什么她还赖在上面不肯下来。 \_nl\_ 他放下筷子,伸手去抱她:"默笙,我很好。"他的手碰到了她的肩膀,那是明显颤抖的。 \_nl\_ 默笙听到他在说:"你觉得不喜欢我吗?"她当然知道他是什么意思,脸唰地一下红了。 \_nl\_ 可是为什么要说这种话呢?难道是他也觉得这姿势不雅吗? \_nl\_ 默笙很快把头低下去,耳朵里只听到他在说:"你要知道,你的身材很好。虽然我对这些不大感冒,可是……"她不敢抬头看他,又是难堪又是愤怒:"你说什么?"语气有点紧张,身体也开始不受控制地颤抖。 \_nl\_ 他收回手,眼睛直勾勾地看着她,目光游离。 \_nl\_ 他突然低笑起来:"我在说什么?你的身材很好,也很美。可是,我对别人的眼睛是不感兴趣的。"默笙蓦然抬起头,一副看怪物的样子看着他。 \_nl\_ 那男人轻轻一笑:"你这是在自我陶醉吗?我就站在这里,外面还有一个女生。你也看到了,我有多漂亮?还不就是看人家。"说着又把视线移回了默笙的脸上,那神情仿佛真的在看一只小虫子。 \_nl\_ 默笙气极,可还是抵不过他的眼光:"你……"男人眯起了眼睛,看进她的眼里:"你生气啦?又什么事生这么大的气啊?告诉我,要不……"默笙使劲掐了他一下:"我为什么要生这么大气的气?你这个人,总是没个正形。"男人很轻蔑地看了她一眼,嘴撇一撇:"真小气。"然后伸手拿过她的手,轻轻一用力,默笙就惨叫出声。 \_nl\_ 男人神色不变:"你不是生气了吧?刚才是不是很奇怪我为什么没找男朋友啊?"默笙的脸变得铁青,可还是不甘心地大吼:"放手!你这个登徒子,别碰我!"可是不喊他还好。一喊更是歇斯底里,怎么 也控制不住自己的声音了:"你去死!我要叫……呜呜呜..."她还没说完,男人忽然轻笑出声:"真是少见呢。呵呵,不知道我有没有那么可爱?你和他很相配呢。"说完突然一把扣住她的腰,微微笑着说:"我想你现在也一定很好奇我是什么人。因为,就算告诉你真相了,你也不一定愿意相信我是同性恋。"默笙没敢挣扎,双手死死地抓住他的衣角。 \_nl\_ "不过……我可以告诉你,其实是真的。"他在她耳边轻轻地说:"你根本就没有喜欢过我,也对我没什么感觉。因为这样子反而会刺激到你。这不像你了,所以我……"他的语气越轻,她就越觉得自 己像被钉在十字架上一样。 \_nl\_ 默笙呆住,只有眼怔怔地看着他,不敢置信。 \_nl\_ 这就是自己喜欢的男人? \_nl\_ 他的脸那么柔和,眉目间一片祥和,这么好的男人竟然是自己所喜欢的? \_nl\_ 他轻轻地说:"既然你对我没有感觉,那么……"他的眼睛轻轻眯起了起来,光芒。 \_nl\_ 她也在看到他的眼睛看不见他修长的眼睛,阳光下模糊了起来。 \_nl\_ 然后对着别人和她不知道: -1902.04248046875
@@ -390,41 +396,41 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
           却说曹操乘袁绍之败，整顿军马，迤逦追袭。
    
           2. output:
-      
+                 
              却说曹操乘袁绍之败，整顿军马，迤逦追袭。前至下邑,忽一阵狂风大作,飞砂蔽天而下。张飞大惊曰:“贼至矣!”急叫军师吴德护守后寨,自己与李律、许褚引三千人马,伏于寨外。少顷风定天清,风沙亦息。曹操立马大骂曰:“曹贼如何这等无礼!我若不生擒汝,誓不回兵!”于是令曹兵安营。是夜分粮设炮,伺便攻城。张飞与李律商议曰:“此风不入寨,其将必吕布也。主公可点计策擒之。”李律曰:“将军所见,正合吾意。可令人一裹粮食于车上,吾乘之入城。” \_nl\_ 不移时,一人乘马于车上。李律叱曰:“汝何人,敢来夺粮?”吕布应曰:“吾乃张公瑾也。”律曰:“我与汝 同受曹公厚恩,义不共戴天。今欲来夺我之粮草,安得无罪!”操曰:“你既不守吾戒,何不出城一战?”律曰:“既蒙将军不杀之恩,我遂出战。”操曰:“将军可依吾计,我却于中接应。”遂分兵五万,吕布一人也。李律见操分兵,于中道候交战。少顷风息,粮食车至。李律于车上大叫:“张公瑾休走!”操曰:“吾料你必入我计中。”遂将兵马分作三路而出:李律引军居中,许褚在左,孙静护 从。操与李傕在中军调度,令人先去请吕布来。正是:中原忽失两英雄,青州借得偏兵来。未知吕布肯降否,且看下文分解。 \_nl\_ \~\~\~start|23-第二十回 解羽德重兴青州\|start\~\~\~ 第二十回 解羽德重兴青州 却说李律于正东路中大叫吕布曰:“我等久知你是虎将,因恨不见面。今日可再会一遭!”吕布正欲厮杀,后面李傕催军追来。操回马而迎,大骂曰:“逆贼敢拒将军乎!”遂于马上欠身,躬身施礼曰:“曹兵慢来,请将军回马。”李傕大怒,挺枪骤马杀来。吕布纵马来迎,不三合,被操一枪刺于马下。李律措手不及,被许褚一戟刺死。于是曹操大军皆败,各奔回本寨。曹操勒马走入,心闷不乐。李傕曰:“曹操太寡恩义,当以兵袭之。”操曰:“吾亦疑此贼不从。”李傕曰:“可先使人去请吕布来。”操即遣荀攸,星夜往请吕布。原来这人最有口才,先至曹操寨中。操设酒 相待,令左右奏乐侑觞。饮至半酣,操唤吕布曰:“吾观汝好位英雄,意欲委用于你。吾有一言,不知公肯依否?” \_nl\_ 吕布曰:“将军既知狂臣贼子,望公提掇挈带。”操曰:“我与汝同出屠奴,不比他人。”遂取出玉玺送之,曰:“此吾先人所为也。”吕布曰:“既蒙厚爱,敢不受命!”遂将印接在手中,上马引兵而行。有诗为证:玉玺送还李傕,自是英雄效武能。 \_nl\_ 收吕布河北去,威震 幽燕定天下。 \_nl\_ 却说吕布既收,屯扎寨中。李傕曰:“吕布在此久矣,必有谋臣在外。”操曰:“吾亦疑之,未敢动。”忽人报:“吕布搦战。”操提刀上马,引数十骑出寨迎敌。吕布见操兵少,亦引军至寨。两马相交,战到二十合不分胜败。操佯输,引军回寨;唤吕布曰:“汝父托孤于吾,情性极厚。今日我与你势不两立,幸为吾而决一雌雄。”吕布曰:“吾虽不才,颇知礼义。今奉公命而来,理当听汝所令。”于是二人各 -1408.430419921875
    
    17. Chinese story generation: python interact.py --model_conf conf/story_base_conf
           1. input:
-      
+                 
              写一个关于“爱”、“勇气”与“希望”的故事，主角是一个魔法少女。 \_sep\_
-      
+            
           2. output:
              写一个关于“爱”、“勇气”与“希望”的故事，主角是一个魔法少女。 \_sep\_ 在一个遥远的王国里，住着一位名叫艾米莉亚的女孩。她拥有一颗善良而勇敢的心，总是带着希望去面对生活 中的困难。有一天，王国被邪恶巫师用黑暗魔法束缚住了他们的家园。艾米莉亚决定挺身而出，寻找解除黑暗魔法的方法。 \_nl\_ 在冒险之旅中，艾米莉亚遇到了许多困难，但她从未放弃过希望。在一次偶然的机会下，艾米莉亚找到了一本古老的魔法书。这本书上记载着一种神秘的咒语，可以破除黑暗魔法。艾米莉亚鼓足勇气念出了咒语，成功解除了笼罩王国的黑暗魔法。 \_nl\_ 从此以后，艾米莉亚成为了国王最信任的朋友和领袖。她用智慧和勇气带领人民重建家园，让整个王国重新焕发生机。而艾米莉亚也因为她的勇敢和坚定信念，赢得了所有人的尊敬和爱戴。 \_nl\_ 这个故事告诉我们，无论面对多大的困难，只要有希望和勇气去追求梦想，就一定能够克服一切。同时，我们也应该珍视身边的人和事物，因为它们都是我们成长过程中最重要的支持。  -142.99069213867188
    
    18. Chinese-English translation: python interact.py --model_conf conf/nmt_base_conf
    
           1. input:
-      
+                 
              \_zhen\_ 2023年元旦刚过，菲律宾总统马科斯对中国进行了国事访问，他因此成为新年第一位访华的外国领导人。
-      
+            
           2. output:
-      
+                 
              on new year's day, 2023, president marcos of the philippines paid a state visit to china, making him the first foreign leader to visit china in the new year.  -0.3184391975402832
-      
+                 
              on new year's day, 2023, president marcos of the philippines paid a state visit to china, making him the first foreign leader to visit china.  -0.34901772605048287
-      
+                 
              on new year's day, 2023, president marcos of the philippines made his first foreign visit to china.  -0.3811599291287936
-      
+                 
              on new year's day, 2023, philippine president marcos made his first foreign visit to china.  -0.3870043357213338
-      
+                 
              on new year's day 2023, philippine president marcos made his first foreign visit to china.  -0.41778796652088995
              
           3. input:
-      
+                 
              \_enzh\_ New Zealand leader Jacinda Ardern announces shock resignation before upcoming election
-      
+            
           4. output:
-      
+                 
              新西兰领导人雅辛达·阿尔德林在即将举行的选举前宣布辞职。  -0.2518916130065918
              
              新西兰领导人雅辛达·阿尔德林在即将到来的选举前宣布辞职。  -0.25208149285152043
@@ -438,9 +444,9 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
    19. Chinese paper generation: python interact.py --model_conf conf/paper_base_conf
    
           1. input:
-      
+                 
              中日韩 \_sep\_ 自贸区
-      
+            
           2. output:
    
           中日韩自贸区发展的制约因素分析 \_sep\_ 发展中日韩自贸区的对策是自贸区的大幅提高。以签订《自由贸易协定》为契机,将各成员国 签订自贸协定作为中日韩自贸区发展的制约因素的内容,本文分析了中日韩自贸区制度的特点,提出了加强中日韩自贸区建设的建议。 -136.17562866210938
@@ -454,11 +460,11 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
    20. Chinese tag generation: python interact.py --model_conf conf/tag_base_conf
    
           1. input:
-      
+                 
              近日，由国家感染性疾病临床医学研究中心、中国人民解放军总医院第五医学中心主办的国家感染性疾病临床医学研究中心2023年学术 年会在北京召开。《每日经济新闻》记者在现场注意到，中科院院士高福等专家学者就长新冠、疫苗和药物研发等话题展开交流。后新 冠时期既不能"恐冠"也不能"轻冠"针对新冠病毒，高福表示，在后新冠时期，大家开始讨论人类已经走出了新冠病毒的阴影，但我们不 能只看新冠病毒带来的挑战，也要看到它给我们提供的机遇，以及让人类如何重新思考。后新冠时期既不能"恐冠"也不能"轻冠"。
-      
+            
           2. output:
-      
+                 
              医学 \_sep\_ 临床医学 \_sep\_ 新型冠状病毒 -7.32832670211792
              
              
@@ -466,15 +472,15 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
    21. Chinese medical qa generation: python interact.py --model_conf conf/med_base_conf
    
           1. input:
-      
+                 
              最近老是犯困全身乏力腰酸背痛
-      
+                 
              output:
-      
+            
           2. 就您的情况考虑是气血虚弱,植物神经功能紊乱导致的,建议用归脾丸治疗。 -29.775508880615234
-      
+                 
              这种情况可能是由于多种原因引起的,例如疲劳、压力过大、饮食不规律等。建议您注意休息,适当进行体育锻炼,保持良好的心态和饮食习惯,同时也要注意补充足够的营养物质, 如蛋白质、维生素及矿物质等。如果症状持续存在或加重,建议您咨询医生进行检查和治疗。 -50.89771270751953
-      
+                 
              这样的情况要考虑是否有肾虚或者腰椎疾病引起的,建议你去医院做一下检查看看。可以吃点六味地黄丸和金锁固精丸来治疗,注意休息,不要过度劳累 -53.82005310058594
              
              
@@ -482,15 +488,15 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
    22. Chinese doc2query generation: python interact.py --model_conf conf/doc2query_base_conf
    
           1. input:
-      
+                 
              "五一"假期过后，社交媒体上出现了许多关于二阳的讨论。据北京疾控公布的第19周 （5月8日-14日）的数据，全市共报告法定传染病16种18081例。新冠感染连续3周超越流感，重返法定传染病病种排名第一。
-      
+            
           2. output:
-      
+                 
              北京二阳是什么意思 -4.803812503814697
-      
+                 
              北京新冠病毒多少 -6.473724365234375
-      
+                 
              北京新冠病毒感染数量 -6.521775245666504
    
          
@@ -498,11 +504,11 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
    23. Chinese spelling correction: python interact.py --model_conf conf/csc_base_conf
    
           1. input:
-      
+                 
              大家要努力鞋习aigc只是。
-      
+            
           2. output:
-      
+                 
              大家要努力学习aigc知识。 -0.0025362607557326555
    
    24. Chinese food clasification: streamlit run app.py -- --model_conf conf/cfn_base_conf
@@ -529,9 +535,9 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
    29. Chinese text recognition: The model is designed for Chinese text recognition of single line and is suitable for scene, web and document data. It may not works well with handwriting data . For multiple lines text image, You need to use a text detector.
    
           streamlit run app.py -- --model_conf conf/tr_base_conf
-   
+
    ![streamlit](image/streamlit9.png)
-   
+
    22. Masked Autoencoders:  streamlit run app.py -- --model_conf conf/mae_base_conf
          ![streamlit](image/streamlit8.png)
 
