@@ -1,6 +1,6 @@
-# Mimix: A Tool for Seq2seq learning framework based on Pytorch 
+# Mimix: A Tool for sequence generation framework based on Pytorch 
 
-Mimix is a tool for Seq2seq learning framework based on Pytorch. Basically, I implement several generative models, including rnn-seq2seq and transformer. Some other models, such as Text CNN, Transformer-based classifier and Transformer-based Language model, are also provided. To facilitate the use of pretrained models, Mimix can also load bert model weights. Other pretrained models may be supported in the future.
+Mimix is a tool for sequence generation framework based on Pytorch.  Basically, I implement several generative models, including Transformer-based Seq2seq model, Transformer-based Language model and Transformer-based vision encoder decoder model. To facilitate the use of pretrained models, Mimix can also load bert model weights. Other pretrained models may be supported in the future.
 
 I have trained some Chinese Generative Models which are listed in Demo section. You can follow the instructions and run the demo.  ~~**An application is required for model download.**~~ Now you can download the weights directly without sending me an email. **You must follow the agreement to use the model. Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/agreement/Mimix%20Model%20Release%20Agreement.docx).** 
 
