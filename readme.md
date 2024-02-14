@@ -12,7 +12,7 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 
 3. I added some example code and config files for training. The training code is flexible and can be easily modified. If use training code, it is better to read the model kwargs in code. Documentation may be improved in the future. 
 
-4. Now MIMIX support image classification,  Image caption/image vqa and image-text match task. I have trained image classification model on ChineseFoodNet dataset. By using the pretrained VIT model, it can easily beats the single resnet152 model (VIT get top1 acc 0.7967 on test data set, ResNet152 get top1 acc 0.7900 on test data set) .  
+4. Now MIMIX support image classification,  image caption/image vqa/text recognition  and image-text match task. I have trained image classification model on ChineseFoodNet dataset. By using the pretrained VIT model, it can easily beats the single resnet152 model (VIT get top1 acc 0.7967 on test data set, ResNet152 get top1 acc 0.7900 on test data set) .  
 
 5. Although LLM achieve remarkable performance in recent years, this project focus on training model useful but not that large(less than 1.5B).  All the models can be trained on 1x-8x 3090 in hours to weeks. Training LLM cost too much for individuals. Also, there already exists many projects for finetune large LLM  at low cost. However, I may boost Chinese text generation models trained before by leveraging the new LLM model.  New models may be released in the future.
 
