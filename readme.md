@@ -8,7 +8,7 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 
 1. The entire project's code has been refactored. Now it is easier to use. 
 
-2. **The old model weights and config files are not compatible with new code. Please download new model data. Old weights links may become invalid in the future.**
+2. **Please download newest code and model. Old codes or models may not compatible.**
 
 3. I added some example code and config files for training. The training code is flexible and can be easily modified. If use training code, it is better to read the model kwargs in code. Documentation may be improved in the future. 
 
@@ -68,16 +68,6 @@ Several pretrained models are listed below.  ~~**Some models are not available f
 | Chinese text recognition | transformer enc-dec | 219m | 12 | 768 | 12 | 10m | 37G | True |
 | piano midi generation | transformer dec-only lm | 89m       | 12       | 768     | 12      | 11k       | 350m      | True |
 | Sudoku Bert | transformer encoder | 300m | 24 | 1024 | 24 | 30m | 5G | True |
-
-~~Download link:  https://pan.baidu.com/s/18UmwOwbN2u_J0ym382SxAA?pwd=bxka~~ 
-
-**DON'T USE OLD MODEL WEIGHTS AND CONFIG FILES ABOVE!** 
-
-**DON'T USE OLD MODEL WEIGHTS AND CONFIG FILES ABOVE!** 
-
-**DON'T USE OLD MODEL WEIGHTS AND CONFIG FILES ABOVE!** 
-
-The old weights and configs are not compatible with new code. Please download new model data with below link. Old weights links may become invalid in the future.
 
 Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z 
 
