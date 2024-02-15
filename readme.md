@@ -1,6 +1,6 @@
 # Mimix: A Tool for sequence generation framework based on Pytorch 
 
-Mimix is a tool for sequence generation framework based on Pytorch.  Basically, I implement several generative models, including Transformer-based Seq2seq model, Transformer-based Language model and Transformer-based vision encoder decoder model. To facilitate the use of pretrained models, Mimix can also load bert model weights. Other pretrained models may be supported in the future.
+Mimix is a tool for sequence generation framework based on Pytorch.  Basically, I implement several generative models, including Transformer-based encoder decoder model, Transformer-based Language model and Transformer-based vision encoder decoder model. To facilitate the use of pretrained models, Mimix can also load bert model weights. Other pretrained models may be supported in the future.
 
 I have trained some Chinese Generative Models which are listed in Demo section. You can follow the instructions and run the demo.  ~~**An application is required for model download.**~~ Now you can download the weights directly without sending me an email. **You must follow the agreement to use the model. Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/agreement/Mimix%20Model%20Release%20Agreement.docx).** 
 
@@ -20,7 +20,7 @@ I have trained some Chinese Generative Models which are listed in Demo section. 
 
 
 
-If you want to contact with me, please send me an email.
+If you want to contact with me, please send me an email. Email address can be found in the agreement.
 
 ### Cite
 
@@ -60,14 +60,14 @@ Several pretrained models are listed below.  ~~**Some models are not available f
 | Chinese doc2query generation | transformer enc-dec | 216m | 12       | 768     | 12      | 1.3m      | 1.5GB     | True         |
 | Chinese ancient translation              | transformer enc-dec     | 216m     | 12       | 768     | 12      | 6m        | 1GB       | True             |
 | Chinese spelling correction | transformer enc-dec | 216m | 12 | 768 | 12 | 32m | 6GB | True |
-| Chinese Food classification | VIT                     | 88m      | 12       | 768     | 12      | 180k      | 20G       | True |
-| Chinese Traditional Medicine classification | VIT                     | 88m      | 12       | 768     | 12      | 267k      | 5G        | True |
-| Chinese image caption | transformer enc-dec | 219m | 12 | 768 | 12 | 356k | 34G | True |
+| Chinese Food classification | VIT enc             | 88m      | 12       | 768     | 12      | 180k      | 20G       | True |
+| Chinese Traditional Medicine classification | VIT enc             | 88m      | 12       | 768     | 12      | 267k      | 5G        | True |
+| Chinese image caption | transformer vision enc-dec | 219m | 12 | 768 | 12 | 356k | 34G | True |
 | Chinese CLIP | dual encoder | 192m | 12 | 768 | 12 | 3m | 300G | True |
-| Chinese VQA | transformer enc-dec | 219m | 12 | 768 | 12 | 240k | 19G | True |
-| Chinese text recognition | transformer enc-dec | 219m | 12 | 768 | 12 | 10m | 37G | True |
+| Chinese VQA | transformer vision enc-dec | 219m | 12 | 768 | 12 | 240k | 19G | True |
+| Chinese text recognition | transformer vision enc-dec | 219m | 12 | 768 | 12 | 10m | 37G | True |
 | piano midi generation | transformer dec-only lm | 89m       | 12       | 768     | 12      | 11k       | 350m      | True |
-| Sudoku Bert | transformer encoder | 300m | 24 | 1024 | 24 | 30m | 5G | True |
+| Sudoku Bert | transformer enc | 300m | 24 | 1024 | 24 | 30m | 5G | True |
 
 Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z 
 
