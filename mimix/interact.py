@@ -412,7 +412,7 @@ def run_interactive():
             lm_demo(config)
         elif config["task"] == "mlm":
             mlm_demo(config)
-        elif config["task"] == "sequence_labeling":
+        elif config["task"] == "seqcls":
             sequene_labeling_demo(config)
         elif config["task"] == "match":
             match_text_demo(config)

@@ -237,19 +237,11 @@ def crf_model_decoding(model, x):
 
     batch_size, seq_len, n_labels = emission.size()
     
-    if mask is not None:
-        end_mask = crf.get_end_mask(mask).float()
-    
     scores = crf.start_trans + emission[:, 0, :]
-    if mask is not None:
-        scores = scores + end_mask[:, 0:1] * crf.end_trans
     path_table = torch.zeros(batch_size, seq_len-1, n_labels, dtype=torch.long, device=x.device)
     
     for i in range(1, seq_len):
         all_scores = scores.unsqueeze(2) + emission[:, i, :].unsqueeze(1) + crf.trans.unsqueeze(0)
-
-        if mask is not None:
-            all_scores = all_scores + (end_mask[:, i:i+1] * crf.end_trans).unsqueeze(1)
         
         next_scores,indices = torch.max(all_scores, 1)
 
@@ -265,13 +257,7 @@ def crf_model_decoding(model, x):
     indice = end_tag
     best_path = indice
     for i in range(seq_len-2, -1, -1):
-        indice = torch.gather(path_table[:,i,:], -1, indice)
-
-        if end_mask is not None:
-            _mask = end_mask[:,i].unsqueeze(-1)
-            
-            indice = indice * (1 - _mask.long()) + end_tag * _mask.long() 
-        
+        indice = torch.gather(path_table[:,i,:], -1, indice)        
         best_path = torch.cat([indice, best_path], 1)
     
     if mask is not None:

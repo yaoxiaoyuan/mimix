@@ -9,8 +9,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from mimix.layers import Linear,Embedding,Dropout,LayerNorm,act2fn,PositionEmbedding,CRF
-from mimix.layers import TransformerLayer
+from mimix.layers import *
 from mimix.utils import real_path
 
 class Transformer(nn.Module):
@@ -50,6 +49,7 @@ class Transformer(nn.Module):
         self.share_emb_out_proj = kwargs.get("share_emb_out_proj", False)
         self.use_pre_norm = kwargs.get("use_pre_norm", False)
         self.activation = kwargs.get("activation", "relu")
+        self.norm_type = kwargs.get("layer_norm_type", "layer_norm")
         self.scale_embedding = kwargs.get("scale_embedding", False)
         self.norm_before_pred = kwargs.get("norm_before_pred", False)
         self.norm_after_embedding = kwargs.get("norm_after_embedding", False)
@@ -72,8 +72,11 @@ class Transformer(nn.Module):
             self.cls = nn.Parameter(torch.Tensor(self.d_model))
 
         if self.use_word_embedding == True:
-            self.word_embedding = Embedding(self.vocab_size, self.d_model, self.factorized_size)
-            
+            if self.factorized_size is None:
+                self.word_embedding = Embedding(self.vocab_size, self.d_model)
+            else:
+                self.word_embedding = FactorizedEmbedding(self.vocab_size, self.d_model, self.factorized_size)
+                
         self.emb_dropout = Dropout(self.emb_dropout) if self.emb_dropout else None
         
         if self.use_pos_embedding == True:    
@@ -83,7 +86,10 @@ class Transformer(nn.Module):
             self.type_embedding = Embedding(self.n_types, self.d_model, self.factorized_size)
         
         if self.norm_after_embedding == True:       
-            self.norm_emb = LayerNorm(self.d_model, self.ln_eps, self.use_rms_norm, self.use_ln_scale, self.use_ln_bias)
+            if self.norm_type == "layer_norm":
+                self.norm_emb = LayerNorm(self.d_model,self.ln_eps,self.use_ln_scale,self.use_ln_bias)
+            elif self.norm_type == "rms_norm":
+                self.norm_emb = RMSNorm(self.d_model,self.ln_eps,self.use_ln_scale,self.use_ln_bias)
         
         self.layers = nn.ModuleList([TransformerLayer(**kwargs) for i in range(self.n_layers//self.n_share_across_layers)])
    
@@ -94,7 +100,10 @@ class Transformer(nn.Module):
                 self.b = nn.Parameter(torch.Tensor(self.vocab_size))
 
         if self.norm_before_pred == True:
-            self.norm = LayerNorm(self.d_model, self.ln_eps, self.use_rms_norm, self.use_ln_scale, self.use_ln_bias)
+            if self.norm_type == "layer_norm":
+                self.norm = LayerNorm(self.d_model,self.ln_eps,self.use_ln_scale,self.use_ln_bias)
+            elif self.norm_type == "rms_norm":
+                self.norm = RMSNorm(self.d_model,self.ln_eps,self.use_ln_scale,self.use_ln_bias)
         
         self.reset_parameters()
     
@@ -825,10 +834,17 @@ class TransformerEncoder(nn.Module):
         self.with_mlm = kwargs.get("with_mlm", False)
         self.share_emb_out_proj = kwargs.get("share_emb_out_proj", False)
         if self.with_mlm == True:
+            self.norm_type = kwargs.get("layer_norm_type", "layer_norm")
+            self.ln_eps = kwargs.get("ln_eps", 1e-5)
+            self.use_ln_scale = kwargs.get("use_ln_scale", True)
+            self.use_ln_bias = kwargs.get("use_ln_bias", True)
             self.W_mlm = nn.Parameter(torch.Tensor(self.d_model, self.d_model))
             self.b_mlm = nn.Parameter(torch.Tensor(self.d_model))
-            self.norm_mlm = LayerNorm(self.d_model, eps=kwargs.get("ln_eps", 1e-5))
-            
+            if self.norm_type == "layer_norm":
+                self.norm_mlm = LayerNorm(self.d_model,self.ln_eps,self.use_ln_scale,self.use_ln_bias)
+            elif self.norm_type == "rms_norm":
+                self.norm_mlm = RMSNorm(self.d_model,self.ln_eps,self.use_ln_scale,self.use_ln_bias)
+                
             self.share_emb_out_proj = kwargs.get("share_emb_out_proj", False)
             if self.share_emb_out_proj == False:
                 self.W_out_mlm = nn.Parameter(torch.Tensor(self.d_model, self.src_vocab_size))
@@ -868,7 +884,8 @@ class TransformerEncoder(nn.Module):
         enc_outputs = self.encoder(x, enc_self_attn_mask, self_pos_ids=self_pos_ids)
         enc_output = enc_outputs[0]
         
-        enc_output = torch.tanh(torch.matmul(enc_output, self.W_pool) + self.b_pool)
+        if self.use_pooling == True:
+            enc_output = torch.tanh(torch.matmul(enc_output, self.W_pool) + self.b_pool)
             
         enc_output = torch.matmul(enc_output, self.W_out) + self.b_out
 
@@ -933,14 +950,13 @@ class TransformerEncoder(nn.Module):
 
             outputs = [logits]
         
-        
         if compute_loss == True:
             loss = self.loss_fn(outputs, targets)
             outputs = [loss] + outputs
-
+        
         if return_states == True:
             outputs = outputs + enc_outputs
-                    
+        
         return outputs        
 
 
@@ -1111,7 +1127,7 @@ def build_model(config, load_model_path=None):
             model = TransformerLM(**config)
         else:
             raise ValueError("model not correct!")
-    elif config["task"] in ["match", "mlm"]:
+    elif config["task"] in ["match", "mlm", "seqcls"]:
         if config["model"] == "transformer":
             model = TransformerEncoder(**config)
         else:

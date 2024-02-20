@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Tue Aug 13 13:29:30 2019
 
@@ -49,26 +48,17 @@ class CRF(nn.Module):
         self.n_labels = n_labels
         self.start_trans = nn.Parameter(torch.Tensor(n_labels))
         self.trans = nn.Parameter(torch.Tensor(n_labels, n_labels))
-        self.end_trans = nn.Parameter(torch.Tensor(n_labels))
         self.reset_parameters()
         
     
     def reset_parameters(self):
         """
         """
-        for weight in [self.start_trans, self.trans, self.end_trans]:
+        for weight in [self.start_trans, self.trans]:
             weight.data.uniform_(-0.1, 0.1)
-
-
-    def get_end_mask(self, mask):
-        """
-        """
-        left_shift_mask = torch.cat([mask[:,1:], torch.zeros_like(mask[:,:1])], 1)
-        end_mask = (mask > left_shift_mask).to(mask.dtype)
-        return end_mask
     
     
-    def get_normalizer(self, emission, mask=None, end_mask=None):
+    def get_normalizer(self, emission, mask=None):
         """
         """
         #start -> first tag 
@@ -94,9 +84,6 @@ class CRF(nn.Module):
                 _mask = mask[:, i].unsqueeze(1)
                 next_scores = _mask * next_scores + (1 - _mask) * scores
 
-                _mask = end_mask[:, i].unsqueeze(1)
-                next_scores = next_scores + _mask * self.end_trans
-
             scores = next_scores
         
         scores = torch.logsumexp(scores, 1)
@@ -104,7 +91,7 @@ class CRF(nn.Module):
         return scores
 
 
-    def get_path_score(self, emission, target, mask=None, end_mask=None):
+    def get_path_score(self, emission, target, mask=None):
         """
         """
         batch_size, seq_len = emission.size(0), emission.size(1)
@@ -119,9 +106,6 @@ class CRF(nn.Module):
             if mask is not None:
                 _mask = mask[:,i]
                 next_scores = _mask * next_scores + (1 - _mask) * scores
-            if end_mask is not None:
-                _mask = end_mask[:,i]
-                next_scores = next_scores + _mask * self.end_trans[target[:, i]]
 
             scores = next_scores
         
@@ -131,12 +115,9 @@ class CRF(nn.Module):
     def forward(self, emission, target, mask=None):
         """
         """
-        if mask is not None:
-            end_mask = self.get_end_mask(mask)
+        path_scores = self.get_path_score(emission, target, mask)
         
-        path_scores = self.get_path_score(emission, target, mask, end_mask)
-        
-        normalizer = self.get_normalizer(emission, mask, end_mask)
+        normalizer = self.get_normalizer(emission, mask)
 
         neg_log_likelihood = torch.mean(normalizer - path_scores)
         
@@ -146,17 +127,13 @@ class CRF(nn.Module):
 class Embedding(nn.Module):
     """
     """
-    def __init__(self, vocab_size, embedding_size, factorized_size=None):
+    def __init__(self, vocab_size, embedding_size):
         super(Embedding, self).__init__()
         self.vocab_size = vocab_size
         self.embedding_size = embedding_size
-        self.factorized_size = factorized_size
-        if self.factorized_size is None:
-            self.W = nn.Parameter(torch.Tensor(vocab_size, embedding_size))
-        else:
-            self.W = nn.Parameter(torch.Tensor(vocab_size, embedding_size))
-            self.We = nn.Parameter(torch.Tensor(factorized_size, embedding_size))             
+        self.W = nn.Parameter(torch.Tensor(vocab_size, embedding_size))
         self.reset_parameters()
+    
     
     def reset_parameters(self):
         """
@@ -165,19 +142,49 @@ class Embedding(nn.Module):
         for weight in self.parameters():
             weight.data.uniform_(-math.sqrt(3)*stdv, math.sqrt(3)*stdv)
 
+
     def forward(self, x):
         """
         """
-        if self.factorized_size is None:
-            return self.W[x]
+        return self.W[x]
+
+
+    def get_embedding(self):
+        """
+        """
+        return self.W
+
+
+class FactorizedEmbedding(nn.Module):
+    """
+    """
+    def __init__(self, vocab_size, embedding_size, factorized_size):
+        super(FactorizedEmbedding, self).__init__()
+        self.vocab_size = vocab_size
+        self.embedding_size = embedding_size
+        self.factorized_size = factorized_size
+        self.W = nn.Parameter(torch.Tensor(vocab_size, embedding_size))
+        self.We = nn.Parameter(torch.Tensor(factorized_size, embedding_size))             
+        self.reset_parameters()
+    
+    
+    def reset_parameters(self):
+        """
+        """
+        stdv = 1.0 / np.sqrt(self.vocab_size)
+        for weight in self.parameters():
+            weight.data.uniform_(-math.sqrt(3)*stdv, math.sqrt(3)*stdv)
+
+
+    def forward(self, x):
+        """
+        """
         return F.linear(self.W[x], self.We)
 
 
     def get_embedding(self):
         """
         """
-        if self.factorized_size is None:
-            return self.W
         return F.linear(self.W, self.We)
 
 
@@ -343,10 +350,63 @@ def gelu_new(x):
 act2fn = {"relu": F.relu, "gelu":F.gelu, "gelu_new":gelu_new}
 
 
+class GatedFeedforward(nn.Module):
+    """
+    """
+    def __init__(self, d_model, d_ff, activation="relu", dropout=0, use_bias=True):
+        """
+        """
+        super(GatedFeedforward, self).__init__()
+        self.d_model = d_model
+        self.d_ff = d_ff
+        self.activation = activation
+        self.dropout = None
+        if dropout > 0:
+            self.dropout = Dropout(dropout)
+
+        self.use_bias = use_bias
+        self.W1 = nn.Parameter(torch.Tensor(self.d_ff, self.d_model))
+        if self.use_bias == True:
+            self.b1 = nn.Parameter(torch.Tensor(self.d_ff))
+        self.W2 = nn.Parameter(torch.Tensor(self.d_ff, self.d_model))
+        if self.use_bias == True:
+            self.b2 = nn.Parameter(torch.Tensor(self.d_ff))            
+        self.W3 = nn.Parameter(torch.Tensor(self.d_model, self.d_ff))
+        if self.use_bias == True:
+            self.b3 = nn.Parameter(torch.Tensor(self.d_model))
+            
+        self.reset_parameters()
+    
+    
+    def reset_parameters(self):
+        """
+        """
+        stdv = math.sqrt(6) / np.sqrt(self.d_model + self.d_ff)
+        for weight in [self.W1, self.W2, self.W3]:
+            weight.data.uniform_(-stdv, stdv)
+        if self.use_bias == True:
+            for weight in [self.b1, self.b2, self.b3]:
+                weight.data.fill_(0)
+            
+
+    def forward(self, x):
+        """
+        """
+        act_fn = act2fn[self.activation]
+        if self.use_bias == True:
+            x = F.linear(act_fn(F.linear(x, self.W1) + self.b1) * (F.linear(x, self.W2) + self.b2), self.W3) + self.b3
+        else:
+            x = F.linear(act_fn(F.linear(x, self.W1)) * F.linear(x, self.W2), self.W3)
+            
+        if self.dropout is not None:
+            x = self.dropout(x)
+        return x
+
+
 class FeedForward(nn.Module):
     """
     """
-    def __init__(self, d_model, d_ff, activation="relu", dropout=0, use_bias=True, use_glu=False):
+    def __init__(self, d_model, d_ff, activation="relu", dropout=0, use_bias=True):
         """
         """
         super(FeedForward, self).__init__()
@@ -356,22 +416,15 @@ class FeedForward(nn.Module):
         self.dropout = None
         if dropout > 0:
             self.dropout = Dropout(dropout)
-        self.use_glu = use_glu
-        self.W1 = nn.Parameter(torch.Tensor(self.d_ff, self.d_model))
         self.use_bias = use_bias
+        
+        self.W1 = nn.Parameter(torch.Tensor(self.d_ff, self.d_model))
         if self.use_bias == True:
             self.b1 = nn.Parameter(torch.Tensor(self.d_ff))
-        if self.use_glu == False:
-            self.W2 = nn.Parameter(torch.Tensor(self.d_model, self.d_ff))
-            if self.use_bias == True:
-                self.b2 = nn.Parameter(torch.Tensor(self.d_model))
-        else:
-            self.W2 = nn.Parameter(torch.Tensor(self.d_ff, self.d_model))
-            if self.use_bias == True:
-                self.b2 = nn.Parameter(torch.Tensor(self.d_ff))            
-        if self.use_glu == True:
-            self.W3 = nn.Parameter(torch.Tensor(self.d_model, self.d_ff))
-            self.b3 = nn.Parameter(torch.Tensor(self.d_model))
+        self.W2 = nn.Parameter(torch.Tensor(self.d_model, self.d_ff))
+        if self.use_bias == True:
+            self.b2 = nn.Parameter(torch.Tensor(self.d_model))
+
         self.reset_parameters()
     
     
@@ -379,16 +432,10 @@ class FeedForward(nn.Module):
         """
         """
         stdv = math.sqrt(6) / np.sqrt(self.d_model + self.d_ff)
-        w_list = [self.W1, self.W2]
-        if self.use_glu:
-            w_list.append(self.W3)
-        for weight in w_list:
+        for weight in [self.W1, self.W2]:
             weight.data.uniform_(-stdv, stdv)
         if self.use_bias == True:
-            b_list = [self.b1, self.b2]
-            if self.use_glu == True:
-                b_list = b_list + [self.b3]
-            for weight in b_list:
+            for weight in [self.b1, self.b2]:
                 weight.data.fill_(0)
             
 
@@ -396,16 +443,10 @@ class FeedForward(nn.Module):
         """
         """
         act_fn = act2fn[self.activation]
-        if self.use_glu == False:
-            if self.use_bias == True:
-                x = F.linear(act_fn(F.linear(x, self.W1) + self.b1), self.W2) + self.b2
-            else:
-                x = F.linear(act_fn(F.linear(x, self.W1)), self.W2)
+        if self.use_bias == True:
+            x = F.linear(act_fn(F.linear(x, self.W1) + self.b1), self.W2) + self.b2
         else:
-            if self.use_bias == True:
-                x = F.linear(act_fn(F.linear(x, self.W1) + self.b1) * (F.linear(x, self.W2) + self.b2), self.W3) + self.b3
-            else:
-                x = F.linear(act_fn(F.linear(x, self.W1)) * F.linear(x, self.W2), self.W3)
+            x = F.linear(act_fn(F.linear(x, self.W1)), self.W2)
             
         if self.dropout is not None:
             x = self.dropout(x)
@@ -415,7 +456,7 @@ class FeedForward(nn.Module):
 class LayerNorm(nn.Module):
     """
     """
-    def __init__(self, d_model, eps=1e-5, use_rms_norm=False, use_bias=True, use_scale=True):
+    def __init__(self, d_model, eps=1e-5, use_bias=True, use_scale=True):
         """
         """
         super(LayerNorm, self).__init__()
@@ -428,18 +469,46 @@ class LayerNorm(nn.Module):
         self.use_bias = use_bias
         if use_bias == True:
             self.bias = nn.Parameter(torch.zeros(self.d_model))
-        self.use_rms_norm = use_rms_norm
+
         
     def forward(self, x):
         """
         """
-        if self.use_rms_norm == True:
-            rms = torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
-            norm = x * rms      
-        else:
-            mean = x.mean(dim=-1, keepdim=True)
-            std = x.std(dim=-1, unbiased=False, keepdim=True)
-            norm = (x - mean) / (std + self.eps)
+        mean = x.mean(dim=-1, keepdim=True)
+        std = x.std(dim=-1, unbiased=False, keepdim=True)
+        norm = (x - mean) / (std + self.eps)
+            
+        if self.use_scale == True:
+            norm = self.alpha * norm
+        if self.use_bias == True:
+            norm = norm + self.bias  
+                
+        return norm
+
+
+class RMSNorm(nn.Module):
+    """
+    """
+    def __init__(self, d_model, eps=1e-5, use_bias=True, use_scale=True):
+        """
+        """
+        super(RMSNorm, self).__init__()
+
+        self.eps = eps
+        self.d_model = d_model
+        self.use_scale = use_scale
+        if use_scale == True:
+            self.alpha = nn.Parameter(torch.ones(self.d_model))
+        self.use_bias = use_bias
+        if use_bias == True:
+            self.bias = nn.Parameter(torch.zeros(self.d_model))
+
+        
+    def forward(self, x):
+        """
+        """
+        rms = torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
+        norm = x * rms      
             
         if self.use_scale == True:
             norm = self.alpha * norm
@@ -739,7 +808,7 @@ class TransformerLayer(nn.Module):
         self.ln_eps = kwargs.get("ln_eps", 1e-5)
         self.use_pre_norm = kwargs.get("use_pre_norm", False)
         self.activation = kwargs.get("activation", "relu")
-        self.use_rms_norm = kwargs.get("use_rms_norm", False)
+        self.norm_type = kwargs.get("layer_norm_type", "layer_norm")
         self.use_attention_bias = kwargs.get("use_attention_bias", True)
         self.use_ffn_bias = kwargs.get("use_ffn_bias", True)
         self.use_multi_query_attention = kwargs.get("use_multi_query_attention", False)
@@ -776,8 +845,11 @@ class TransformerLayer(nn.Module):
                                                  self.pos_bias_type,
                                                  self.use_talking_attention)
         
-        self.norm_1 = LayerNorm(self.d_model,self.ln_eps,self.use_rms_norm,self.use_ln_scale,self.use_ln_bias)
-        
+        if self.norm_type == "layer_norm":
+            self.norm_1 = LayerNorm(self.d_model,self.ln_eps,self.use_ln_scale,self.use_ln_bias)
+        elif self.norm_type == "rms_norm":
+            self.norm_1 = RMSNorm(self.d_model,self.ln_eps,self.use_ln_scale,self.use_ln_bias)
+            
         if self.with_across_attention == True:
             self.enc_attention = MultiHeadAttention(self.n_heads,
                                                     self.d_model, 
@@ -797,18 +869,36 @@ class TransformerLayer(nn.Module):
                                                     None,
                                                     self.use_talking_attention)
         
-            self.norm_2 = LayerNorm(self.d_model,self.ln_eps,self.use_rms_norm,self.use_ln_scale,self.use_ln_bias)
-            
-        self.ffn = FeedForward(self.d_model, 
-                               self.d_ff, 
-                               self.activation, 
-                               self.dropout,
-                               self.use_ffn_bias,
-                               self.use_glu)
-        if self.with_across_attention == True:
-            self.norm_3 = LayerNorm(self.d_model,self.ln_eps,self.use_rms_norm,self.use_ln_scale,self.use_ln_bias)
+            if self.norm_type == "layer_norm":
+                self.norm_2 = LayerNorm(self.d_model,self.ln_eps,self.use_ln_scale,self.use_ln_bias)
+            elif self.norm_type == "rms_norm":
+                self.norm_2 = RMSNorm(self.d_model,self.ln_eps,self.use_ln_scale,self.use_ln_bias)
+        
+        if self.use_glu == False:
+            self.ffn = FeedForward(self.d_model, 
+                                   self.d_ff, 
+                                   self.activation, 
+                                   self.dropout,
+                                   self.use_ffn_bias,
+                                   )
         else:
-            self.norm_2 = LayerNorm(self.d_model,self.ln_eps,self.use_rms_norm,self.use_ln_scale,self.use_ln_bias)
+            self.ffn = GatedFeedForward(self.d_model, 
+                                        self.d_ff, 
+                                        self.activation, 
+                                        self.dropout,
+                                        self.use_ffn_bias,
+                                        )            
+        
+        if self.with_across_attention == True:
+            if self.norm_type == "layer_norm":
+                self.norm_3 = LayerNorm(self.d_model,self.ln_eps,self.use_ln_scale,self.use_ln_bias)
+            elif self.norm_type == "rms_norm":
+                self.norm_3 = RMSNorm(self.d_model,self.ln_eps,self.use_ln_scale,self.use_ln_bias)
+        else:
+            if self.norm_type == "layer_norm":
+                self.norm_2 = LayerNorm(self.d_model,self.ln_eps,self.use_ln_scale,self.use_ln_bias)
+            elif self.norm_type == "rms_norm":
+                self.norm_2 = RMSNorm(self.d_model,self.ln_eps,self.use_ln_scale,self.use_ln_bias)
 
 
         if self.layer_scale == "learned":
