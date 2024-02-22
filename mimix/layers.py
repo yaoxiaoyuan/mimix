@@ -532,10 +532,11 @@ def scaled_dot_product_attention(query,
     """
     """
     d = query.size(-1)
-    #q:B x L_q x n_heads x d_qk 
-    #k:B x L_kv x n_heads x d_v 
+    
+    #q:B x n_heads x L_q x d_qk 
+    #k:B x n_heads x L_kv x d_v 
     #scores:B x n_heads x L_q x L_kv
-    scores = torch.einsum("bqnd,bknd->bnqk", query, key)
+    scores = torch.einsum("bnqd,bnkd->bnqk", query, key)
     
     if pos_key is not None:
         #p_k:L_q x L_k x d_qk
@@ -566,8 +567,8 @@ def scaled_dot_product_attention(query,
         attn_scores = dropout(attn_scores)
 
     #scores:B x n_heads x L_q x L_kv
-    #v:B x L_kv x n_heads x d_v 
-    output = torch.einsum("bnqk,bknd->bnqd", attn_scores, value)
+    #v:B x n_heads x L_kv x d_v 
+    output = torch.einsum("bnqk,bnkd->bnqd", attn_scores, value)
     if pos_value is not None:
         #p_v:L_q x L_kv x d_v
         output += torch.einsum("bnqk,bqkd->bnqd", attn_scores, pos_value)
@@ -592,7 +593,7 @@ class MultiHeadAttention(nn.Module):
                  max_relative_len=-1,
                  use_rel_pos_value=False,
                  rel_pos_type="learned",
-                 use_multi_query_attention=False,
+                 n_kv_heads=None,
                  use_pos_bias=False,
                  pos_bias_type=None,
                  use_talking_attention=False):
@@ -612,23 +613,18 @@ class MultiHeadAttention(nn.Module):
         self.d_v = d_v
         self.max_relative_len = max_relative_len
         self.W_q = nn.Parameter(torch.Tensor(n_heads*d_qk, d_model))
-        self.use_multi_query_attention = use_multi_query_attention
-        if use_multi_query_attention == True:
-            self.W_k = nn.Parameter(torch.Tensor(d_qk, d_model))
-            self.W_v = nn.Parameter(torch.Tensor(d_v, d_model))            
-        else:
-            self.W_k = nn.Parameter(torch.Tensor(n_heads*d_qk, d_model))
-            self.W_v = nn.Parameter(torch.Tensor(n_heads*d_v, d_model))
+        self.n_kv_heads = n_kv_heads
+        if self.n_kv_heads is None:
+            self.n_kv_heads = n_heads
+        self.W_k = nn.Parameter(torch.Tensor(self.n_kv_heads*d_qk, d_model))
+        self.W_v = nn.Parameter(torch.Tensor(self.n_kv_heads*d_v, d_model))
+        
         self.W_o = nn.Parameter(torch.Tensor(d_model, n_heads*d_v))
         self.use_bias = use_bias
         if self.use_bias == True:
             self.b_q = nn.Parameter(torch.Tensor(n_heads*d_qk))
-            if use_multi_query_attention == True:
-                self.b_k = nn.Parameter(torch.Tensor(d_qk))
-                self.b_v = nn.Parameter(torch.Tensor(d_v))                
-            else:
-                self.b_k = nn.Parameter(torch.Tensor(n_heads*d_qk))
-                self.b_v = nn.Parameter(torch.Tensor(n_heads*d_v))
+            self.b_k = nn.Parameter(torch.Tensor(self.n_kv_heads*d_qk))
+            self.b_v = nn.Parameter(torch.Tensor(self.n_kv_heads*d_v))
             self.b_o = nn.Parameter(torch.Tensor(d_model))
         
         self.attn_scale = attn_scale
@@ -696,15 +692,11 @@ class MultiHeadAttention(nn.Module):
                 value = value + self.b_v
                         
         batch_size = query.size(0)
-        #B x l x (d*n_heads) -> B x L x n_heads x d_qk
-        query = query.view(batch_size, -1, self.n_heads, self.d_qk)
+        #B x l x (d*n_heads) -> B x n_heads x L x d_qk
+        query = query.view(batch_size, -1, self.n_heads, self.d_qk).transpose(1, 2)
         if cached_kv == False:
-            if self.use_multi_query_attention == True:
-                key = key.view(batch_size, -1, 1, self.d_qk)
-                value = value.view(batch_size, -1, 1, self.d_v)            
-            else:
-                key = key.view(batch_size, -1, self.n_heads, self.d_qk)
-                value = value.view(batch_size, -1, self.n_heads, self.d_v)
+            key = key.view(batch_size, -1, self.n_kv_heads, self.d_qk).transpose(1, 2)
+            value = value.view(batch_size, -1, self.n_kv_heads, self.d_v).transpose(1, 2)
 
         if self.use_rope_embedding == True:
             if cached_kv == False:
@@ -738,6 +730,11 @@ class MultiHeadAttention(nn.Module):
                 relative_dis[relative_dis<0] = -relative_dis[relative_dis<0]
                 pos_bias = torch.einsum("bqk,n->bnqk", relative_dis, slopes)
         
+        if self.n_heads != self.n_kv_heads and self.n_kv_heads != 1:
+            n_rep = self.n_heads // self.n_kv_heads
+            key = key[:, :, None, :, :].repeat(1, 1, n_rep, 1, 1).reshape(batch_size, self.n_heads, -1,  self.d_qk)
+            value = value[:, :, None, :, :].repeat(1, 1, n_rep, 1, 1).reshape(batch_size, self.n_heads, -1,  self.d_qk)
+        
         output, attn_scores,scores = scaled_dot_product_attention(query, 
                                                                   key, 
                                                                   value, 
@@ -752,8 +749,7 @@ class MultiHeadAttention(nn.Module):
         
         #B x n_heads x L x d -> B x L x n_heads x d -> B x L x d_model
         output = output.transpose(1,2)
-        output = output.contiguous().view(batch_size, -1, 
-                                  self.n_heads*self.d_v)
+        output = output.contiguous().view(batch_size, -1, self.n_heads*self.d_v)
 
         
         output = F.linear(output, self.W_o)
@@ -777,12 +773,8 @@ class MultiHeadAttention(nn.Module):
             key = key + self.b_k
             value = value + self.b_v
         
-        if self.use_multi_query_attention == True:
-            key = key.view(batch_size, -1, 1, self.d_qk)
-            value = value.view(batch_size, -1, 1, self.d_v)            
-        else:   
-            key = key.view(batch_size, -1, self.n_heads, self.d_qk)
-            value = value.view(batch_size, -1, self.n_heads, self.d_v)
+        key = key.view(batch_size, -1, self.n_kv_heads, self.d_qk).transpose(1, 2)
+        value = value.view(batch_size, -1, self.n_kv_heads, self.d_v).transpose(1, 2)
         
         if self.use_rope_embedding == True:
             key = self.rope_emb(key, pos_ids)
@@ -811,7 +803,7 @@ class TransformerLayer(nn.Module):
         self.norm_type = kwargs.get("layer_norm_type", "layer_norm")
         self.use_attention_bias = kwargs.get("use_attention_bias", True)
         self.use_ffn_bias = kwargs.get("use_ffn_bias", True)
-        self.use_multi_query_attention = kwargs.get("use_multi_query_attention", False)
+        self.n_kv_heads = kwargs.get("n_kv_heads", None)
         self.use_rope_embedding = kwargs.get("use_rope_embedding", False)
         self.max_rope_len = kwargs.get("max_rope_len", -1)
         self.use_pos_bias = kwargs.get("use_pos_bias", False)
@@ -840,7 +832,7 @@ class TransformerLayer(nn.Module):
                                                  self.max_relative_len,
                                                  self.use_rel_pos_value,
                                                  self.rel_pos_type,
-                                                 self.use_multi_query_attention,
+                                                 self.n_kv_heads,
                                                  self.use_pos_bias,
                                                  self.pos_bias_type,
                                                  self.use_talking_attention)
@@ -864,7 +856,7 @@ class TransformerLayer(nn.Module):
                                                     self.max_relative_len,
                                                     self.use_rel_pos_value,
                                                     self.rel_pos_type,
-                                                    self.use_multi_query_attention,
+                                                    self.n_kv_heads,
                                                     False,
                                                     None,
                                                     self.use_talking_attention)
@@ -937,11 +929,11 @@ class TransformerLayer(nn.Module):
             if self_keys is None:
                 self_keys = kv[0]                
             else:
-                self_keys = torch.cat([self_keys, kv[0]], 1)
+                self_keys = torch.cat([self_keys, kv[0]], 2)
             if self_values is None:
                 self_values = kv[1]
             else:
-                self_values = torch.cat([self_values, kv[1]], 1)
+                self_values = torch.cat([self_values, kv[1]], 2)
                 
         else:
             self_keys = output

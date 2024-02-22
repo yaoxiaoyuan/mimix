@@ -36,7 +36,7 @@ class Transformer(nn.Module):
         self.use_rms_norm = kwargs.get("use_rms_norm", False)
         self.use_attention_bias = kwargs.get("use_attention_bias", True)
         self.use_ffn_bias = kwargs.get("use_ffn_bias", True)
-        self.use_multi_query_attention = kwargs.get("use_multi_query_attention", False)
+        self.n_kv_heads = kwargs.get("n_kv_heads", None)
         self.use_alibi_bias = kwargs.get("use_alibi_bias", False)
         self.max_relative_len = kwargs.get("max_relative_len", -1)
         self.use_rel_pos_value = kwargs.get("use_rel_pos_value", False)
