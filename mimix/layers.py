@@ -163,8 +163,8 @@ class FactorizedEmbedding(nn.Module):
         self.vocab_size = vocab_size
         self.embedding_size = embedding_size
         self.factorized_size = factorized_size
-        self.W = nn.Parameter(torch.Tensor(vocab_size, embedding_size))
-        self.We = nn.Parameter(torch.Tensor(factorized_size, embedding_size))             
+        self.W = nn.Parameter(torch.Tensor(vocab_size, factorized_size))
+        self.We = nn.Parameter(torch.Tensor(embedding_size, factorized_size))             
         self.reset_parameters()
     
     
@@ -260,11 +260,11 @@ class RoPE(nn.Module):
         elif self.pos_type == "learned":
             pe = self.W[pos_ids]
         
-        #B x L x d_qk -> B x L x 1 x d_qk
-        cos_pos = pe[:, :, 1::2].repeat([1, 1, 2]).unsqueeze(2)
-        sin_pos = pe[:, :, 0::2].repeat([1, 1, 2]).unsqueeze(2)
+        #B x L x d_qk -> B x 1 x L x d_qk
+        cos_pos = pe[:, :, 1::2].repeat([1, 1, 2]).unsqueeze(2).transpose(1,2)
+        sin_pos = pe[:, :, 0::2].repeat([1, 1, 2]).unsqueeze(2).transpose(1,2)
          
-        #B x L x n x d_qk -> B x L x n x d_qk
+        #B x n x L x d_qk -> B x n x L x d_qk
         x2 = torch.cat([-x[..., self.embedding_size//2:], x[..., :self.embedding_size//2]], -1)
         
         x = x * cos_pos + x2 * sin_pos
@@ -350,13 +350,13 @@ def gelu_new(x):
 act2fn = {"relu": F.relu, "gelu":F.gelu, "gelu_new":gelu_new}
 
 
-class GatedFeedforward(nn.Module):
+class GatedFeedForward(nn.Module):
     """
     """
     def __init__(self, d_model, d_ff, activation="relu", dropout=0, use_bias=True):
         """
         """
-        super(GatedFeedforward, self).__init__()
+        super(GatedFeedForward, self).__init__()
         self.d_model = d_model
         self.d_ff = d_ff
         self.activation = activation
@@ -456,7 +456,7 @@ class FeedForward(nn.Module):
 class LayerNorm(nn.Module):
     """
     """
-    def __init__(self, d_model, eps=1e-5, use_bias=True, use_scale=True):
+    def __init__(self, d_model, eps=1e-5, use_scale=True, use_bias=True):
         """
         """
         super(LayerNorm, self).__init__()
@@ -489,7 +489,7 @@ class LayerNorm(nn.Module):
 class RMSNorm(nn.Module):
     """
     """
-    def __init__(self, d_model, eps=1e-5, use_bias=True, use_scale=True):
+    def __init__(self, d_model, eps=1e-5, use_scale=True, use_bias=True):
         """
         """
         super(RMSNorm, self).__init__()
