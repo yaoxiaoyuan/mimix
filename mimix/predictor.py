@@ -82,7 +82,6 @@ class EncDecGenerator():
         self.repetition_window_size = config.get("repetition_window_size", 0)
         self.normalize = config.get("normalize", "none")
         self.use_mask_unk =  config.get("use_mask_unk", False)
-        self.use_cuda = config["use_cuda"] 
         self.remove_special_symbols = config.get("remove_special_symbols", False)
     
     
@@ -142,20 +141,21 @@ class EncDecGenerator():
         
         with torch.no_grad():
             if self.strategy in ["beam_search", "sample"]:
-                states, cache = search(self.model, 
-                                       self.beam_size, 
-                                       inputs=[x,y],
-                                       use_cuda=self.use_cuda,
-                                       strategy=self.strategy,
-                                       top_k=self.top_k,
-                                       top_p=self.top_p,
-                                       temperature=self.temperature,
-                                       eos=self.model.EOS,
-                                       group_size=self.group_size, 
-                                       repetition_penalty=self.repetition_penalty,
-                                       repetition_window_size=self.repetition_window_size,
-                                       use_mask_unk=self.use_mask_unk,
-                                       max_decode_steps=self.max_decode_steps)
+                for states, cache in search(self.model, 
+                                            self.beam_size, 
+                                            inputs=[x,y],
+                                            device=self.device,
+                                            strategy=self.strategy,
+                                            top_k=self.top_k,
+                                            top_p=self.top_p,
+                                            temperature=self.temperature,
+                                            eos=self.model.EOS,
+                                            group_size=self.group_size, 
+                                            repetition_penalty=self.repetition_penalty,
+                                            repetition_window_size=self.repetition_window_size,
+                                            use_mask_unk=self.use_mask_unk,
+                                            max_decode_steps=self.max_decode_steps):
+                    pass
                 hypothesis,scores = states[4], states[1]
             else:
                 raise ValueError("strategy not correct!")
@@ -341,7 +341,6 @@ class LMGenerator():
         self.trg_word2id = vocab
         self.trg_id2word = {vocab[word]:word for word in vocab}
 
-        self.use_cuda = config.get("use_cuda", False)
         self.gamma = float(config.get("gamma", 1))
         self.trg_max_len = config["trg_max_len"]
         self.trg_vocab_size = config["trg_vocab_size"]
@@ -362,7 +361,6 @@ class LMGenerator():
         self.repetition_window_size = config.get("repetition_window_size", 0)
         self.normalize = config.get("normalize", "none")
         self.use_mask_unk =  config.get("use_mask_unk", False)
-        self.use_cuda = config["use_cuda"] 
         self.remove_special_symbols = config.get("remove_special_symbols", False)
         
 
@@ -402,20 +400,21 @@ class LMGenerator():
         self.model.eval()
         with torch.no_grad():
             if self.strategy in ["beam_search", "sample"]:
-                states, cache = search(self.model, 
-                                       self.beam_size, 
-                                       inputs=[y],
-                                       use_cuda=self.use_cuda,
-                                       strategy=self.strategy,
-                                       top_k=self.top_k,
-                                       top_p=self.top_p,
-                                       temperature=self.temperature,
-                                       eos=self.model.EOS,
-                                       group_size=self.group_size, 
-                                       repetition_penalty=self.repetition_penalty,
-                                       repetition_window_size=self.repetition_window_size,
-                                       use_mask_unk=self.use_mask_unk,
-                                       max_decode_steps=self.max_decode_steps)
+                for states, cache in search(self.model, 
+                                            self.beam_size, 
+                                            inputs=[y],
+                                            device=self.device,
+                                            strategy=self.strategy,
+                                            top_k=self.top_k,
+                                            top_p=self.top_p,
+                                            temperature=self.temperature,
+                                            eos=self.model.EOS,
+                                            group_size=self.group_size, 
+                                            repetition_penalty=self.repetition_penalty,
+                                            repetition_window_size=self.repetition_window_size,
+                                            use_mask_unk=self.use_mask_unk,
+                                            max_decode_steps=self.max_decode_steps):
+                    pass
                 hypothesis,scores = states[4], states[1]
             else:
                 raise ValueError("strategy not correct!")
@@ -442,6 +441,67 @@ class LMGenerator():
             res.append(["" if prefix_list is None else prefix_list[i], tmp])
         
         return res
+
+
+    def predict_stream(self, prefix_list, pad_trg_left=True):
+        """
+        """
+        batch_size = 1
+        y = None
+        if prefix_list is not None:
+            prefix_list = [prefix_list[i] for i in range(len(prefix_list))]
+            y = self.encode_inputs(prefix_list, add_bos=True, pad_trg_left=True)
+            batch_size = len(prefix_list)
+        self.model.eval()
+        with torch.no_grad():
+            if self.strategy in ["beam_search", "sample"]:
+                it = search(self.model,
+                            self.beam_size,
+                            inputs=[y],
+                            device=self.device,
+                            strategy=self.strategy,
+                            top_k=self.top_k,
+                            top_p=self.top_p,
+                            temperature=self.temperature,
+                            eos=self.model.EOS,
+                            group_size=self.group_size,
+                            repetition_penalty=self.repetition_penalty,
+                            repetition_window_size=self.repetition_window_size,
+                            use_mask_unk=self.use_mask_unk,
+                            max_decode_steps=self.max_decode_steps)
+                while True:
+                    try:
+                        states, cache = next(it)
+    
+                        hypothesis,scores = states[4], states[1]
+                        h_len = torch.sum(hypothesis.ne(self.model.PAD), -1).cpu().numpy()
+                        hypothesis = hypothesis.cpu().numpy()
+                        scores = scores.cpu().numpy()
+    
+                        res = []
+                        for i in range(batch_size):
+                            tmp = []
+                            for j in range(i*self.beam_size, (i+1)*self.beam_size):
+    
+                                trg = self.trg_tokenizer.detokenize_ids(hypothesis[j], self.remove_special_symbols)
+    
+                                trg = trg.replace(self.bos_tok, "").replace(self.pad_tok, "").strip()
+                                trg = re.sub(self.eos_tok + ".*", "", trg)
+                                score = float(scores[j])
+    
+                                if self.normalize == "linear":
+                                    score = score/(h_len[j] - 1)
+                                tmp.append([trg, score])
+                            tmp.sort(key=lambda x:x[-1], reverse=True)
+                            res.append(["" if prefix_list is None else prefix_list[i], tmp])
+
+                        yield res
+                          
+                    except:
+                        break
+                    
+            else:
+                raise ValueError("strategy not correct!")
 
 
     def scoring(self, trg_list):

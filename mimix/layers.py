@@ -275,6 +275,7 @@ class RoPE(nn.Module):
     def forward(self, q, q_pos_ids, k=None, k_pos_ids=None):
         """
         """
+        assert (q_pos_ids < self.max_len).all()
         qw = self.apply_rope(q, q_pos_ids)
         if k is not None:
             kw = self.apply_rope(k, k_pos_ids)
@@ -347,7 +348,7 @@ def gelu_new(x):
     return 0.5 * x * (1.0 + torch.tanh(math.sqrt(2.0 / math.pi) * (x + 0.044715 * torch.pow(x, 3.0))))
 
  
-act2fn = {"relu": F.relu, "gelu":F.gelu, "gelu_new":gelu_new}
+act2fn = {"relu": F.relu, "gelu":F.gelu, "gelu_new":gelu_new, "swish":F.silu}
 
 
 class GatedFeedForward(nn.Module):

@@ -6,7 +6,7 @@ Created on Fri Aug 23 10:59:36 2019
 """
 import torch
 
-def init_search(model, batch_size, use_cuda):
+def init_search(model, batch_size, device):
     """
     """
     vocab_size = model.trg_vocab_size
@@ -21,20 +21,12 @@ def init_search(model, batch_size, use_cuda):
                                  dtype=torch.float)
     mask_finished[model.PAD] = model.MAX_LOGITS
                      
-    if use_cuda == False:
-        states = [y,
-                  log_probs,
-                  finished,
-                  mask_finished,
-                  hypothesis,
-                  history_probs]
-    else:
-        states = [y.cuda(),
-                  log_probs.cuda(),
-                  finished.cuda(),
-                  mask_finished.cuda(),
-                  hypothesis.cuda(),
-                  history_probs.cuda()]        
+    states = [y.to(device),
+              log_probs.to(device),
+              finished.to(device),
+              mask_finished.to(device),
+              hypothesis.to(device),
+              history_probs.to(device)]        
     return states
 
 
@@ -96,16 +88,16 @@ def top_k_top_p_sampling(logits,
     return samples, probs
 
 
-def search(model, 
-           beam_size, 
+def search(model,
+           beam_size,
            inputs=None,
-           use_cuda=False,
+           device="cpu",
            strategy="beam_search",
            top_k=-1,
            top_p=-1,
            temperature=1,
            eos=None,
-           group_size=-1, 
+           group_size=-1,
            repetition_penalty=0,
            repetition_window_size=0,
            use_mask_unk=False,
@@ -116,7 +108,7 @@ def search(model,
     if len(inputs) > 0 and inputs[0] is not None:
         batch_size = inputs[0].size(0)
     
-    states = init_search(model, batch_size, use_cuda)
+    states = init_search(model, batch_size, device)
 
     states, cache = model.init_search(states, inputs)
     
@@ -220,11 +212,11 @@ def search(model,
 
         states = [y, cur_log_probs, finished, mask_finished, hypothesis, history_probs]
         steps += 1
+        yield states, cache
+
         if finished.all() or (max_decode_steps is not None and steps >= max_decode_steps):
             break
 
-    return states, cache
-    
 
 def crf_model_decoding(model, x):
     """
