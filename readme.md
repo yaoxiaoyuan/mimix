@@ -21,6 +21,8 @@ A pretrained small Chinese LLM MimixLM-0.7b-sft is now available. You can downlo
 
 ![mimix](image/mimix.png)
 
+![mimix](image/mimix2.png)
+
 Download link：
 
 Google: https://drive.google.com/drive/folders/1ZfGq0HBYLQYWI152w-0PEUeXbBjtvywH?usp=drive_link
@@ -572,6 +574,7 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
 
    22. Masked Autoencoders:  streamlit run app.py -- --model_conf conf/mae_base_conf
        
+
 (Weights are converted from Google's open-source model)  ![streamlit](image/streamlit8.png)
        
    23. Piano midi generation: python interact  --model_conf   conf/midi_base_conf

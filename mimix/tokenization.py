@@ -267,6 +267,7 @@ class MimixTokenizer(Tokenizer):
             text = text.lower()
         
         text = re.sub("[ ]+", " ", text)
+        text = re.sub("[ ]*[\r\n]+[ ]*", "_mimixnl_", text)
         
         i = 0
         tokenized = ""
@@ -324,7 +325,7 @@ class MimixTokenizer(Tokenizer):
 
         tokens = []
         for token in tokenized.split():
-            if is_special(token[0]) and is_special(token[-1]):
+            if re.search("^_[0-9a-z]+_$", token):
                 tokens.append(token)
             elif all(is_cjk(ch) for ch in token):
                 tokens.extend(self.maximum_match(token))    
@@ -372,7 +373,7 @@ class MimixTokenizer(Tokenizer):
             elif token.startswith("##"):
                 text += token[2:]
                 is_last_alphabet = True
-            elif is_special(token[0]) and is_special(token[-1]):
+            elif re.search("^_[0-9a-z]+_$", token):
                 if remove_special_symbols == False:
                     text += (" " + token + " ")
                 else:
