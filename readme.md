@@ -546,61 +546,64 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
                       ![streamlit](image/streamlit.png)
             
    
-    26. Chinese image caption: streamlit run app.py -- --model_conf conf/caption_base_conf
+    26. Chinese Traditional Medicine clasification: streamlit run app.py -- --model_conf conf/ctm_base_conf
+                    ![streamlit](image/streamlit10.png)
+        
+    27. Chinese image caption: streamlit run app.py -- --model_conf conf/caption_base_conf
             v2: The v2 version of the model can generate more detailed descriptions.
             ![streamlit](image/streamlit5.png)
          v1:
             ![streamlit](image/streamlit2.png)
    
-    27. Chinese clip: streamlit run app.py -- --model_conf   conf/clip_base_conf
+    28. Chinese clip: streamlit run app.py -- --model_conf   conf/clip_base_conf
                       ![streamlit](image/streamlit3.png)
             
    
-   28. Chinese vqa:  streamlit run app.py -- --model_conf   conf/vqa_base_conf
-            v2: The v2 version of the model can generate more detailed descriptions.
-            ![streamlit](image/streamlit6.png)
-         v1:
-            ![streamlit](image/streamlit4.png)
+   29. Chinese vqa:  streamlit run app.py -- --model_conf   conf/vqa_base_conf
+             v2: The v2 version of the model can generate more detailed descriptions.
+             ![streamlit](image/streamlit6.png)
+          v1:
+             ![streamlit](image/streamlit4.png)
    
-    29. Chinese product image description generation:  streamlit run app.py -- --model_conf conf/prodimg_base_conf
+    30. Chinese product image description generation:  streamlit run app.py -- --model_conf conf/prodimg_base_conf
                     ![streamlit](image/streamlit7.png)
    
-   30. Chinese text recognition: streamlit run app.py -- --model_conf conf/tr_base_conf 
+   31. Chinese text recognition: streamlit run app.py -- --model_conf conf/tr_base_conf 
    
-        The model is designed for Chinese text recognition of single line and is suitable for scene, web and document data. It may not works well with handwriting data . For multiple lines text image, You need to use a text detector.   
+         The model is designed for Chinese text recognition of single line and is suitable for scene, web and document data. It may not works well with handwriting data . For multiple lines text image, You need to use a text detector.   
    
-        ![streamlit](image/streamlit9.png)
+         ![streamlit](image/streamlit9.png)
    
-   31. Masked Autoencoders:  streamlit run app.py -- --model_conf conf/mae_base_conf
+   32. Masked Autoencoders:  streamlit run app.py -- --model_conf conf/mae_base_conf
    
-        (Weights are converted from Google's open-source model)  ![streamlit](image/streamlit8.png)
+         (Weights are converted from Google's open-source model)  ![streamlit](image/streamlit8.png)
    
-    32. Piano midi generation: python gen_midi.py
+    33. Piano midi generation: python gen_midi.py
             It will generate a midi file in current directory. A generated sample is here: [test.mid](test.mid)
    
-    33. Sudoku BERT: python sudoku.py  (It may failed/get wrong answer on very hard puzzles. Model achieve 92% success rate on hard puzzles test)
-        
+    34. Sudoku BERT: python sudoku.py  (It may failed/get wrong answer on very hard puzzles. Model achieve 92% success rate on hard puzzles test)
+   
            1. input:
-        
+   
               000071050043000000000000000000260000100000040080300000706002000000000803000000100
-        
+   
         2. output:
-        
+   
            8 6 9 4 7 1 3 5 2
-        
+   
            2 4 3 5 8 9 7 1 6
-        
+   
            5 7 1 6 2 3 9 8 4
-        
+   
            4 9 7 2 6 8 5 3 1
-        
+   
            1 3 2 7 9 5 6 4 8
-        
+   
            6 8 5 3 1 4 2 7 9
-        
+   
            7 1 6 8 3 2 4 9 5
-        
+   
            9 2 4 1 5 7 8 6 3
-        
+   
            3 5 8 9 4 6 1 2 7
 
