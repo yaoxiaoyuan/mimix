@@ -434,147 +434,149 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
 
    1. input:
 
-
    却说曹操乘袁绍之败，整顿军马，迤逦追袭。
 
-      2. output:
-                
-         却说曹操乘袁绍之败，整顿军马，迤逦追袭。前至下邑,忽一阵狂风大作,飞砂蔽天而下。张飞大惊曰:“贼至矣!”急叫军师吴德护守后寨,自己与李律、许褚引三千人马,伏于寨外。少顷风定天清,风沙亦息。曹操立马大骂曰:“曹贼如何这等无礼!我若不生擒汝,誓不回兵!”于是令曹兵安营。是夜分粮设炮,伺便攻城。张飞与李律商议曰:“此风不入寨,其将必吕布也。主公可点计策擒之。”李律曰:“将军所见,正合吾意。可令人一裹粮食于车上,吾乘之入城。” \_mimixnl\_ 不移时,一人乘马于车上。李律叱曰:“汝何人,敢来夺粮?”吕布应曰:“吾乃张公瑾也。”律曰:“我与汝 同受曹公厚恩,义不共戴天。今欲来夺我之粮草,安得无罪!”操曰:“你既不守吾戒,何不出城一战?”律曰:“既蒙将军不杀之恩,我遂出战。”操曰:“将军可依吾计,我却于中接应。”遂分兵五万,吕布一人也。李律见操分兵,于中道候交战。少顷风息,粮食车至。李律于车上大叫:“张公瑾休走!”操曰:“吾料你必入我计中。”遂将兵马分作三路而出:李律引军居中,许褚在左,孙静护 从。操与李傕在中军调度,令人先去请吕布来。正是:中原忽失两英雄,青州借得偏兵来。未知吕布肯降否,且看下文分解。 \_mimixnl\_ \~\~\~start|23-第二十回 解羽德重兴青州\|start\~\~\~ 第二十回 解羽德重兴青州 却说李律于正东路中大叫吕布曰:“我等久知你是虎将,因恨不见面。今日可再会一遭!”吕布正欲厮杀,后面李傕催军追来。操回马而迎,大骂曰:“逆贼敢拒将军乎!”遂于马上欠身,躬身施礼曰:“曹兵慢来,请将军回马。”李傕大怒,挺枪骤马杀来。吕布纵马来迎,不三合,被操一枪刺于马下。李律措手不及,被许褚一戟刺死。于是曹操大军皆败,各奔回本寨。曹操勒马走入,心闷不乐。李傕曰:“曹操太寡恩义,当以兵袭之。”操曰:“吾亦疑此贼不从。”李傕曰:“可先使人去请吕布来。”操即遣荀攸,星夜往请吕布。原来这人最有口才,先至曹操寨中。操设酒 相待,令左右奏乐侑觞。饮至半酣,操唤吕布曰:“吾观汝好位英雄,意欲委用于你。吾有一言,不知公肯依否?” \_mimixnl\_ 吕布曰:“将军既知狂臣贼子,望公提掇挈带。”操曰:“我与汝同出屠奴,不比他人。”遂取出玉玺送之,曰:“此吾先人所为也。”吕布曰:“既蒙厚爱,敢不受命!”遂将印接在手中,上马引兵而行。有诗为证:玉玺送还李傕,自是英雄效武能。 \_mimixnl\_ 收吕布河北去,威震 幽燕定天下。 \_mimixnl\_ 却说吕布既收,屯扎寨中。李傕曰:“吕布在此久矣,必有谋臣在外。”操曰:“吾亦疑之,未敢动。”忽人报:“吕布搦战。”操提刀上马,引数十骑出寨迎敌。吕布见操兵少,亦引军至寨。两马相交,战到二十合不分胜败。操佯输,引军回寨;唤吕布曰:“汝父托孤于吾,情性极厚。今日我与你势不两立,幸为吾而决一雌雄。”吕布曰:“吾虽不才,颇知礼义。今奉公命而来,理当听汝所令。”于是二人各 -1408.430419921875
+​         2. output:
+​       却说曹操乘袁绍之败，整顿军马，迤逦追袭。前至下邑,忽一阵狂风大作,飞砂蔽天而下。张飞大惊曰:“贼至矣!”急叫军师吴德护守后寨,自己与李律、许褚引三千人马,伏于寨外。少顷风定天清,风沙亦息。曹操立马大骂曰:“曹贼如何这等无礼!我若不生擒汝,誓不回兵!”于是令曹兵安营。是夜分粮设炮,伺便攻城。张飞与李律商议曰:“此风不入寨,其将必吕布也。主公可点计策擒之。”李律曰:“将军所见,正合吾意。可令人一裹粮食于车上,吾乘之入城。” \_mimixnl\_ 不移时,一人乘马于车上。李律叱曰:“汝何人,敢来夺粮?”吕布应曰:“吾乃张公瑾也。”律曰:“我与汝 同受曹公厚恩,义不共戴天。今欲来夺我之粮草,安得无罪!”操曰:“你既不守吾戒,何不出城一战?”律曰:“既蒙将军不杀之恩,我遂出战。”操曰:“将军可依吾计,我却于中接应。”遂分兵五万,吕布一人也。李律见操分兵,于中道候交战。少顷风息,粮食车至。李律于车上大叫:“张公瑾休走!”操曰:“吾料你必入我计中。”遂将兵马分作三路而出:李律引军居中,许褚在左,孙静护 从。操与李傕在中军调度,令人先去请吕布来。正是:中原忽失两英雄,青州借得偏兵来。未知吕布肯降否,且看下文分解。 \_mimixnl\_ \~\~\~start|23-第二十回 解羽德重兴青州\|start\~\~\~ 第二十回 解羽德重兴青州 却说李律于正东路中大叫吕布曰:“我等久知你是虎将,因恨不见面。今日可再会一遭!”吕布正欲厮杀,后面李傕催军追来。操回马而迎,大骂曰:“逆贼敢拒将军乎!”遂于马上欠身,躬身施礼曰:“曹兵慢来,请将军回马。”李傕大怒,挺枪骤马杀来。吕布纵马来迎,不三合,被操一枪刺于马下。李律措手不及,被许褚一戟刺死。于是曹操大军皆败,各奔回本寨。曹操勒马走入,心闷不乐。李傕曰:“曹操太寡恩义,当以兵袭之。”操曰:“吾亦疑此贼不从。”李傕曰:“可先使人去请吕布来。”操即遣荀攸,星夜往请吕布。原来这人最有口才,先至曹操寨中。操设酒 相待,令左右奏乐侑觞。饮至半酣,操唤吕布曰:“吾观汝好位英雄,意欲委用于你。吾有一言,不知公肯依否?” \_mimixnl\_ 吕布曰:“将军既知狂臣贼子,望公提掇挈带。”操曰:“我与汝同出屠奴,不比他人。”遂取出玉玺送之,曰:“此吾先人所为也。”吕布曰:“既蒙厚爱,敢不受命!”遂将印接在手中,上马引兵而行。有诗为证:玉玺送还李傕,自是英雄效武能。 \_mimixnl\_ 收吕布河北去,威震 幽燕定天下。 \_mimixnl\_ 却说吕布既收,屯扎寨中。李傕曰:“吕布在此久矣,必有谋臣在外。”操曰:“吾亦疑之,未敢动。”忽人报:“吕布搦战。”操提刀上马,引数十骑出寨迎敌。吕布见操兵少,亦引军至寨。两马相交,战到二十合不分胜败。操佯输,引军回寨;唤吕布曰:“汝父托孤于吾,情性极厚。今日我与你势不两立,幸为吾而决一雌雄。”吕布曰:“吾虽不才,颇知礼义。今奉公命而来,理当听汝所令。”于是二人各 -1408.430419921875
 
 7. Chinese story generation: python interact.py --model_conf conf/story_base_conf
+     
          1. input:
                    写一个关于“爱”、“勇气”与“希望”的故事，主角是一个魔法少女。 \_sep\_
-         2. output:
-        写一个关于“爱”、“勇气”与“希望”的故事，主角是一个魔法少女。 \_sep\_ 在一个遥远的王国里，住着一位名叫艾米莉亚的女孩。她拥有一颗善良而勇敢的心，总是带着希望去面对生活 中的困难。有一天，王国被邪恶巫师用黑暗魔法束缚住了他们的家园。艾米莉亚决定挺身而出，寻找解除黑暗魔法的方法。 \_mimixnl\_ 在冒险之旅中，艾米莉亚遇到了许多困难，但她从未放弃过希望。在一次偶然的机会下，艾米莉亚找到了一本古老的魔法书。这本书上记载着一种神秘的咒语，可以破除黑暗魔法。艾米莉亚鼓足勇气念出了咒语，成功解除了笼罩王国的黑暗魔法。 \_mimixnl\_ 从此以后，艾米莉亚成为了国王最信任的朋友和领袖。她用智慧和勇气带领人民重建家园，让整个王国重新焕发生机。而艾米莉亚也因为她的勇敢和坚定信念，赢得了所有人的尊敬和爱戴。 \_mimixnl\_ 这个故事告诉我们，无论面对多大的困难，只要有希望和勇气去追求梦想，就一定能够克服一切。同时，我们也应该珍视身边的人和事物，因为它们都是我们成长过程中最重要的支持。  -142.99069213867188
-
+             2. output:
+         写一个关于“爱”、“勇气”与“希望”的故事，主角是一个魔法少女。 \_sep\_ 在一个遥远的王国里，住着一位名叫艾米莉亚的女孩。她拥有一颗善良而勇敢的心，总是带着希望去面对生活 中的困难。有一天，王国被邪恶巫师用黑暗魔法束缚住了他们的家园。艾米莉亚决定挺身而出，寻找解除黑暗魔法的方法。 \_mimixnl\_ 在冒险之旅中，艾米莉亚遇到了许多困难，但她从未放弃过希望。在一次偶然的机会下，艾米莉亚找到了一本古老的魔法书。这本书上记载着一种神秘的咒语，可以破除黑暗魔法。艾米莉亚鼓足勇气念出了咒语，成功解除了笼罩王国的黑暗魔法。 \_mimixnl\_ 从此以后，艾米莉亚成为了国王最信任的朋友和领袖。她用智慧和勇气带领人民重建家园，让整个王国重新焕发生机。而艾米莉亚也因为她的勇敢和坚定信念，赢得了所有人的尊敬和爱戴。 \_mimixnl\_ 这个故事告诉我们，无论面对多大的困难，只要有希望和勇气去追求梦想，就一定能够克服一切。同时，我们也应该珍视身边的人和事物，因为它们都是我们成长过程中最重要的支持。  -142.99069213867188
+     
 8. Chinese-English translation: python interact.py --model_conf conf/nmt_base_conf
 
-        1. input:
-                  
-              \_zhen\_ 2023年元旦刚过，菲律宾总统马科斯对中国进行了国事访问，他因此成为新年第一位访华的外国领导人。
-                     
-           2. output:
-                  
-              on new year's day, 2023, president marcos of the philippines paid a state visit to china, making him the first foreign leader to visit china in the new year.  -0.3184391975402832
-                  
-              on new year's day, 2023, president marcos of the philippines paid a state visit to china, making him the first foreign leader to visit china.  -0.34901772605048287
-                  
-              on new year's day, 2023, president marcos of the philippines made his first foreign visit to china.  -0.3811599291287936
-                  
-              on new year's day, 2023, philippine president marcos made his first foreign visit to china.  -0.3870043357213338
-                  
-              on new year's day 2023, philippine president marcos made his first foreign visit to china.  -0.41778796652088995
+    1. input:
               
-           3. input:
-                  
-              \_enzh\_ New Zealand leader Jacinda Ardern announces shock resignation before upcoming election
-             
-           4. output:
-                  
-              新西兰领导人雅辛达·阿尔德林在即将举行的选举前宣布辞职。  -0.2518916130065918
-              
-              新西兰领导人雅辛达·阿尔德林在即将到来的选举前宣布辞职。  -0.25208149285152043
-              
-              新西兰领导人雅辛达·阿尔德林在即将到来的选举前宣布了震惊辞职。  -0.2606537640094757
-              
-              新西兰领导人阿尔德林在即将举行的选举前宣布辞职。  -0.2731153869628906
-              
-              新西兰领导人阿尔德林在即将到来的选举前宣布辞职。  -0.2777881622314453
+          \_zhen\_ 2023年元旦刚过，菲律宾总统马科斯对中国进行了国事访问，他因此成为新年第一位访华的外国领导人。
+                 
+    2. output:
+           
+       on new year's day, 2023, president marcos of the philippines paid a state visit to china, making him the first foreign leader to visit china in the new year.  -0.3184391975402832
+           
+       on new year's day, 2023, president marcos of the philippines paid a state visit to china, making him the first foreign leader to visit china.  -0.34901772605048287
+           
+       on new year's day, 2023, president marcos of the philippines made his first foreign visit to china.  -0.3811599291287936
+           
+       on new year's day, 2023, philippine president marcos made his first foreign visit to china.  -0.3870043357213338
+           
+       on new year's day 2023, philippine president marcos made his first foreign visit to china.  -0.41778796652088995
+
+    3. input:
+           
+       \_enzh\_ New Zealand leader Jacinda Ardern announces shock resignation before upcoming election
+
+    4. output:
+           
+       新西兰领导人雅辛达·阿尔德林在即将举行的选举前宣布辞职。  -0.2518916130065918
+
+       新西兰领导人雅辛达·阿尔德林在即将到来的选举前宣布辞职。  -0.25208149285152043
+
+       新西兰领导人雅辛达·阿尔德林在即将到来的选举前宣布了震惊辞职。  -0.2606537640094757
+
+       新西兰领导人阿尔德林在即将举行的选举前宣布辞职。  -0.2731153869628906
+
+       新西兰领导人阿尔德林在即将到来的选举前宣布辞职。  -0.2777881622314453
 
 9. Chinese paper generation: python interact.py --model_conf conf/paper_base_conf
 
-        1. input:
-                  
-              中日韩 \_sep\_ 自贸区
-                     
-           2. output:
+    1. input:
+              
+          中日韩 \_sep\_ 自贸区
+                 
+    2. output:
 
-        中日韩自贸区发展的制约因素分析 \_sep\_ 发展中日韩自贸区的对策是自贸区的大幅提高。以签订《自由贸易协定》为契机,将各成员国 签订自贸协定作为中日韩自贸区发展的制约因素的内容,本文分析了中日韩自贸区制度的特点,提出了加强中日韩自贸区建设的建议。 -136.17562866210938
+    中日韩自贸区发展的制约因素分析 \_sep\_ 发展中日韩自贸区的对策是自贸区的大幅提高。以签订《自由贸易协定》为契机,将各成员国 签订自贸协定作为中日韩自贸区发展的制约因素的内容,本文分析了中日韩自贸区制度的特点,提出了加强中日韩自贸区建设的建议。 -136.17562866210938
 
-        发展自贸区:中日韩自贸区面临的机遇与挑战 \_sep\_ 金融危机以后,中日韩的自贸区得以提升。自贸区作为自贸区的重要组成部分,将有 力推动中日韩各国的经贸合作与交流。但是,由于自贸区自身存在内外部条件不协调、自贸区机制不完善、自贸区本身存在诸多问题,解 决自贸区发展问题成为全球一体化的关键问题。促进自贸区发展,中日韩自贸区的建设与发展需要充分调研,借鉴其成功经验,提出解决问题的对策。 -233.56361389160156
+    发展自贸区:中日韩自贸区面临的机遇与挑战 \_sep\_ 金融危机以后,中日韩的自贸区得以提升。自贸区作为自贸区的重要组成部分,将有 力推动中日韩各国的经贸合作与交流。但是,由于自贸区自身存在内外部条件不协调、自贸区机制不完善、自贸区本身存在诸多问题,解 决自贸区发展问题成为全球一体化的关键问题。促进自贸区发展,中日韩自贸区的建设与发展需要充分调研,借鉴其成功经验,提出解决问题的对策。 -233.56361389160156
 
-        中日韩自贸区与韩国新自贸区若干问题探析 \_sep\_ 自2005年日本政府最近在韩国举行调查示范活动后,由韩国自由贸易区(garthge aurantifiation,api)于2007年启动,正式于2008年建立了中日韩自贸区。在自贸区的建立、保护、协调等方面,中日韩三国及其相关部门在经贸领域取得了宝贵的成果。但是,由于签订协议不够透明,各自制度较为模糊,使中日韩自贸区的发展有今天的困境。 -316.9208068847656
-
-       
+    中日韩自贸区与韩国新自贸区若干问题探析 \_sep\_ 自2005年日本政府最近在韩国举行调查示范活动后,由韩国自由贸易区(garthge aurantifiation,api)于2007年启动,正式于2008年建立了中日韩自贸区。在自贸区的建立、保护、协调等方面,中日韩三国及其相关部门在经贸领域取得了宝贵的成果。但是,由于签订协议不够透明,各自制度较为模糊,使中日韩自贸区的发展有今天的困境。 -316.9208068847656   
 
 10. Chinese tag generation: python interact.py --model_conf conf/tag_base_conf
 
-        1. input:
-                  
-              近日，由国家感染性疾病临床医学研究中心、中国人民解放军总医院第五医学中心主办的国家感染性疾病临床医学研究中心2023年学术 年会在北京召开。《每日经济新闻》记者在现场注意到，中科院院士高福等专家学者就长新冠、疫苗和药物研发等话题展开交流。后新 冠时期既不能"恐冠"也不能"轻冠"针对新冠病毒，高福表示，在后新冠时期，大家开始讨论人类已经走出了新冠病毒的阴影，但我们不 能只看新冠病毒带来的挑战，也要看到它给我们提供的机遇，以及让人类如何重新思考。后新冠时期既不能"恐冠"也不能"轻冠"。
-                     
-           2. output:
-                  
-              医学 \_sep\_ 临床医学 \_sep\_ 新型冠状病毒 -7.32832670211792
+    1. input:
               
-              
+          近日，由国家感染性疾病临床医学研究中心、中国人民解放军总医院第五医学中心主办的国家感染性疾病临床医学研究中心2023年学术 年会在北京召开。《每日经济新闻》记者在现场注意到，中科院院士高福等专家学者就长新冠、疫苗和药物研发等话题展开交流。后新 冠时期既不能"恐冠"也不能"轻冠"针对新冠病毒，高福表示，在后新冠时期，大家开始讨论人类已经走出了新冠病毒的阴影，但我们不 能只看新冠病毒带来的挑战，也要看到它给我们提供的机遇，以及让人类如何重新思考。后新冠时期既不能"恐冠"也不能"轻冠"。
+                 
+    2. output:
+           
+       医学 \_sep\_ 临床医学 \_sep\_ 新型冠状病毒 -7.32832670211792
+
+
+    ​          
 
 11. Chinese medical qa generation: python interact.py --model_conf conf/med_base_conf
 
-         1. input:
+      1. input:
+                
+            最近老是犯困全身乏力腰酸背痛
+                
+            
+      2. output:
                    
-               最近老是犯困全身乏力腰酸背痛
-                   
-               output:
-                      
-            2. 就您的情况考虑是气血虚弱,植物神经功能紊乱导致的,建议用归脾丸治疗。 -29.775508880615234
-                   
-               这种情况可能是由于多种原因引起的,例如疲劳、压力过大、饮食不规律等。建议您注意休息,适当进行体育锻炼,保持良好的心态和饮食习惯,同时也要注意补充足够的营养物质, 如蛋白质、维生素及矿物质等。如果症状持续存在或加重,建议您咨询医生进行检查和治疗。 -50.89771270751953
-                   
-               这样的情况要考虑是否有肾虚或者腰椎疾病引起的,建议你去医院做一下检查看看。可以吃点六味地黄丸和金锁固精丸来治疗,注意休息,不要过度劳累 -53.82005310058594
-               
-               
+
+            就您的情况考虑是气血虚弱,植物神经功能紊乱导致的,建议用归脾丸治疗。 -29.775508880615234
+                
+            这种情况可能是由于多种原因引起的,例如疲劳、压力过大、饮食不规律等。建议您注意休息,适当进行体育锻炼,保持良好的心态和饮食习惯,同时也要注意补充足够的营养物质, 如蛋白质、维生素及矿物质等。如果症状持续存在或加重,建议您咨询医生进行检查和治疗。 -50.89771270751953
+                
+            这样的情况要考虑是否有肾虚或者腰椎疾病引起的,建议你去医院做一下检查看看。可以吃点六味地黄丸和金锁固精丸来治疗,注意休息,不要过度劳累 -53.82005310058594
+
+
+     ​           
 
 12. Chinese doc2query generation: python interact.py --model_conf conf/doc2query_base_conf
 
-         1. input:
+      1. input:
+                
+            "五一"假期过后，社交媒体上出现了许多关于二阳的讨论。据北京疾控公布的第19周 （5月8日-14日）的数据，全市共报告法定传染病16种18081例。新冠感染连续3周超越流感，重返法定传染病病种排名第一。
                    
-               "五一"假期过后，社交媒体上出现了许多关于二阳的讨论。据北京疾控公布的第19周 （5月8日-14日）的数据，全市共报告法定传染病16种18081例。新冠感染连续3周超越流感，重返法定传染病病种排名第一。
-                      
-            2. output:
-                   
-               北京二阳是什么意思 -4.803812503814697
-                   
-               北京新冠病毒多少 -6.473724365234375
-                   
-               北京新冠病毒感染数量 -6.521775245666504
+      2. output:
+            
+        北京二阳是什么意思 -4.803812503814697
+            
+        北京新冠病毒多少 -6.473724365234375
+            
+        北京新冠病毒感染数量 -6.521775245666504
 
-        
+
+     ​    
 
 13. Chinese spelling correction: python interact.py --model_conf conf/csc_base_conf
 
-         1. input:
+      1. input:
+                
+            大家要努力鞋习aigc只是。
                    
-               大家要努力鞋习aigc只是。
-                      
-            2. output:
-                   
-               大家要努力学习aigc知识。 -0.0025362607557326555
+      2. output:
+            
+        大家要努力学习aigc知识。 -0.0025362607557326555
 
 14. Chinese food clasification: streamlit run app.py -- --model_conf conf/cfn_base_conf
-             ![streamlit](image/streamlit.png)
+              ![streamlit](image/streamlit.png)
 
 15. Chinese image caption: streamlit run app.py -- --model_conf conf/caption_base_conf
-           v2: The v2 version of the model can generate more detailed descriptions.
-           ![streamlit](image/streamlit5.png)
-           v1:
-           ![streamlit](image/streamlit2.png)
+            v2: The v2 version of the model can generate more detailed descriptions.
+            ![streamlit](image/streamlit5.png)
+            v1:
+            ![streamlit](image/streamlit2.png)
 
 16. Chinese clip: streamlit run app.py -- --model_conf   conf/clip_base_conf
-             ![streamlit](image/streamlit3.png)
+              ![streamlit](image/streamlit3.png)
 
 17. Chinese vqa:  streamlit run app.py -- --model_conf   conf/vqa_base_conf
-           v2: The v2 version of the model can generate more detailed descriptions.
-           ![streamlit](image/streamlit6.png)
-           v1:
-           ![streamlit](image/streamlit4.png)
+            v2: The v2 version of the model can generate more detailed descriptions.
+            ![streamlit](image/streamlit6.png)
+            v1:
+            ![streamlit](image/streamlit4.png)
 
 18. Chinese product image description generation:  streamlit run app.py -- --model_conf conf/prodimg_base_conf
-           ![streamlit](image/streamlit7.png)
+            ![streamlit](image/streamlit7.png)
 
 19. Chinese text recognition: The model is designed for Chinese text recognition of single line and is suitable for scene, web and document data. It may not works well with handwriting data . For multiple lines text image, You need to use a text detector.
 
-         streamlit run app.py -- --model_conf conf/tr_base_conf
+          streamlit run app.py -- --model_conf conf/tr_base_conf
 
 ![streamlit](image/streamlit9.png)
 
