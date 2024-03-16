@@ -442,17 +442,20 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
 
    18. Chinese story generation: python interact.py --model_conf conf/story_base_conf
 
-         1. input:
-           写一个关于“爱”、“勇气”与“希望”的故事，主角是一个魔法少女。 \_sep\_
-         2. output:
+           1. input:
+   
+              写一个关于“爱”、“勇气”与“希望”的故事，主角是一个魔法少女。 \_sep\_
+   
+        2. output:
+   
            写一个关于“爱”、“勇气”与“希望”的故事，主角是一个魔法少女。 \_sep\_ 在一个遥远的王国里，住着一位名叫艾米莉亚的女孩。她拥有一颗善良而勇敢的心，总是带着希望去面对生活 中的困难。有一天，王国被邪恶巫师用黑暗魔法束缚住了他们的家园。艾米莉亚决定挺身而出，寻找解除黑暗魔法的方法。 \_mimixnl\_ 在冒险之旅中，艾米莉亚遇到了许多困难，但她从未放弃过希望。在一次偶然的机会下，艾米莉亚找到了一本古老的魔法书。这本书上记载着一种神秘的咒语，可以破除黑暗魔法。艾米莉亚鼓足勇气念出了咒语，成功解除了笼罩王国的黑暗魔法。 \_mimixnl\_ 从此以后，艾米莉亚成为了国王最信任的朋友和领袖。她用智慧和勇气带领人民重建家园，让整个王国重新焕发生机。而艾米莉亚也因为她的勇敢和坚定信念，赢得了所有人的尊敬和爱戴。 \_mimixnl\_ 这个故事告诉我们，无论面对多大的困难，只要有希望和勇气去追求梦想，就一定能够克服一切。同时，我们也应该珍视身边的人和事物，因为它们都是我们成长过程中最重要的支持。  -142.99069213867188
-
+   
    19. Chinese-English translation: python interact.py --model_conf conf/nmt_base_conf
-
+   
         1. input:
-                     
+                  
               \_zhen\_ 2023年元旦刚过，菲律宾总统马科斯对中国进行了国事访问，他因此成为新年第一位访华的外国领导人。
-
+   
         2. output:
                
            on new year's day, 2023, president marcos of the philippines paid a state visit to china, making him the first foreign leader to visit china in the new year.  -0.3184391975402832
@@ -462,99 +465,99 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
            on new year's day, 2023, president marcos of the philippines made his first foreign visit to china.  -0.3811599291287936
                
            on new year's day, 2023, philippine president marcos made his first foreign visit to china.  -0.3870043357213338
-               
+           
            on new year's day 2023, philippine president marcos made his first foreign visit to china.  -0.41778796652088995
-
+   
         3. input:
-               
+           
            \_enzh\_ New Zealand leader Jacinda Ardern announces shock resignation before upcoming election
-
+   
         4. output:
-               
-           新西兰领导人雅辛达·阿尔德林在即将举行的选举前宣布辞职。  -0.2518916130065918
-
-        新西兰领导人雅辛达·阿尔德林在即将到来的选举前宣布辞职。  -0.25208149285152043
-
-        新西兰领导人雅辛达·阿尔德林在即将到来的选举前宣布了震惊辞职。  -0.2606537640094757
-
-        新西兰领导人阿尔德林在即将举行的选举前宣布辞职。  -0.2731153869628906
-
-        新西兰领导人阿尔德林在即将到来的选举前宣布辞职。  -0.2777881622314453
-
+           
+        新西兰领导人雅辛达·阿尔德林在即将举行的选举前宣布辞职。  -0.2518916130065918
+   
+     新西兰领导人雅辛达·阿尔德林在即将到来的选举前宣布辞职。  -0.25208149285152043
+   
+     新西兰领导人雅辛达·阿尔德林在即将到来的选举前宣布了震惊辞职。  -0.2606537640094757
+   
+     新西兰领导人阿尔德林在即将举行的选举前宣布辞职。  -0.2731153869628906
+   
+     新西兰领导人阿尔德林在即将到来的选举前宣布辞职。  -0.2777881622314453
+   
    20. Chinese paper generation: python interact.py --model_conf conf/paper_base_conf
-
+   
         1. input:
-           中日韩 \_sep\_ 自贸区
-        2. output:
-
-        中日韩自贸区发展的制约因素分析 \_sep\_ 发展中日韩自贸区的对策是自贸区的大幅提高。以签订《自由贸易协定》为契机,将各成员国 签订自贸协定作为中日韩自贸区发展的制约因素的内容,本文分析了中日韩自贸区制度的特点,提出了加强中日韩自贸区建设的建议。 -136.17562866210938
-
-        发展自贸区:中日韩自贸区面临的机遇与挑战 \_sep\_ 金融危机以后,中日韩的自贸区得以提升。自贸区作为自贸区的重要组成部分,将有 力推动中日韩各国的经贸合作与交流。但是,由于自贸区自身存在内外部条件不协调、自贸区机制不完善、自贸区本身存在诸多问题,解 决自贸区发展问题成为全球一体化的关键问题。促进自贸区发展,中日韩自贸区的建设与发展需要充分调研,借鉴其成功经验,提出解决问题的对策。 -233.56361389160156
-
-        中日韩自贸区与韩国新自贸区若干问题探析 \_sep\_ 自2005年日本政府最近在韩国举行调查示范活动后,由韩国自由贸易区(garthge aurantifiation,api)于2007年启动,正式于2008年建立了中日韩自贸区。在自贸区的建立、保护、协调等方面,中日韩三国及其相关部门在经贸领域取得了宝贵的成果。但是,由于签订协议不够透明,各自制度较为模糊,使中日韩自贸区的发展有今天的困境。 -316.9208068847656   
-
+        中日韩 \_sep\_ 自贸区
+     2. output:
+   
+     中日韩自贸区发展的制约因素分析 \_sep\_ 发展中日韩自贸区的对策是自贸区的大幅提高。以签订《自由贸易协定》为契机,将各成员国 签订自贸协定作为中日韩自贸区发展的制约因素的内容,本文分析了中日韩自贸区制度的特点,提出了加强中日韩自贸区建设的建议。 -136.17562866210938
+   
+     发展自贸区:中日韩自贸区面临的机遇与挑战 \_sep\_ 金融危机以后,中日韩的自贸区得以提升。自贸区作为自贸区的重要组成部分,将有 力推动中日韩各国的经贸合作与交流。但是,由于自贸区自身存在内外部条件不协调、自贸区机制不完善、自贸区本身存在诸多问题,解 决自贸区发展问题成为全球一体化的关键问题。促进自贸区发展,中日韩自贸区的建设与发展需要充分调研,借鉴其成功经验,提出解决问题的对策。 -233.56361389160156
+   
+     中日韩自贸区与韩国新自贸区若干问题探析 \_sep\_ 自2005年日本政府最近在韩国举行调查示范活动后,由韩国自由贸易区(garthge aurantifiation,api)于2007年启动,正式于2008年建立了中日韩自贸区。在自贸区的建立、保护、协调等方面,中日韩三国及其相关部门在经贸领域取得了宝贵的成果。但是,由于签订协议不够透明,各自制度较为模糊,使中日韩自贸区的发展有今天的困境。 -316.9208068847656   
+   
    21. Chinese tag generation: python interact.py --model_conf conf/tag_base_conf
-
+   
         1. input:
-                  
-           近日，由国家感染性疾病临床医学研究中心、中国人民解放军总医院第五医学中心主办的国家感染性疾病临床医学研究中心2023年学术 年会在北京召开。《每日经济新闻》记者在现场注意到，中科院院士高福等专家学者就长新冠、疫苗和药物研发等话题展开交流。后新 冠时期既不能"恐冠"也不能"轻冠"针对新冠病毒，高福表示，在后新冠时期，大家开始讨论人类已经走出了新冠病毒的阴影，但我们不 能只看新冠病毒带来的挑战，也要看到它给我们提供的机遇，以及让人类如何重新思考。后新冠时期既不能"恐冠"也不能"轻冠"。
-
-        2. output:
                
-           医学 \_sep\_ 临床医学 \_sep\_ 新型冠状病毒 -7.32832670211792
-
+           近日，由国家感染性疾病临床医学研究中心、中国人民解放军总医院第五医学中心主办的国家感染性疾病临床医学研究中心2023年学术 年会在北京召开。《每日经济新闻》记者在现场注意到，中科院院士高福等专家学者就长新冠、疫苗和药物研发等话题展开交流。后新 冠时期既不能"恐冠"也不能"轻冠"针对新冠病毒，高福表示，在后新冠时期，大家开始讨论人类已经走出了新冠病毒的阴影，但我们不 能只看新冠病毒带来的挑战，也要看到它给我们提供的机遇，以及让人类如何重新思考。后新冠时期既不能"恐冠"也不能"轻冠"。
+   
+        2. output:
+           
+        医学 \_sep\_ 临床医学 \_sep\_ 新型冠状病毒 -7.32832670211792
+   
    22. Chinese medical qa generation: python interact.py --model_conf conf/med_base_conf
-
+   
           1. input:  
              最近老是犯困全身乏力腰酸背痛 
           2. output:      
              就您的情况考虑是气血虚弱,植物神经功能紊乱导致的,建议用归脾丸治疗。 -29.775508880615234
                  
              这种情况可能是由于多种原因引起的,例如疲劳、压力过大、饮食不规律等。建议您注意休息,适当进行体育锻炼,保持良好的心态和饮食习惯,同时也要注意补充足够的营养物质, 如蛋白质、维生素及矿物质等。如果症状持续存在或加重,建议您咨询医生进行检查和治疗。 -50.89771270751953
-                 
-             这样的情况要考虑是否有肾虚或者腰椎疾病引起的,建议你去医院做一下检查看看。可以吃点六味地黄丸和金锁固精丸来治疗,注意休息,不要过度劳累 -53.82005310058594
-
-   23. Chinese doc2query generation: python interact.py --model_conf conf/doc2query_base_conf
-
-          1. input:
-
-             "五一"假期过后，社交媒体上出现了许多关于二阳的讨论。据北京疾控公布的第19周 （5月8日-14日）的数据，全市共报告法定传染病16种18081例。新冠感染连续3周超越流感，重返法定传染病病种排名第一。
-
+             
+          这样的情况要考虑是否有肾虚或者腰椎疾病引起的,建议你去医院做一下检查看看。可以吃点六味地黄丸和金锁固精丸来治疗,注意休息,不要过度劳累 -53.82005310058594
+   
+23. Chinese doc2query generation: python interact.py --model_conf conf/doc2query_base_conf
+   
+       1. input:
+   
+          "五一"假期过后，社交媒体上出现了许多关于二阳的讨论。据北京疾控公布的第19周 （5月8日-14日）的数据，全市共报告法定传染病16种18081例。新冠感染连续3周超越流感，重返法定传染病病种排名第一。
+   
           2. output:
-
+   
              北京二阳是什么意思 -4.803812503814697
                  
              北京新冠病毒多少 -6.473724365234375
-                 
-             北京新冠病毒感染数量 -6.521775245666504
-
+             
+          北京新冠病毒感染数量 -6.521775245666504
+   
    24. Chinese spelling correction: python interact.py --model_conf conf/csc_base_conf
-
+   
         1. input:      
-           大家要努力鞋习aigc只是。
-        2. output:
-
+        大家要努力鞋习aigc只是。
+     2. output:
+   
         ​       大家要努力学习aigc知识。 -0.0025362607557326555
-
-   25. Chinese food clasification: streamlit run app.py -- --model_conf conf/cfn_base_conf
+   
+25. Chinese food clasification: streamlit run app.py -- --model_conf conf/cfn_base_conf
                   ![streamlit](image/streamlit.png)
-
+   
    26. Chinese image caption: streamlit run app.py -- --model_conf conf/caption_base_conf
                 v2: The v2 version of the model can generate more detailed descriptions.
                 ![streamlit](image/streamlit5.png)
-                v1:
+             v1:
                 ![streamlit](image/streamlit2.png)
-
-   27. Chinese clip: streamlit run app.py -- --model_conf   conf/clip_base_conf
+   
+27. Chinese clip: streamlit run app.py -- --model_conf   conf/clip_base_conf
                   ![streamlit](image/streamlit3.png)
-
+   
    28. Chinese vqa:  streamlit run app.py -- --model_conf   conf/vqa_base_conf
                 v2: The v2 version of the model can generate more detailed descriptions.
                 ![streamlit](image/streamlit6.png)
-                v1:
+             v1:
                 ![streamlit](image/streamlit4.png)
-
-   29. Chinese product image description generation:  streamlit run app.py -- --model_conf conf/prodimg_base_conf
+   
+29. Chinese product image description generation:  streamlit run app.py -- --model_conf conf/prodimg_base_conf
                 ![streamlit](image/streamlit7.png)
 
    30. Chinese text recognition: streamlit run app.py -- --model_conf conf/tr_base_conf 
@@ -566,8 +569,8 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
    31. Masked Autoencoders:  streamlit run app.py -- --model_conf conf/mae_base_conf
 
         (Weights are converted from Google's open-source model)  ![streamlit](image/streamlit8.png)
-
-   32. Piano midi generation: python gen_midi.py
+   
+32. Piano midi generation: python gen_midi.py
         It will generate a midi file in current directory. A generated sample is here: [test.mid](test.mid)
 
    33. Sudoku BERT: python sudoku.py  (It may failed/get wrong answer on very hard puzzles. Model achieve 92% success rate on hard puzzles test)
@@ -577,21 +580,21 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
            000071050043000000000000000000260000100000040080300000706002000000000803000000100
 
         2. output:
+        
+           8 6 9 4 7 1 3 5 2
 
-   ​            8 6 9 4 7 1 3 5 2
+   ​           2 4 3 5 8 9 7 1 6
 
-   ​            2 4 3 5 8 9 7 1 6
+   ​           5 7 1 6 2 3 9 8 4
 
-   ​            5 7 1 6 2 3 9 8 4
+   ​           4 9 7 2 6 8 5 3 1
 
-   ​            4 9 7 2 6 8 5 3 1
+   ​           1 3 2 7 9 5 6 4 8
 
-   ​            1 3 2 7 9 5 6 4 8
+   ​           6 8 5 3 1 4 2 7 9
 
-   ​            6 8 5 3 1 4 2 7 9
+   ​           7 1 6 8 3 2 4 9 5
 
-   ​            7 1 6 8 3 2 4 9 5
+   ​           9 2 4 1 5 7 8 6 3
 
-   ​            9 2 4 1 5 7 8 6 3
-
-   ​            3 5 8 9 4 6 1 2 7
+   ​           3 5 8 9 4 6 1 2 7
