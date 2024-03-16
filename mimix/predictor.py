@@ -82,7 +82,6 @@ class EncDecGenerator():
         self.repetition_window_size = config.get("repetition_window_size", 0)
         self.normalize = config.get("normalize", "none")
         self.use_mask_unk =  config.get("use_mask_unk", False)
-        self.remove_special_symbols = config.get("remove_special_symbols", False)
     
     
     def encode_inputs(self, 
@@ -168,7 +167,7 @@ class EncDecGenerator():
             tmp = []
             for j in range(i*self.beam_size, (i+1)*self.beam_size):
                 
-                trg = self.trg_tokenizer.detokenize_ids(hypothesis[j], self.remove_special_symbols)
+                trg = self.trg_tokenizer.detokenize_ids(hypothesis[j])
                 
                 trg = trg.replace(self.bos_tok, "").replace(self.pad_tok, "").strip()
                 trg = re.sub(self.eos_tok + ".*", "", trg)
@@ -182,6 +181,61 @@ class EncDecGenerator():
             res.append([src, tmp])
         
         return res
+
+
+    def predict_stream(self, src_list, prefix_list=None):
+        """
+        """
+        self.model.eval()
+        x,y = self.encode_inputs(src_list, prefix_list, add_bos=True, pad_trg_left=True)
+        
+        with torch.no_grad():
+            if self.strategy in ["beam_search", "sample"]:
+                it = search(self.model, 
+                            self.beam_size, 
+                            inputs=[x,y],
+                            device=self.device,
+                            strategy=self.strategy,
+                            top_k=self.top_k,
+                            top_p=self.top_p,
+                            temperature=self.temperature,
+                            eos=self.model.EOS,
+                            group_size=self.group_size, 
+                            repetition_penalty=self.repetition_penalty,
+                            repetition_window_size=self.repetition_window_size,
+                            use_mask_unk=self.use_mask_unk,
+                            max_decode_steps=self.max_decode_steps)
+                while True:
+                    try:
+                        states, cache = next(it)
+    
+                        hypothesis,scores = states[4], states[1]
+
+                        h_len = torch.sum(hypothesis.ne(self.model.PAD), -1).cpu().numpy()
+                        hypothesis = hypothesis.cpu().numpy()
+                        scores = scores.cpu().numpy()
+                        res = []
+                        for i,src in enumerate(src_list):
+                            tmp = []
+                            for j in range(i*self.beam_size, (i+1)*self.beam_size):
+                
+                                trg = self.trg_tokenizer.detokenize_ids(hypothesis[j])
+                
+                                trg = trg.replace(self.bos_tok, "").replace(self.pad_tok, "").strip()
+                                trg = re.sub(self.eos_tok + ".*", "", trg)
+                
+                                score = float(scores[j])
+                
+                                if self.normalize == "linear":
+                                    score = score/(h_len[j] - 1)
+                                tmp.append([trg, score])
+                                tmp.sort(key=lambda x:x[-1], reverse=True)
+                            res.append([src, tmp])
+                        yield res
+                    except:
+                        break
+            else:
+                raise ValueError("strategy not correct!")
 
 
     def scoring(self, pairs_list):
@@ -361,7 +415,6 @@ class LMGenerator():
         self.repetition_window_size = config.get("repetition_window_size", 0)
         self.normalize = config.get("normalize", "none")
         self.use_mask_unk =  config.get("use_mask_unk", False)
-        self.remove_special_symbols = config.get("remove_special_symbols", False)
         
 
     def encode_inputs(self, trg_list, add_bos=False, add_eos=False, pad_trg_left=False):
@@ -428,7 +481,7 @@ class LMGenerator():
             tmp = []
             for j in range(i*self.beam_size, (i+1)*self.beam_size):
                 
-                trg = self.trg_tokenizer.detokenize_ids(hypothesis[j], self.remove_special_symbols)
+                trg = self.trg_tokenizer.detokenize_ids(hypothesis[j])
                 
                 trg = trg.replace(self.bos_tok, "").replace(self.pad_tok, "").strip()
                 trg = re.sub(self.eos_tok + ".*", "", trg)
@@ -483,7 +536,7 @@ class LMGenerator():
                             tmp = []
                             for j in range(i*self.beam_size, (i+1)*self.beam_size):
     
-                                trg = self.trg_tokenizer.detokenize_ids(hypothesis[j], self.remove_special_symbols)
+                                trg = self.trg_tokenizer.detokenize_ids(hypothesis[j])
     
                                 trg = trg.replace(self.bos_tok, "").replace(self.pad_tok, "").strip()
                                 trg = re.sub(self.eos_tok + ".*", "", trg)

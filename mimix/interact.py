@@ -10,7 +10,7 @@ import time
 from PIL import Image
 from mimix.predictor import EncDecGenerator,LMGenerator,TextEncoder
 from mimix.predictor import ImageEncoder, ClipMatcher
-from mimix.utils import real_path, load_model_config, convert_tokens_to_midi
+from mimix.utils import real_path, load_model_config
 
 
 def pretty_print(res):
@@ -73,10 +73,6 @@ def lm_demo(config):
         
         start = time.time()
         search_res = lm_gen.predict(prefix_list=prefix_list) 
-
-        if config.get("convert2midi", False) == True:
-            tokens = search_res[0][1][0][0].split()
-            convert_tokens_to_midi(tokens, "test.mid")
         
         search_res = [{"src":x, "predict":y} for x,y in search_res]
         pretty_print(search_res)
@@ -390,6 +386,76 @@ def text_image_match_demo(config):
         print("-----cost time: %s s-----" % cost)
 
 
+def stream_enc_dec_demo(config):
+    """
+    """    
+    config["beam_size"] = 1
+    enc_dec_gen = EncDecGenerator(config)
+    
+    print("INPUT TEXT:")
+    for line in sys.stdin:
+        line = line.strip()
+
+        if len(line) == 0:
+            continue
+    
+        src_list = [line.strip().split("\t")[0]]
+            
+        prefix_list = None
+        if "\t" in line:
+            prefix_list = [line.split("\t")[1]]
+        
+        start = time.time()
+        search_res = enc_dec_gen.predict_stream(src_list, prefix_list=prefix_list)
+        
+        text = ""
+        while True:
+            try:
+                _text = next(search_res)[0][1][0][0]
+                print(_text[len(text):], end="", flush=True)
+                text = _text
+            except:
+                break
+
+        print()
+        
+        end = time.time()
+        cost = end - start
+        print("-----cost time: %s s-----" % cost)
+
+
+def stream_lm_demo(config):
+    """
+    """
+    config["beam_size"] = 1
+    lm_gen = LMGenerator(config)
+    
+    print("INPUT TEXT:")
+    for line in sys.stdin:
+        line = line.strip()
+        prefix_list = None
+        if len(line) > 0:
+            prefix_list = [line] 
+        
+        start = time.time()
+        search_res = lm_gen.predict_stream(prefix_list=prefix_list) 
+        
+        text = ""
+        while True:
+            try:
+                _text = next(search_res)[0][1][0][0]
+                print(_text[len(text):], end="", flush=True)
+                text = _text
+            except:
+                break
+
+        print()
+        
+        end = time.time()
+        cost = end - start
+        print("-----cost time: %s s-----" % cost)
+
+
 def run_interactive():
     """
     """
@@ -397,19 +463,27 @@ def run_interactive():
 
     parser.add_argument("--model_conf", type=str)
     parser.add_argument("--mode", type=str, default="pred")
-    
-    args = parser.parse_args(sys.argv[1:])
+    parser.add_argument('--stream', action='store_true')   
+    parser.set_defaults(stream=False)
 
+    args = parser.parse_args(sys.argv[1:])
+    
     conf_file = args.model_conf
     config = load_model_config(real_path(conf_file))
     
     if args.mode == "pred":
         if config["task"] == "enc_dec":
-            enc_dec_demo(config)
+            if args.stream == True:
+                stream_enc_dec_demo(config)    
+            else:
+                enc_dec_demo(config)
         elif config["task"] == "classification":
             classification_demo(config)
         elif config["task"] == "lm":
-            lm_demo(config)
+            if args.stream == True:
+                stream_lm_demo(config)    
+            else:
+                lm_demo(config)
         elif config["task"] == "mlm":
             mlm_demo(config)
         elif config["task"] == "seqcls":

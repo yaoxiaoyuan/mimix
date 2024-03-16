@@ -70,6 +70,12 @@ def is_space(ch):
     return ch == " "
 
 
+def is_newline(ch):
+    """
+    """
+    return ch == "\n"
+
+
 class Tokenizer():
     """
     """
@@ -91,7 +97,7 @@ class Tokenizer():
     
     
     @abstractmethod
-    def detokenize(self, tokens, remove_special_symbols=False):
+    def detokenize(self, tokens):
         """
         """
         pass
@@ -121,11 +127,11 @@ class Tokenizer():
         return word_ids
     
     
-    def detokenize_ids(self, word_ids, remove_special_symbols=False):
+    def detokenize_ids(self, word_ids):
         """
         """
         tokens = self.convert_ids_to_tokens(word_ids)
-        text = self.detokenize(tokens, remove_special_symbols)
+        text = self.detokenize(tokens)
                             
         return text
 
@@ -147,7 +153,7 @@ class SpaceTokenizer(Tokenizer):
         return tokens
     
     
-    def detokenize(self, tokens, remove_special_symbols=False):
+    def detokenize(self, tokens):
         """
         """
         text = " ".join(tokens)
@@ -158,23 +164,41 @@ class SpaceTokenizer(Tokenizer):
 class MimixTokenizer(Tokenizer):
     """
     """
-    def __init__(self, vocab_file, uncased=True):
+    def __init__(self, vocab_file, uncased=True, match_special_symbols=True):
         """
         """
         super(MimixTokenizer,self).__init__(vocab_file)
         
         zh_words = [ww for ww in self.vocab if all([is_cjk(ch) for ch in ww])]
         self.tri_tree = self.build_tri_tree(zh_words)
-
-        self.symbols = set()
-        for word in self.vocab:
-            if re.search("^_[0-9a-z]+_$", word):
-                self.symbols.add(word)
-        self.symbols_tri_tree = self.build_tri_tree(self.symbols)
         
         self.space_token = "_mimixsp_"
         self.newline_token = "_mimixnl_"
-            
+        self.pad_token = "_pad_"
+        self.bos_token = "_bos_"
+        self.eos_token = "_eos_"
+        self.unk_token = "_unk_"
+        self.sep_token = "_sep_"
+        self.mask_token = "_mask_"
+        self.cls_token = "_cls_"
+        
+        self.special_symbols = [self.pad_token, 
+                                self.bos_token, 
+                                self.eos_token, 
+                                self.unk_token,
+                                self.sep_token,
+                                self.mask_token,
+                                self.cls_token]
+
+        self.symbols = set()
+        for word in self.vocab:
+            if re.search("^_unused[0-9]+_$", word):
+                continue
+            if re.search("^_[0-9a-z]+_$", word) and (match_special_symbols == True or word not in self.special_symbols):
+                self.symbols.add(word)
+
+        self.symbols_tri_tree = self.build_tri_tree(self.symbols)
+        
         self.uncased = uncased
 
 
@@ -262,12 +286,8 @@ class MimixTokenizer(Tokenizer):
     def tokenize(self, text):
         """
         """
-        text = text.strip()
         if self.uncased == True:
             text = text.lower()
-        
-        text = re.sub("[ ]+", " ", text)
-        text = re.sub("[ ]*[\r\n]+[ ]*", "_mimixnl_", text)
         
         i = 0
         tokenized = ""
@@ -301,19 +321,28 @@ class MimixTokenizer(Tokenizer):
                 is_last_cjk = False
                 is_last_num_or_alphabet = True
                 i += 1
-            elif is_useless(ch):
-                is_last_cjk = False
-                is_last_num_or_alphabet = False  
-                i += 1
             elif is_space(ch):
-                if is_alphabet(text[i-1]) and is_alphabet(text[i+1]): 
+                if i == 0 or i == len(text) - 1:
+                    tokenized += (" " + self.space_token + " ")
+                elif is_alphabet(text[i-1]) and is_alphabet(text[i+1]): 
                     tokenized += " "
-                elif is_special(text[i-1]) or is_special(text[i+1]): 
-                    tokenized += " "
+                elif re.search("_[0-9a-z]+_ $", tokenized): 
+                    pass
+                elif re.search("_[0-9a-z]+_", text[i:]): 
+                    pass
                 else:
                     tokenized += (" " + self.space_token + " ")
                 is_last_cjk = False
                 is_last_num_or_alphabet = False   
+                i += 1
+            elif is_newline(ch):
+                tokenized += (" " + self.newline_token + " ")
+                is_last_cjk = False
+                is_last_num_or_alphabet = False 
+                i += 1
+            elif is_useless(ch):
+                is_last_cjk = False
+                is_last_num_or_alphabet = False  
                 i += 1
             else:
                 tokenized += (" " + ch + " ") 
@@ -322,7 +351,7 @@ class MimixTokenizer(Tokenizer):
                 i += 1
 
         tokenized = re.sub("[ ]+", " ", tokenized).strip()
-
+        
         tokens = []
         for token in tokenized.split():
             if re.search("^_[0-9a-z]+_$", token):
@@ -331,7 +360,7 @@ class MimixTokenizer(Tokenizer):
                 tokens.extend(self.maximum_match(token))    
             else:
                 tokens.extend(self.wordpiece(token))
-
+        
         return tokens
     
 
@@ -360,7 +389,7 @@ class MimixTokenizer(Tokenizer):
         return tokens
 
 
-    def detokenize(self, tokens, remove_special_symbols=False):
+    def detokenize(self, tokens):
         """
         """
         text = ""
@@ -374,35 +403,26 @@ class MimixTokenizer(Tokenizer):
                 text += token[2:]
                 is_last_alphabet = True
             elif re.search("^_[0-9a-z]+_$", token):
-                if remove_special_symbols == False:
-                    text += (" " + token + " ")
+                if token == self.space_token:
+                    text += " "
+                elif token == self.newline_token:
+                    text += "\n"
                 else:
-                    if token == "_unk_":
-                        text += token
-                    elif word == self.space_token:
+                    if text.endswith(" ") == False:
                         text += " "
-                    elif word == self.newline_token:
-                        text = "\n"
-                    else:
-                        #text += token
-                        continue
+                    text += (token + " ")
                     
                 is_last_alphabet = False
             else:
                 is_cur_alphabet = False
                 if all(is_alphabet(ch) or is_num(ch) for ch in token):
                     is_cur_alphabet = True
-                    
                 if is_last_alphabet == True and is_cur_alphabet == True:
                     text += (" " + token)
                 else:
                     text += token
                 is_last_alphabet = is_cur_alphabet
         
-        text = text.replace(self.space_token, " ")
-        text = re.sub("[ ]+", " ", text)
-        text = text.strip()
-
         return text
 
 
@@ -422,7 +442,7 @@ class BertTokenizer(Tokenizer):
         return self.tokenizer.tokenize(text)
     
     
-    def detokenize(self, tokens, remove_special_symbols=False):
+    def detokenize(self, tokens):
         """
         """
         return " ".join(tokens)
