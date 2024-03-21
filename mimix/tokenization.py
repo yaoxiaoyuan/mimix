@@ -326,10 +326,10 @@ class MimixTokenizer(Tokenizer):
                     tokenized += (" " + self.space_token + " ")
                 elif is_alphabet(text[i-1]) and is_alphabet(text[i+1]): 
                     tokenized += " "
-                elif re.search("_[0-9a-z]+_ $", tokenized): 
-                    pass
-                elif re.search("_[0-9a-z]+_", text[i:]): 
-                    pass
+                elif re.search("_[0-9a-z]+_$", text[:i]): 
+                    tokenized += " "
+                elif re.search(" _[0-9a-z]+_", text[i:]): 
+                    tokenized += " "
                 else:
                     tokenized += (" " + self.space_token + " ")
                 is_last_cjk = False
