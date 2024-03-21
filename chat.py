@@ -34,6 +34,7 @@ def main():
         os.system("cls")
     else:
         os.system("clear")
+    print("Welcome to MimixAI.")
     while True:
         print("User:")
         user_input = input()
@@ -42,9 +43,10 @@ def main():
                 os.system("cls")
             else:
                 os.system("clear")
+            print("Welcome to MimixAI.")
             history = []
             continue
-        elif user_input == ":quit":
+        elif user_input == ":exit":
             break
         history.append(user_input)
         context = " _mimix_"
