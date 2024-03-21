@@ -11,7 +11,7 @@ Mimix is a tool for text generation based on Pytorch.  Mimix support following T
 7. Image  classification
 8. MAE 
 
-For single task, I have trained some Chinese text  generation Models which are listed in Demo section. Each of the model can only do a single task.  The sizes of these models' parameters vary from 50 million to 370 million. Thus you can easily run them on a laptop without GPU. You can follow the instructions and run the demo. 
+For single task, I have trained some Chinese text  generation Models which are listed in Single Task Models section. Each of the model can only do a single task.  The sizes of these models' parameters vary from 50 million to 370 million. Thus you can easily run them on a laptop without GPU. You can follow the instructions and run the demo. 
 
 I also trained a small Chinese LLM MimixLM-0.7b-sft. You can chat with it.
 
@@ -19,19 +19,33 @@ I also trained a small Chinese LLM MimixLM-0.7b-sft. You can chat with it.
 
 ### MimixLM-0.7b-sft
 
-A pretrained small Chinese LLM MimixLM-0.7b-sft is now available. You can download from below links and place conf and model in the corresponding folder. Run python chat.py to play with it.
+A pretrained small Chinese LLM MimixLM-0.7b-sft is now available. You can download from below links and place conf and model in the corresponding folder. Run python chat.py --model_conf path/to/conf to play with it.
 
 ![mimix](image/mimix.png)
 
-![mimix](image/mimix2.png)
+v0.1:
+
+Run: python chat.py --model_conf conf/MimixLM-0.7b-sft_conf
 
 Download link：
 
-Google: https://drive.google.com/drive/folders/1ZfGq0HBYLQYWI152w-0PEUeXbBjtvywH?usp=drive_link
+Google: https://drive.google.com/drive/folders/1ZfGq0HBYLQYWI152w-0PEUeXbBjtvywH?usp=sharing
 
 or
 
 Baidu: https://pan.baidu.com/s/13jkMDd_ScrPCycg40UdCtA?pwd=c3pu 
+
+v0.2: 
+
+Run: python chat.py --model_conf conf/MimixLM-0.7b-sft-0.2_conf
+
+Download link：
+
+Google: https://drive.google.com/drive/folders/1oQsH_qsBPu_QDZohr-bvXta37pJOvJxQ?usp=sharing
+
+or
+
+Baidu: https://pan.baidu.com/s/14yDpEfK2eCyn-6VKvRZnbg?pwd=vc6w 
 
 ### TODO LIST
 
@@ -550,7 +564,8 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
                     ![streamlit](image/streamlit10.png)
         
     27. Chinese image caption: streamlit run app.py -- --model_conf conf/caption_base_conf
-            v2: The v2 version of the model can generate more detailed descriptions.
+   
+        v2: The v2 version of the model can generate more detailed descriptions.
             ![streamlit](image/streamlit5.png)
          v1:
             ![streamlit](image/streamlit2.png)

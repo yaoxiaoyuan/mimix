@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Mar 21 20:41:32 2024
+
+@author: Xiaoyuan Yao
+"""
+import sys
+from argparse import ArgumentParser
 import re
 import platform
 import os
@@ -7,8 +15,12 @@ from mimix.utils import real_path, load_model_config
 def main():
     
     print("loading model...")
-    conf_file = "conf/MimixLM-0.7b-sft_conf"
-    #conf_file = "conf/MimixLM-1.5b-sft_conf"
+
+    parser = ArgumentParser()
+    parser.add_argument("--model_conf", type=str, default="conf/MimixLM-0.7b-sft-0.2_conf") 
+    args = parser.parse_args(sys.argv[1:])
+    conf_file = args.model_conf
+
     model_config = load_model_config(real_path(conf_file))
     max_history_len = 2000
     max_history_turn = 20
