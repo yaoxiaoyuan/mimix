@@ -26,7 +26,7 @@ A pretrained small Chinese LLM MimixLM-0.7b-sft is now available, you are welcom
 
 Start a new session at any time by typing ":restart" and pressing Enter.
 
-|               |                       |
+| Architecture  |                       |
 | ------------- | --------------------- |
 | max_len       | 2048                  |
 | n_heads       | 12                    |
