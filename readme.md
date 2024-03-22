@@ -19,7 +19,24 @@ I also trained a small Chinese LLM MimixLM-0.7b-sft. You can chat with it.
 
 ### MimixLM-0.7b-sft
 
-A pretrained small Chinese LLM MimixLM-0.7b-sft is now available. You can download from below links and place conf and model in the corresponding folder. Run python chat.py --model_conf path/to/conf to play with it. You can start a new session at any time by typing ":restart" and pressing Enter.
+A pretrained small Chinese LLM MimixLM-0.7b-sft is now available, you are welcome to try them out. 
+
+1. Download model from below links and place conf and model in the corresponding folder. 
+2. Run python chat.py --model_conf path/to/conf to play with it. 
+
+Start a new session at any time by typing ":restart" and pressing Enter.
+
+|               |                       |
+| ------------- | --------------------- |
+| max_len       | 2048                  |
+| n_heads       | 12                    |
+| d_model       | 1536                  |
+| n_dec_layers  | 24                    |
+| vocab_size    | 100000                |
+| norm          | rms_norm              |
+| attention     | multi_query_attention |
+| pos_embedding | RoPE                  |
+| activation    | SwiGLU                |
 
 ![mimix](image/mimix.png)
 
