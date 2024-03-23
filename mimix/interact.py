@@ -533,6 +533,7 @@ def run_interactive():
     if args.mode == "pred":
         if config["task"] == "enc_dec":
             if args.stream == True:
+                config["beam_size"] = 1
                 stream_enc_dec_demo(config)    
             else:
                 enc_dec_demo(config)
@@ -542,6 +543,7 @@ def run_interactive():
             if config.get("is_mimix_chat", False) == True:
                 chat(config)
             elif args.stream == True:
+                config["beam_size"] = 1
                 stream_lm_demo(config)    
             else:
                 lm_demo(config)
