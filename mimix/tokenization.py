@@ -97,7 +97,7 @@ class Tokenizer():
     
     
     @abstractmethod
-    def detokenize(self, tokens):
+    def detokenize(self, tokens, convert_special_token=True):
         """
         """
         pass
@@ -127,11 +127,11 @@ class Tokenizer():
         return word_ids
     
     
-    def detokenize_ids(self, word_ids):
+    def detokenize_ids(self, word_ids, convert_special_token=True):
         """
         """
         tokens = self.convert_ids_to_tokens(word_ids)
-        text = self.detokenize(tokens)
+        text = self.detokenize(tokens, convert_special_token=convert_special_token)
                             
         return text
 
@@ -153,7 +153,7 @@ class SpaceTokenizer(Tokenizer):
         return tokens
     
     
-    def detokenize(self, tokens):
+    def detokenize(self, tokens, convert_special_token=True):
         """
         """
         text = " ".join(tokens)
@@ -389,7 +389,7 @@ class MimixTokenizer(Tokenizer):
         return tokens
 
 
-    def detokenize(self, tokens):
+    def detokenize(self, tokens, convert_special_token=True):
         """
         """
         text = ""
@@ -403,14 +403,17 @@ class MimixTokenizer(Tokenizer):
                 text += token[2:]
                 is_last_alphabet = True
             elif re.search("^_[0-9a-z]+_$", token):
-                if token == self.space_token:
-                    text += " "
-                elif token == self.newline_token:
-                    text += "\n"
+                if convert_special_token == False:
+                    text = text + (" " + token + " ")
                 else:
-                    if text.endswith(" ") == False:
+                    if token == self.space_token:
                         text += " "
-                    text += (token + " ")
+                    elif token == self.newline_token:
+                        text += "\n"
+                    else:
+                        if text.endswith(" ") == False:
+                            text += " "
+                        text += (token + " ")
                     
                 is_last_alphabet = False
             else:
@@ -442,7 +445,7 @@ class BertTokenizer(Tokenizer):
         return self.tokenizer.tokenize(text)
     
     
-    def detokenize(self, tokens):
+    def detokenize(self, tokens, convert_special_token=True):
         """
         """
         return " ".join(tokens)

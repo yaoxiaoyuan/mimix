@@ -529,6 +529,8 @@ def run_interactive():
     
     conf_file = args.model_conf
     config = load_model_config(real_path(conf_file))
+    if "convert_special_token" not in config:
+        config["convert_special_token"] = False
     
     if args.mode == "pred":
         if config["task"] == "enc_dec":
@@ -541,6 +543,7 @@ def run_interactive():
             classification_demo(config)
         elif config["task"] == "lm":
             if config.get("is_mimix_chat", False) == True:
+                config["convert_special_token"] = True
                 chat(config)
             elif args.stream == True:
                 config["beam_size"] = 1

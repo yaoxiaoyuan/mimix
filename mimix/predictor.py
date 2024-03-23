@@ -82,6 +82,7 @@ class EncDecGenerator():
         self.repetition_window_size = config.get("repetition_window_size", 0)
         self.normalize = config.get("normalize", "none")
         self.use_mask_unk =  config.get("use_mask_unk", False)
+        self.convert_special_token = config.get("convert_special_token", True)
     
     
     def encode_inputs(self, 
@@ -167,7 +168,7 @@ class EncDecGenerator():
             tmp = []
             for j in range(i*self.beam_size, (i+1)*self.beam_size):
                 
-                trg = self.trg_tokenizer.detokenize_ids(hypothesis[j])
+                trg = self.trg_tokenizer.detokenize_ids(hypothesis[j], self.convert_special_token)
                 
                 trg = trg.replace(self.bos_tok, "").replace(self.pad_tok, "").strip()
                 trg = re.sub(self.eos_tok + ".*", "", trg)
@@ -219,7 +220,7 @@ class EncDecGenerator():
                             tmp = []
                             for j in range(i*self.beam_size, (i+1)*self.beam_size):
                 
-                                trg = self.trg_tokenizer.detokenize_ids(hypothesis[j])
+                                trg = self.trg_tokenizer.detokenize_ids(hypothesis[j], self.convert_special_token)
                 
                                 trg = trg.replace(self.bos_tok, "").replace(self.pad_tok, "").strip()
                                 trg = re.sub(self.eos_tok + ".*", "", trg)
@@ -415,7 +416,8 @@ class LMGenerator():
         self.repetition_window_size = config.get("repetition_window_size", 0)
         self.normalize = config.get("normalize", "none")
         self.use_mask_unk =  config.get("use_mask_unk", False)
-        
+        self.convert_special_token = config.get("convert_special_token", True)
+
 
     def encode_inputs(self, trg_list, add_bos=False, add_eos=False, pad_trg_left=False):
         """
@@ -481,7 +483,7 @@ class LMGenerator():
             tmp = []
             for j in range(i*self.beam_size, (i+1)*self.beam_size):
                 
-                trg = self.trg_tokenizer.detokenize_ids(hypothesis[j])
+                trg = self.trg_tokenizer.detokenize_ids(hypothesis[j], self.convert_special_token)
                 
                 trg = trg.replace(self.bos_tok, "").replace(self.pad_tok, "").strip()
                 trg = re.sub(self.eos_tok + ".*", "", trg)
@@ -536,7 +538,7 @@ class LMGenerator():
                             tmp = []
                             for j in range(i*self.beam_size, (i+1)*self.beam_size):
     
-                                trg = self.trg_tokenizer.detokenize_ids(hypothesis[j])
+                                trg = self.trg_tokenizer.detokenize_ids(hypothesis[j], self.convert_special_token)
     
                                 trg = trg.replace(self.bos_tok, "").replace(self.pad_tok, "").strip()
                                 trg = re.sub(self.eos_tok + ".*", "", trg)
