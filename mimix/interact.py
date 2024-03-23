@@ -4,6 +4,8 @@ Created on Mon Jul 16 12:20:14 2018
 
 @author: Xiaoyuan Yao
 """
+import os
+import platform
 from argparse import ArgumentParser
 import sys
 import time
@@ -456,6 +458,63 @@ def stream_lm_demo(config):
         print("-----cost time: %s s-----" % cost)
 
 
+def chat(config):
+    
+    print("loading model...")
+    max_history_len = 2000
+    max_history_turn = 20
+    
+    assert config["is_mimix_chat"] == True
+    assert max_history_len < config["trg_max_len"]
+   
+    lm_gen = LMGenerator(config) 
+    history = []
+    if platform.system() == "Windows":
+        os.system("cls")
+    else:
+        os.system("clear")
+    print("Welcome to MimixAI.")
+    while True:
+        print("User:")
+        user_input = input()
+        if user_input == ":restart":
+            if platform.system() == "Windows":
+                os.system("cls")
+            else:
+                os.system("clear")
+            print("Welcome to MimixAI.")
+            history = []
+            continue
+        elif user_input == ":exit":
+            break
+        history.append(user_input)
+        context = " _mimix_"
+        for i,text in enumerate(history[::-1]):
+            if i > max_history_turn:
+                break
+            if len(context) > max_history_len:
+                break
+            if i % 2 == 0:          
+                context = " _mimixuser_ " + text + context
+            else:
+                context = " _mimix_ " + text + context
+        context = context.strip()
+        
+        search_res = lm_gen.predict_stream(prefix_list=[context])
+        resp = ""
+        print("Mimix:")
+        while True:
+            try:
+                _resp = next(search_res)[0][1][0][0].split("_mimix_")[-1].strip()
+                print(_resp[len(resp):], end="", flush=True)
+                resp = _resp
+            except:
+                break
+        print()
+        
+        history.append(resp)
+
+
 def run_interactive():
     """
     """
@@ -480,7 +539,9 @@ def run_interactive():
         elif config["task"] == "classification":
             classification_demo(config)
         elif config["task"] == "lm":
-            if args.stream == True:
+            if config.get("is_mimix_chat", False) == True:
+                chat(config)
+            elif args.stream == True:
                 stream_lm_demo(config)    
             else:
                 lm_demo(config)
