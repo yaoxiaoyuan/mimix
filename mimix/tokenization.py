@@ -67,7 +67,7 @@ def is_useless(ch):
 def is_space(ch):
     """
     """
-    return ch == " "
+    return ch == " " or ch == "　"
 
 
 def is_newline(ch):
@@ -185,16 +185,18 @@ class MimixTokenizer(Tokenizer):
         self.special_symbols = [self.pad_token, 
                                 self.bos_token, 
                                 self.eos_token, 
-                                self.unk_token,
-                                self.sep_token,
-                                self.mask_token,
-                                self.cls_token]
-
+                                self.unk_token]
+        
+        self.match_special_symbols = match_special_symbols
         self.symbols = set()
         for word in self.vocab:
             if re.search("^_unused[0-9]+_$", word):
                 continue
-            if re.search("^_[0-9a-z]+_$", word) and (match_special_symbols == True or word not in self.special_symbols):
+            if word in self.special_symbols:
+                continue
+            if match_special_symbols == False:
+                continue
+            if re.search("^_[0-9a-z]+_$", word):
                 self.symbols.add(word)
 
         self.symbols_tri_tree = self.build_tri_tree(self.symbols)
@@ -296,13 +298,17 @@ class MimixTokenizer(Tokenizer):
         while i < len(text):
             ch = text[i]
             if is_special(ch):
-                matched = self.prefix_match(text[i:]) 
-                if len(matched) > 0:
-                    tokenized += (" " + matched + " ")
-                    i += len(matched)
-                else:
+                if self.match_special_symbols == False:
                     tokenized += (" " + ch + " ")
                     i += 1
+                else:
+                    matched = self.prefix_match(text[i:]) 
+                    if len(matched) > 0:
+                        tokenized += (" " + matched + " ")
+                        i += len(matched)
+                    else:
+                        tokenized += (" " + ch + " ")
+                        i += 1
                 is_last_cjk = False
                 is_last_num_or_alphabet = False
             elif is_cjk(ch):
@@ -322,16 +328,23 @@ class MimixTokenizer(Tokenizer):
                 is_last_num_or_alphabet = True
                 i += 1
             elif is_space(ch):
+                
                 if i == 0 or i == len(text) - 1:
                     tokenized += (" " + self.space_token + " ")
                 elif is_alphabet(text[i-1]) and is_alphabet(text[i+1]): 
                     tokenized += " "
-                elif re.search("_[0-9a-z]+_$", text[:i]): 
-                    tokenized += " "
-                elif re.search(" _[0-9a-z]+_", text[i:]): 
-                    tokenized += " "
                 else:
-                    tokenized += (" " + self.space_token + " ")
+                    ignore = False
+                    if self.match_special_symbols == True:
+                        if re.search("_[0-9a-z]+_$", text[:i]): 
+                            ignore = True
+                        if re.search(" _[0-9a-z]+_", text[i:]):
+                            ignore = True
+                    if ignore == True:
+                        tokenized += " "
+                    else:
+                        tokenized += (" " + self.space_token + " ")
+                            
                 is_last_cjk = False
                 is_last_num_or_alphabet = False   
                 i += 1
@@ -349,12 +362,12 @@ class MimixTokenizer(Tokenizer):
                 is_last_cjk = False
                 is_last_num_or_alphabet = False
                 i += 1
-
-        tokenized = re.sub("[ ]+", " ", tokenized).strip()
-        
+                
         tokens = []
         for token in tokenized.split():
-            if re.search("^_[0-9a-z]+_$", token):
+            if len(token) == 0:
+                continue
+            elif re.search("^_[0-9a-z]+_$", token):
                 tokens.append(token)
             elif all(is_cjk(ch) for ch in token):
                 tokens.extend(self.maximum_match(token))    
@@ -432,11 +445,12 @@ class MimixTokenizer(Tokenizer):
 class BertTokenizer(Tokenizer):
     """
     """
-    def __init__(self, vocab_file):
+    def __init__(self, vocab_file, uncased=True):
         """
         """
         super(BertTokenizer,self).__init__(vocab_file)
-        self.tokenizer = bert_tokenizer(vocab_file)
+        from mimix.bert_tokenizer import FullTokenizer
+        self.tokenizer = FullTokenizer(vocab_file, do_lower_case=uncased)
         
         
     def tokenize(self, text):
@@ -474,7 +488,10 @@ def build_tokenizer(**args):
         tokenizer = MimixTokenizer(vocab_file=args["vocab_file"], uncased=False)
     elif args["tokenizer"] == "bert":
         from mimix.bert_tokenizer import FullTokenizer as bert_tokenizer
-        tokenizer = BertTokenizer(vocab_file=args["vocab_file"])
+        tokenizer = BertTokenizer(vocab_file=args["vocab_file"], uncased=True)
+    elif args["tokenizer"] == "bert-cased":
+        from mimix.bert_tokenizer import FullTokenizer as bert_tokenizer
+        tokenizer = BertTokenizer(vocab_file=args["vocab_file"], uncased=False)
     else:
         raise ValueError("tokenizer not correct!")
         

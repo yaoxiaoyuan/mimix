@@ -59,6 +59,7 @@ class Transformer(nn.Module):
         self.use_talking_attention = kwargs.get("use_talking_attention", False)
         self.use_attention_residual = kwargs.get("use_attention_residual", False)
         self.use_glu = kwargs.get("use_glu", False)
+        self.use_moe = kwargs.get("use_moe", False)
         self.use_ln_scale = kwargs.get("use_ln_scale", True)
         self.use_ln_bias = kwargs.get("use_ln_bias", True)
         
@@ -83,7 +84,7 @@ class Transformer(nn.Module):
             self.pos_embedding = PositionEmbedding(self.max_len, self.d_model, self.pos_type)
             
         if self.n_types is not None:    
-            self.type_embedding = Embedding(self.n_types, self.d_model, self.factorized_size)
+            self.type_embedding = Embedding(self.n_types, self.d_model)
         
         if self.norm_after_embedding == True:       
             if self.norm_type == "layer_norm":
@@ -162,7 +163,7 @@ class Transformer(nn.Module):
 
         embeded = embeded_masked + self.pos_embedding(enc_pos_ids)
         output = embeded
-        attention_residual = None
+        self_attention_residual = None
         for i in range(self.n_layers):
             
             if self.share_layer_params == False:
@@ -173,9 +174,10 @@ class Transformer(nn.Module):
             outputs = layer(output,
                             self_pos_ids=enc_pos_ids,
                             past_pos_ids=enc_pos_ids,
-                            attention_residual=attention_residual if self.use_attention_residual else None)
+                            self_attention_residual=attention_residual if self.use_attention_residual else None)
             
-            output, self_attn_scores, attention_residual = outputs[:3]
+            output = outputs["output"] 
+            self_attention_residual = outputs["self_attn_scores"]
             
         if self.norm_before_pred == True:
             output = self.norm(output)
@@ -196,7 +198,6 @@ class Transformer(nn.Module):
                 past_pos_ids=None,
                 cached_kv=False, 
                 embedding=None,
-                return_states=False,
                 type_ids=None):
         """
         """
@@ -225,10 +226,13 @@ class Transformer(nn.Module):
         if self.emb_dropout is not None:
             output = self.emb_dropout(output)
 
-        self_attn_scores_list = []
-        enc_attn_scores_list = []
+        self_attn_weights_list = []
+        enc_attn_weights_list = []
+        moe_logits_list = []
+        moe_weights_list = []
+        moe_indices_list = []
         states = [output]
-        attention_residual = None
+        self_attention_residual = None
         enc_attention_residual = None
         for i in range(self.n_layers):
             
@@ -248,30 +252,34 @@ class Transformer(nn.Module):
                             self_pos_ids,
                             enc_pos_ids,
                             past_pos_ids,
-                            attention_residual if self.use_attention_residual else None,
+                            self_attention_residual if self.use_attention_residual else None,
                             enc_attention_residual if self.use_attention_residual else None)
+           
+
+            output = outputs["output"] 
             
-            output, self_attn_scores, attention_residual = outputs[:3]
-            
+            self_attn_weights_list.append(outputs["self_attn_weight"])
+            self_attention_residual = outputs["self_attn_scores"]
+
             if self.with_across_attention == True:
-                enc_attn_scores,enc_attention_residual = outputs[3:5]
-                
-            self_attn_scores_list.append(self_attn_scores)
-            if self.with_across_attention == True:
-                enc_attn_scores_list.append(enc_attn_scores)
+                enc_attn_weights_list.append(outputs["enc_attn_weight"])
+                enc_attention_residual = outputs["enc_attn_scores"]
+
+            if self.use_moe == True:
+                moe_logits_list.append(outputs["moe_logits"])
+                moe_weights_list.append(outputs["moe_weights"])
+                moe_indices_list.append(outputs["moe_indices"])
+
             states.append(output)
 
-            output = outputs[0]
-
             if cached_kv == True:
-                self_keys, self_values = outputs[-2:]
-                self_kv_list[i][0] = self_keys
-                self_kv_list[i][1] = self_values
+                self_kv_list[i][0] = outputs["cache_sa_keys"]
+                self_kv_list[i][1] = outputs["cache_sa_values"]
 
         if self.norm_before_pred == True:
             output = self.norm(output)
 
-        outputs = [output]
+        outputs = {"output":output}
         if self.output_next_word_logits == True:            
             if self.share_emb_out_proj == False:
                 W = self.W
@@ -282,12 +290,18 @@ class Transformer(nn.Module):
             if self.use_output_bias == True:
                 logits = logits + self.b
         
-            outputs = [logits]
+            outputs["logits"] = logits
         if cached_kv == True:
-            outputs += [self_kv_list]
+            outputs["cache_kv"] = self_kv_list
 
-        if return_states == True:
-            outputs = outputs + [embeded, states, self_attn_scores_list, enc_attn_scores_list]
+        
+        outputs["embeded"] = embeded
+        outputs["states"] = states
+        outputs["self_attn_weights_list"] = self_attn_weights_list
+        outputs["enc_attn_weights_list"] = enc_attn_weights_list
+        outputs["moe_weights_list"] = moe_weights_list
+        outputs["moe_indices_list"] = moe_indices_list
+        outputs["moe_logits_list"] = moe_logits_list
             
         return outputs
 
@@ -337,7 +351,7 @@ class Transformer(nn.Module):
         if self.norm_after_embedding == True:
             self_output = self.norm_emb(self_output)
 
-        attention_residual = None
+        self_attention_residual = None
         enc_attention_residual = None
         for i in range(self.n_layers):
             if self.share_layer_params == False:
@@ -356,17 +370,17 @@ class Transformer(nn.Module):
                             self_pos_ids,
                             enc_pos_ids,
                             past_pos_ids,
-                            attention_residual if self.use_attention_residual else None,
+                            self_attention_residual if self.use_attention_residual else None,
                             enc_attention_residual if self.use_attention_residual else None
                             )
-            self_output, self_attn_scores, attention_residual = outputs[:3]
-            
+             
+            self_output = outputs["output"]
+            self_attention_residual = outputs["self_attn_scores"]
             if self.with_across_attention == True:
-                enc_attn_scores,enc_attention_residual = outputs[3:5]
+                enc_attention_residual = outputs["enc_attn_scores"]
 
-            self_keys, self_values = outputs[-2:]
-            self_kv_list[i][0] = self_keys
-            self_kv_list[i][1] = self_values
+            self_kv_list[i][0] = outputs["cache_sa_keys"]
+            self_kv_list[i][1] = outputs["cache_sa_values"]
 
         return self_kv_list
 
@@ -434,7 +448,7 @@ class TransformerSeq2seq(nn.Module):
         return mask
         
     
-    def forward(self, inputs, return_states=False, targets=None, compute_loss=False):
+    def forward(self, inputs, targets=None, compute_loss=False):
         """
         """
         x, y = inputs
@@ -459,9 +473,8 @@ class TransformerSeq2seq(nn.Module):
         enc_outputs = self.encoder(x, 
                                    self_attn_mask=enc_self_attn_mask,
                                    self_pos_ids=enc_pos_ids,
-                                   past_pos_ids=enc_pos_ids,
-                                   return_states=return_states)
-        enc_output = enc_outputs[0]
+                                   past_pos_ids=enc_pos_ids)
+        enc_output = enc_outputs["output"]
 
         trg_embedding = None
         if self.share_src_trg_emb == True:
@@ -474,18 +487,15 @@ class TransformerSeq2seq(nn.Module):
                                    self_pos_ids=dec_pos_ids,
                                    enc_pos_ids=enc_pos_ids,
                                    past_pos_ids=dec_pos_ids,
-                                   return_states=return_states,
                                    embedding=trg_embedding)
         
-        outputs = dec_outputs + enc_outputs
+        outputs = dec_outputs
+        outputs["enc_outputs"] = enc_outputs
         
-        if return_states == False:
-            outputs = outputs[:1]
-
         if compute_loss == True:
             loss = self.loss_fn(outputs, targets)
-            outputs = [loss] + outputs
-                    
+            outputs["loss"] = loss
+
         return outputs
 
 
@@ -505,7 +515,7 @@ class TransformerSeq2seq(nn.Module):
                                    self_attn_mask=enc_attn_mask, 
                                    self_pos_ids=enc_pos_ids,
                                    past_pos_ids=enc_pos_ids)      
-        enc_output = enc_outputs[0]
+        enc_output = enc_outputs["output"]
         enc_kv_list = self.decoder.cache_enc_kv(enc_output, enc_pos_ids)
         
         dec_pos_ids = states[0].ne(self.PAD).cumsum(-1) - 1         
@@ -573,7 +583,7 @@ class TransformerSeq2seq(nn.Module):
                                cached_kv=True,
                                embedding=trg_embedding)
                 
-        logits, dec_kv_list = outputs[:2]
+        logits, dec_kv_list = outputs["logits"], outputs["cache_kv"]
         dec_pos_ids = dec_pos_ids + 1
         past_pos_ids = torch.cat([past_pos_ids, dec_pos_ids], -1)
         
@@ -654,7 +664,7 @@ class TransformerLM(nn.Module):
         return mask
         
     
-    def forward(self, inputs, return_states=False, targets=None, compute_loss=False):
+    def forward(self, inputs, targets=None, compute_loss=False):
         """
         """
         y = inputs[0]
@@ -673,18 +683,14 @@ class TransformerLM(nn.Module):
         dec_outputs = self.decoder(y, 
                                    self_attn_mask=dec_self_attn_mask,
                                    self_pos_ids=self_pos_ids,
-                                   past_pos_ids=self_pos_ids,
-                                   return_states=return_states)
+                                   past_pos_ids=self_pos_ids)
 
         outputs = dec_outputs
-        
-        if return_states == False:
-            outputs = outputs[:1]
-
+       
         if compute_loss == True:
             loss = self.loss_fn(outputs, targets)
-            outputs = [loss] + outputs
-            
+            outputs["loss"] = loss
+
         return outputs
 
 
@@ -734,7 +740,7 @@ class TransformerLM(nn.Module):
                                self_pos_ids=self_pos_ids,
                                past_pos_ids=past_pos_ids,
                                cached_kv=True)
-        logits,dec_kv_list = outputs[:2]
+        logits,dec_kv_list = outputs["logits"], outputs["cache_kv"]
         
         self_pos_ids = self_pos_ids + 1
         past_pos_ids = torch.cat([past_pos_ids, self_pos_ids], -1)
@@ -812,12 +818,14 @@ class TransformerEncoder(nn.Module):
             self.W_pool = nn.Parameter(torch.Tensor(self.d_model, self.d_model))
             self.b_pool = nn.Parameter(torch.zeros(self.d_model))
         
-        self.W_out = None
-        self.b_out = None
+        self.W_cls = None
+        self.b_cls = None
         if self.n_class is not None:
-            self.W_out = nn.Parameter(torch.Tensor(self.d_model, self.n_class))
-            self.b_out = nn.Parameter(torch.zeros(self.n_class))
-        
+            self.W_cls = nn.Parameter(torch.Tensor(self.d_model, self.n_class))
+            self.b_cls = nn.Parameter(torch.zeros(self.n_class))
+
+        self.W_out = None
+        self.b_out = None        
         self.out_dim = kwargs.get("out_dim", None)
         if self.out_dim is not None:
             self.W_out = nn.Parameter(torch.Tensor(self.d_model, self.out_dim))
@@ -857,10 +865,10 @@ class TransformerEncoder(nn.Module):
         """
         """
         stdv = 1.0 / np.sqrt(self.d_model)
-        for weight in [self.W_pool, self.W_out, self.W_mlm, self.W_out_mlm]:
+        for weight in [self.W_pool, self.W_cls, self.W_out, self.W_mlm, self.W_out_mlm]:
             if weight is not None:
                 weight.data.uniform_(-math.sqrt(3)*stdv, math.sqrt(3)*stdv)
-        for weight in [self.b_pool, self.b_out, self.b_mlm, self.b_out_mlm]:
+        for weight in [self.b_pool, self.b_cls, self.b_out, self.b_mlm, self.b_out_mlm]:
             if weight is not None:
                 weight.data.zero_()
                 
@@ -882,17 +890,17 @@ class TransformerEncoder(nn.Module):
         self_pos_ids = x.ne(self.PAD).cumsum(-1)-1
  
         enc_outputs = self.encoder(x, enc_self_attn_mask, self_pos_ids=self_pos_ids)
-        enc_output = enc_outputs[0]
+        enc_output = enc_outputs["output"]
         
         if self.use_pooling == True:
             enc_output = torch.tanh(torch.matmul(enc_output, self.W_pool) + self.b_pool)
             
-        enc_output = torch.matmul(enc_output, self.W_out) + self.b_out
+        enc_output = torch.matmul(enc_output, self.W_cls) + self.b_cls
 
-        return enc_output    
+        return enc_output     
+
     
-    
-    def forward(self, inputs, return_states=False, targets=None, compute_loss=False):
+    def forward(self, inputs, targets=None, compute_loss=False):
         """
         """
         x = inputs[0]
@@ -907,32 +915,37 @@ class TransformerEncoder(nn.Module):
                                        enc_self_attn_mask,
                                        self_pos_ids=self_pos_ids, 
                                        past_pos_ids=self_pos_ids, 
-                                       return_states=return_states,
                                        type_ids=type_ids)
         else:
             pos_ids = torch.arange(self.src_max_len).repeat([x.size(0), 1]).to(x.device)
 
             enc_outputs = self.encoder(x, self_pos_ids=pos_ids)
 
-        enc_output = enc_outputs[0]   
+        enc_output = enc_outputs["output"]   
         mlm_enc_output = enc_output
         
-        outputs = [enc_output]
+        outputs = enc_outputs
         if self.use_pooling == True:
             
             enc_output = torch.tanh(torch.matmul(enc_output, self.W_pool) + self.b_pool)
             
-            outputs = [enc_output[:,0,:]]
+            outputs["output"] = enc_output[:,0,:]
             
-        if self.out_dim is not None or self.n_class is not None:
+        if self.out_dim is not None:
             enc_output = torch.matmul(enc_output, self.W_out) + self.b_out
 
-            outputs = [enc_output[:,0,:], enc_output]
-            
+            outputs["output"] = enc_output[:,0,:]
+        
+        if self.n_class is not None:
+            enc_output = torch.matmul(enc_output, self.W_cls) + self.b_cls
+
+            outputs["cls_output"] = enc_output
+            outputs["cls_logits"] = enc_output[:,0,:] 
+        
         if self.crf is not None:
             mask = x.ne(self.PAD).to(enc_output.dtype)
             nlg = self.crf(enc_output, inputs[1], mask)
-            outputs = [nlg] 
+            outputs["crf_nlg"] = nlg
         
         if self.with_mlm == True:
             enc_output = F.linear(mlm_enc_output, self.W_mlm) + self.b_mlm
@@ -948,14 +961,11 @@ class TransformerEncoder(nn.Module):
             
             logits = torch.matmul(enc_output, W) + self.b_out_mlm
 
-            outputs = [logits]
+            outputs["mlm_logits"] = logits
         
         if compute_loss == True:
             loss = self.loss_fn(outputs, targets)
-            outputs = [loss] + outputs
-        
-        if return_states == True:
-            outputs = outputs + enc_outputs
+            outputs["loss"] = loss
         
         return outputs        
 
@@ -991,7 +1001,7 @@ class CLIP(nn.Module):
         self.text_encoder = TransformerEncoder(**text_config)
 
 
-    def forward(self, inputs, return_states=False, targets=None, compute_loss=False):
+    def forward(self, inputs, targets=None, compute_loss=False):
         """
         """
         img, text = inputs
@@ -999,14 +1009,13 @@ class CLIP(nn.Module):
         img_outputs = self.img_encoder([img])
         text_outputs = self.text_encoder([text])
 
-        outputs = [[img_outputs[0], text_outputs[0]]] + img_outputs[1:] + text_outputs[1:]
+        outputs = {}
+        outputs["img_outputs"] = img_outputs
+        outputs["text_outputs"] = text_outputs
 
         if compute_loss == True:            
             loss = self.loss_fn(outputs, targets)
-            outputs = [loss] + outputs
-
-        if return_states == True:
-            outputs = outputs + enc_outputs
+            outputs["loss"] = loss
 
         return outputs
 
@@ -1050,7 +1059,7 @@ class MAE(nn.Module):
         self.out_proj = Linear(kwargs["dec_d_model"], self.ph*self.pw*self.n_channels)
         
 
-    def forward(self, inputs, return_states=False, targets=None, compute_loss=False):
+    def forward(self, inputs, targets=None, compute_loss=False):
         """
         """
         x, mask_ratio = inputs[:2]
@@ -1068,10 +1077,9 @@ class MAE(nn.Module):
         dec_pos_ids = torch.arange(dec_embeded.shape[1], device=dec_embeded.device).repeat([dec_embeded.shape[0],1])
         dec_output = self.decoder(dec_embeded, 
                                   self_pos_ids=dec_pos_ids,
-                                  past_pos_ids=dec_pos_ids,
-                                  return_states=return_states)
+                                  past_pos_ids=dec_pos_ids)
         
-        dec_output = self.out_proj(dec_output[0][:,1:,:])
+        dec_output = self.out_proj(dec_output["output"][:,1:,:])
         
         h = self.img_h // self.ph
         w = self.img_w // self.pw
@@ -1083,14 +1091,16 @@ class MAE(nn.Module):
         patchify_x = torch.einsum('nchpwq->nhwpqc', patchify_x)
         patchify_x = patchify_x.reshape(shape=(patchify_x.shape[0], h * w, self.ph * self.pw * 3))
         
-        outputs = [dec_output, reconstruct, mask, patchify_x]
+        outputs = {
+            "output": dec_output, 
+            "reconstruct": reconstruct, 
+            "mask": mask, 
+            "patchify_x": patchify_x
+            }
         
         if compute_loss == True:            
             loss = self.loss_fn(outputs, targets)
-            outputs = [loss] + outputs
-
-        if return_states == True:
-            outputs = outputs + enc_outputs
+            outputs["loss"] = loss
 
         return outputs
         
@@ -1101,7 +1111,7 @@ def load_model_weights(model, weights_path):
     model_path = real_path(weights_path)
     state_dict = torch.load(model_path,
                             map_location=lambda storage, loc: storage)
-
+    state_dict = {k.replace("module.",""):state_dict[k] for k in state_dict}
     param_dict = {}
     for k,v in model.named_parameters():
         if k in state_dict:
@@ -1127,7 +1137,7 @@ def build_model(config, load_model_path=None):
             model = TransformerLM(**config)
         else:
             raise ValueError("model not correct!")
-    elif config["task"] in ["match", "mlm", "seqcls"]:
+    elif config["task"] in ["cls", "match", "mlm", "seqcls"]:
         if config["model"] == "transformer":
             model = TransformerEncoder(**config)
         else:

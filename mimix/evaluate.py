@@ -18,7 +18,7 @@ def eval_acc(model, generator):
         total_count = 0
         for inputs,targets in generator():
             outputs = model(inputs)
-            pred = outputs[0]
+            pred = outputs["cls_logits"]
             shot = torch.sum(pred.argmax(1) == targets[0].view(-1))
                 
             shot_count = shot_count + shot.item()
@@ -37,7 +37,7 @@ def eval_perplexity(model, generator):
         sum_len = 0
         for inputs,targets in generator():          
             outputs = model(inputs)
-            logits = outputs[0]
+            logits = outputs["logits"]
 
             log_probs = torch.gather(F.log_softmax(logits, 2), 
                                      2, 
@@ -65,7 +65,7 @@ def eval_sequence_labeling_acc(model, generator):
             if model.crf is not None:
                 pred = crf_model_decoding(model, x)
             else:
-                pred = model(inputs, return_states=True)[1].argmax(-1)
+                pred = model.get_emission(x).argmax(-1)
             
             shot = torch.sum((pred == targets[0]) * (x != model.PAD))
             

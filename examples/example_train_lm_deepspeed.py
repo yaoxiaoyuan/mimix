@@ -6,6 +6,7 @@ Created on Mon Mar 11 21:41:58 2024
 """
 import sys
 import os
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../"))
 from argparse import ArgumentParser
 import numpy as np
 import torch

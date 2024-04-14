@@ -4,7 +4,9 @@ Created on Sun Aug  6 22:27:06 2023
 
 @author: Xiaoyuan Yao
 """
+import sys
 import os
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../"))
 import json
 import torch
 from mimix.tokenization import build_tokenizer
@@ -14,7 +16,7 @@ def load_bert_weights(bert, weight_path):
     """
     bert.eval()
     state_dict = torch.load(weight_path)
-
+    
     map_key_dict = {"encoder.word_embedding.W": "bert.embeddings.word_embeddings.weight",
                     "encoder.pos_embedding.W": "bert.embeddings.position_embeddings.weight",
                     "encoder.type_embedding.W":"bert.embeddings.token_type_embeddings.weight",
@@ -53,7 +55,8 @@ def load_bert_weights(bert, weight_path):
     
     model_state_dict = {}
     for key,param in bert.named_parameters():
-        model_state_dict[key] = state_dict[map_key_dict[key].replace("gamma", "weight").replace("beta", "bias")]
+        model_state_dict[key] = state_dict[map_key_dict[key]]
+        #model_state_dict[key] = state_dict[map_key_dict[key].replace("gamma", "weight").replace("beta", "bias")]
         if key == "W_out_mlm":
             model_state_dict[key] = state_dict[map_key_dict[key]].T
     
@@ -99,8 +102,8 @@ def load_bert_model(model_path, use_cuda=False):
     return bert
 
 
-#bert_model_path = "model/pretrain/bert"
-bert_model_path = "model/pretrain/bert_large"
+bert_model_path = "model/pretrain/bert"
+#bert_model_path = "model/pretrain/bert_large"
 model = load_bert_model(bert_model_path)
 model.eval()
 tokenizer = build_tokenizer(**{"tokenizer":"bert", "vocab_file":os.path.join(bert_model_path, "vocab.txt")})
@@ -108,7 +111,7 @@ tokenizer = build_tokenizer(**{"tokenizer":"bert", "vocab_file":os.path.join(ber
 #Test for Chinese BERT MLM Task: [MASK]国的首都是曼谷
 #output: ['泰'] 0.9495071768760681
 x = [101,103] + tokenizer.tokenize_to_ids("国的首都是曼谷") + [102]
-y = model([torch.tensor([x], dtype=torch.long), torch.zeros([1,len(x)], dtype=torch.long)])[0]
+y = model([torch.tensor([x], dtype=torch.long), torch.zeros([1,len(x)], dtype=torch.long)])["mlm_logits"]
 prob = torch.softmax(y, -1)
 word_id = y[0][x.index(103)].argmax().item()
 prob = prob[0][x.index(103)][word_id].item()
@@ -117,7 +120,7 @@ print(tokenizer.convert_ids_to_tokens([word_id]), prob)
 #Test for Chinese BERT MLM Task: 韩国的首都是[MASK]尔
 #output: ['首'] 0.9999905824661255
 x = [101] + tokenizer.tokenize_to_ids("韩国的首都是") + [103] + tokenizer.tokenize_to_ids("尔") + [102]
-y = model([torch.tensor([x], dtype=torch.long), torch.zeros([1,len(x)], dtype=torch.long)])[0]
+y = model([torch.tensor([x], dtype=torch.long), torch.zeros([1,len(x)], dtype=torch.long)])["mlm_logits"]
 prob = torch.softmax(y, -1)
 word_id = y[0][x.index(103)].argmax().item()
 prob = prob[0][x.index(103)][word_id].item()

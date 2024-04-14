@@ -539,7 +539,7 @@ def run_interactive():
                 stream_enc_dec_demo(config)    
             else:
                 enc_dec_demo(config)
-        elif config["task"] == "classification":
+        elif config["task"] == "cls":
             classification_demo(config)
         elif config["task"] == "lm":
             if config.get("is_mimix_chat", False) == True:

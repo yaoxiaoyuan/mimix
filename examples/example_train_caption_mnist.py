@@ -6,8 +6,9 @@ Created on Fri Jul 28 22:06:35 2023
 """
 import sys
 import os
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../"))
 from argparse import ArgumentParser
-from mimix.models import build_model
+from mimix.models import build_model, load_model_weights
 from mimix.optimizer import build_optimizer
 from mimix.scheduler import build_scheduler
 from mimix.loss import seq_cross_entropy
@@ -30,6 +31,13 @@ class MNIST():
         self.device = device
         self.idx = list(range(0, len(self.data)))
         random.shuffle(self.idx)
+        
+    
+    def local_shuffle(self):
+        """
+        """
+        random.shuffle(self.idx)
+
 
     def __call__(self, steps=0):
         """
@@ -38,10 +46,9 @@ class MNIST():
         while i < len(self.data):   
             x = torch.cat([self.data[j][0][0].unsqueeze(0) for j in self.idx[i:i+self.batch_size]])
             x = x.float().unsqueeze(1).to(self.device)
-            #for mnist, the vocab here is {"PAD":0, "BOS":1, "EOS":2, "UNK":3, "0":8, "1":9, "2":10, ..., "9":17}
-            y = torch.tensor([[1, 8 + self.data[j][1]] for j in self.idx[i:i+self.batch_size]])
+            y = torch.tensor([[1, 18, 8 + self.data[j][1]] for j in self.idx[i:i+self.batch_size]])
             y = y.long().to(self.device)
-            y_target = torch.tensor([[8 + self.data[j][1], 2] for j in self.idx[i:i+self.batch_size]])
+            y_target = torch.tensor([[18, 8 + self.data[j][1], 2] for j in self.idx[i:i+self.batch_size]])
             y_target = y_target.long().to(self.device)
             yield [x, y], [y_target]
             i += self.batch_size
@@ -51,6 +58,8 @@ def main(model_config, train_config):
     """
     """
     model = build_model(model_config)
+    if train_config.get("reload_model", None) is not None:
+        model = load_model_weights(model, real_path(train_config["reload_model"]))
     
     device = "cpu"
     if train_config["use_cuda"] == True:
@@ -59,23 +68,25 @@ def main(model_config, train_config):
     
     model = model.to(device)
     eps = train_config.get("eps", 0)
-    model.loss_fn = lambda x,y:seq_cross_entropy(x[0], y[0], eps, model.PAD)
+    model.loss_fn = lambda x,y:seq_cross_entropy(x["logits"], y[0], eps, model.PAD)
     symbol2id = model_config["symbol2id"]
     batch_size = train_config["batch_size"]
     
     transform = transforms.Compose([
                 transforms.Resize((model_config["img_w"], model_config["img_h"])),
                 transforms.ToTensor(),
-                transforms.Normalize(0.5, 0.5, 0.5),
+                transforms.Normalize(0.5, 0.5),
             ])
     
     train_dataset = MNIST(
                           datasets.MNIST("test_data/mnist-data", train=True, download=True, transform=transform),
+                          #datasets.FashionMNIST("test_data/mnist-data", train=True, download=True, transform=transforms.ToTensor()),
                           train_config["batch_size"], 
                           device)
     val_dataset = None
     test_dataset = MNIST(
                          datasets.MNIST("test_data/mnist-data", train=False, download=True, transform=transform), 
+                         #datasets.FashionMNIST("test_data/mnist-data", train=True, download=True, transform=transforms.ToTensor()),
                          train_config["batch_size"],
                          device)
 

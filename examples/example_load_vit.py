@@ -4,6 +4,9 @@ Created on Mon Aug 14 23:36:34 2023
 
 @author: Xiaoyuan Yao
 """
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../"))
 import re
 import numpy as np
 import torch
@@ -40,9 +43,9 @@ for k in a.files:
         w = w.flatten()
         k2 = 'encoder.cls'
     if k == 'head/kernel':
-        k2 = 'W_out'
+        k2 = 'W_cls'
     if k == 'head/bias':
-        k2 = 'b_out'  
+        k2 = 'b_cls'  
     
     if k == 'embedding/kernel':
         k2 = 'encoder.patch_embedding.weight'
@@ -81,9 +84,9 @@ vit = TransformerEncoder(use_vit_encoder=True,
                          ln_eps=1e-6)
 vit.load_state_dict(b)
 
-import PIL
+from PIL import Image
 #from imagenet 
-image = PIL.Image.open("n01440764_10026.jpg")
+image = Image.open("n01440764_10026.jpg")
 from torchvision import transforms
 transform = transforms.Compose([
             transforms.Resize((384, 384)),
@@ -97,5 +100,5 @@ with torch.no_grad():
     outputs = vit([x])
 
 #predict label: 0    
-print(outputs[0].argmax(-1))    
+print(outputs["cls_logits"].argmax(-1))    
     

@@ -3,6 +3,7 @@ Created on Tue Aug 13 13:29:30 2019
 
 @author: Xiaoyuan Yao
 """
+from functools import partial
 import math
 import numpy as np
 import torch
@@ -454,6 +455,95 @@ class FeedForward(nn.Module):
         return x
 
 
+class TopkRouter(nn.Module):
+    """
+    """
+    def __init__(self, n_experts, topk, d_model, randk=0, use_noise=False):
+        """
+        """
+        super(TopkRouter, self).__init__()
+        self.n_experts = n_experts
+        self.topk = topk
+        self.linear = Linear(d_model, self.n_experts)
+        self.randk = randk
+        self.use_noise = use_noise
+        if self.use_noise == True:
+            self.noise_linear = Linear(d_model, self.n_experts)
+
+    
+    def forward(self, x):
+        """
+        """
+        logits = self.linear(x)
+
+        if self.use_noise == True:
+            noise_logits = self.noise_linear(x)
+            noise = torch.randn_like(logits)*F.softplus(noise_logits)
+            logits = logits + noise
+
+        #choose real topk = topk - randk
+        top_k_logits, indices = logits.topk(self.topk-self.randk, dim=-1)
+        
+        #choose randk for balance
+        if self.randk > 0:
+            probs = torch.full_like(logits, 1/self.randk)
+            probs = probs.scatter(-1, indices, 0).view(-1, self.n_experts)
+            rand_indices = torch.multinomial(probs, 1)
+            rand_logits = torch.gather(logits.view(-1, self.n_experts), 1, rand_indices)
+            
+            indices = torch.cat([indices, rand_indices.view(x.shape[0], x.shape[1], self.randk)], -1)
+            top_k_logits = torch.cat([top_k_logits, rand_logits.view(x.shape[0], x.shape[1], self.randk)], -1)
+
+        zeros = torch.full_like(logits, float('-inf'))
+        sparse_logits = zeros.scatter(-1, indices, top_k_logits)
+        router_output = F.softmax(sparse_logits, dim=-1)
+        return logits, router_output, indices
+
+
+class SparseMoE(nn.Module):
+    """
+    """
+    def __init__(self, n_experts, topk, d_model, expert, randk=0, use_moe_noise=False):
+        """
+        """
+        super(SparseMoE, self).__init__()
+        self.n_experts = n_experts
+        self.topk = topk
+        self.d_model = d_model
+        self.router = TopkRouter(n_experts, topk, d_model, randk, use_moe_noise) 
+        self.experts = nn.ModuleList([expert() for _ in range(self.n_experts)])
+
+
+    def forward(self, x):
+        """
+        """
+        logits, gating_output, indices = self.router(x)
+        #B x L x d
+        output = torch.zeros_like(x)
+
+        #(BxL) x d
+        flat_x = x.view(-1, x.size(-1))
+        #(BxL) x n
+        flat_gating_output = gating_output.view(-1, gating_output.size(-1))
+
+        for i,expert in enumerate(self.experts):
+            #B x L
+            expert_mask = (indices == i).any(dim=-1)
+            #(BL)
+            flat_mask = expert_mask.view(-1)
+
+            if flat_mask.any():
+                #ne x d
+                expert_input = flat_x[flat_mask]
+                expert_output = expert(expert_input)
+                #ne x 1
+                gating_scores = flat_gating_output[flat_mask, i].unsqueeze(1)
+                weighted_output = expert_output * gating_scores
+                output[expert_mask] += weighted_output
+        
+        return output, logits, gating_output, indices
+
+
 class LayerNorm(nn.Module):
     """
     """
@@ -529,7 +619,8 @@ def scaled_dot_product_attention(query,
                                  pos_value=None,
                                  pos_bias=None,
                                  attention_residual=None,
-                                 talk_w=None):
+                                 talking_w_pre_softmax=None, 
+                                 talking_w_post_softmax=None):
     """
     """
     d = query.size(-1)
@@ -541,7 +632,7 @@ def scaled_dot_product_attention(query,
     
     if pos_key is not None:
         #p_k:L_q x L_k x d_qk
-        scores += torch.einsum("bqnd,bqkd->bnqk", query, pos_key)
+        scores += torch.einsum("bnqd,bqkd->bnqk", query, pos_key)
     
     if attn_scale is not None:
         scores = scores / attn_scale
@@ -549,8 +640,8 @@ def scaled_dot_product_attention(query,
     if pos_bias is not None:        
         scores += pos_bias
 
-    if talk_w is not None:
-        scores = torch.einsum("bnqk,nm->bmqk", scores, talk_w[0])
+    if talking_w_pre_softmax is not None:
+        scores = torch.einsum("bnqk,nm->bmqk", scores, talking_w_pre_softmax)
 
     if attention_residual is not None:
         scores += attention_residual
@@ -559,22 +650,22 @@ def scaled_dot_product_attention(query,
         attn_mask = attn_mask.bool()
         scores = scores.masked_fill(attn_mask, -1e4)
     
-    attn_scores = F.softmax(scores, dim = -1)
+    attn_weight = F.softmax(scores, dim = -1)
     
-    if talk_w is not None:
-        scores = torch.einsum("bmqk,mn->bnqk", scores, talk_w[1])
+    if talking_w_post_softmax is not None:
+        attn_weight = torch.einsum("bmqk,mn->bnqk", attn_weight, talking_w_post_softmax)
     
     if dropout is not None:
-        attn_scores = dropout(attn_scores)
+        attn_weight = dropout(attn_weight)
 
     #scores:B x n_heads x L_q x L_kv
     #v:B x n_heads x L_kv x d_v 
-    output = torch.einsum("bnqk,bnkd->bnqd", attn_scores, value)
+    output = torch.einsum("bnqk,bnkd->bnqd", attn_weight, value)
     if pos_value is not None:
         #p_v:L_q x L_kv x d_v
-        output += torch.einsum("bnqk,bqkd->bnqd", attn_scores, pos_value)
+        output += torch.einsum("bnqk,bqkd->bnqd", attn_weight, pos_value)
     
-    return output, attn_scores, scores
+    return output, attn_weight, scores
             
 
 class MultiHeadAttention(nn.Module):
@@ -646,12 +737,12 @@ class MultiHeadAttention(nn.Module):
         self.use_pos_bias = use_pos_bias
         self.pos_bias_type = pos_bias_type
         
-        self.talking_w = None
         self.use_talking_attention = use_talking_attention
+        self.talking_w_pre_softmax = None
+        self.talking_w_post_softmax = None
         if use_talking_attention == True:
             self.talking_w_pre_softmax = nn.Parameter(torch.Tensor(n_heads, n_heads))
             self.talking_w_post_softmax = nn.Parameter(torch.Tensor(n_heads, n_heads))
-            self.talking_w = [self.talking_w_pre_softmax, self.talking_w_post_softmax]
             
         self.reset_parameters()
         
@@ -669,7 +760,8 @@ class MultiHeadAttention(nn.Module):
             stdv = 1.0 / np.sqrt(self.n_heads)
             self.talking_w_pre_softmax.data.uniform_(-math.sqrt(3)*stdv, math.sqrt(3)*stdv)
             self.talking_w_after_softmax.data.uniform_(-math.sqrt(3)*stdv, math.sqrt(3)*stdv)
-    
+   
+
     def forward(self, 
                 query, 
                 key, 
@@ -736,17 +828,18 @@ class MultiHeadAttention(nn.Module):
             key = key[:, :, None, :, :].repeat(1, 1, n_rep, 1, 1).reshape(batch_size, self.n_heads, -1,  self.d_qk)
             value = value[:, :, None, :, :].repeat(1, 1, n_rep, 1, 1).reshape(batch_size, self.n_heads, -1,  self.d_qk)
         
-        output, attn_scores,scores = scaled_dot_product_attention(query, 
-                                                                  key, 
-                                                                  value, 
-                                                                  attn_mask,
-                                                                  self.attn_scale,
-                                                                  self.attn_dropout,
-                                                                  pos_key,
-                                                                  pos_value,
-                                                                  pos_bias,
-                                                                  attention_residual,
-                                                                  self.talking_w)
+        output, attn_weight, attn_scores = scaled_dot_product_attention(query, 
+                                                                        key, 
+                                                                        value, 
+                                                                        attn_mask,
+                                                                        self.attn_scale,
+                                                                        self.attn_dropout,
+                                                                        pos_key,
+                                                                        pos_value,
+                                                                        pos_bias,
+                                                                        attention_residual,
+                                                                        self.talking_w_pre_softmax,
+                                                                        self.talking_w_post_softmax)
         
         #B x n_heads x L x d -> B x L x n_heads x d -> B x L x d_model
         output = output.transpose(1,2)
@@ -760,7 +853,7 @@ class MultiHeadAttention(nn.Module):
         if self.attn_dropout is not None:
             output = self.dropout(output)
 
-        return output, attn_scores, scores
+        return output, attn_weight, attn_scores
 
 
     def cache_kv(self, x, pos_ids=None):
@@ -815,6 +908,11 @@ class TransformerLayer(nn.Module):
         self.with_across_attention = kwargs.get("with_across_attention", False)
         self.use_talking_attention = kwargs.get("use_talking_attention", False)
         self.use_glu = kwargs.get("use_glu", False)
+        self.use_moe = kwargs.get("use_moe", False)
+        self.n_experts = kwargs.get("n_experts", 1)
+        self.moe_topk = kwargs.get("moe_topk", 1)
+        self.moe_randk = kwargs.get("moe_randk", False) 
+        self.use_moe_noise = kwargs.get("use_moe_noise", True) 
         self.use_ln_scale = kwargs.get("use_ln_scale", True)
         self.use_ln_bias = kwargs.get("use_ln_bias", True)
         self.layer_scale = kwargs.get("layer_scale", None)
@@ -867,20 +965,22 @@ class TransformerLayer(nn.Module):
             elif self.norm_type == "rms_norm":
                 self.norm_2 = RMSNorm(self.d_model,self.ln_eps,self.use_ln_scale,self.use_ln_bias)
         
-        if self.use_glu == False:
-            self.ffn = FeedForward(self.d_model, 
-                                   self.d_ff, 
-                                   self.activation, 
-                                   self.dropout,
-                                   self.use_ffn_bias,
-                                   )
+        ffn_cls = FeedForward
+        if self.use_glu == True:
+            ffn_cls = GatedFeedForward
+        
+        ffn = partial(ffn_cls,
+                      d_model=self.d_model,
+                      d_ff=self.d_ff,
+                      activation=self.activation,
+                      dropout=self.dropout,
+                      use_bias=self.use_ffn_bias,
+                     )
+
+        if self.use_moe == True:
+            self.ffn = SparseMoE(self.n_experts, self.moe_topk, self.d_model, ffn, self.moe_randk, self.use_moe_noise)
         else:
-            self.ffn = GatedFeedForward(self.d_model, 
-                                        self.d_ff, 
-                                        self.activation, 
-                                        self.dropout,
-                                        self.use_ffn_bias,
-                                        )            
+            self.ffn = ffn()
         
         if self.with_across_attention == True:
             if self.norm_type == "layer_norm":
@@ -914,7 +1014,7 @@ class TransformerLayer(nn.Module):
                 self_pos_ids=None,
                 enc_pos_ids=None,
                 past_pos_ids=None,
-                attention_residual=None,
+                self_attention_residual=None,
                 enc_attention_residual=None):
         """
         """
@@ -940,14 +1040,14 @@ class TransformerLayer(nn.Module):
             self_keys = output
             self_values = output
         
-        output, self_attn_scores, self_scores = self.self_attention(output, 
-                                                                    self_keys, 
-                                                                    self_values, 
-                                                                    self_attn_mask,
-                                                                    cached_kv,
-                                                                    self_pos_ids,
-                                                                    past_pos_ids,
-                                                                    attention_residual)
+        output, self_attn_weight, self_attn_scores = self.self_attention(output, 
+                                                                         self_keys, 
+                                                                         self_values, 
+                                                                         self_attn_mask,
+                                                                         cached_kv,
+                                                                         self_pos_ids,
+                                                                         past_pos_ids,
+                                                                         self_attention_residual)
         if self.layer_scale is None:
             output = residual + output
         else:
@@ -962,14 +1062,14 @@ class TransformerLayer(nn.Module):
             if self.use_pre_norm == True:
                 output = self.norm_2(output)
             
-            output, enc_attn_scores, enc_scores = self.enc_attention(output, 
-                                                                     enc_keys, 
-                                                                     enc_values, 
-                                                                     dec_enc_attn_mask,
-                                                                     cached_kv,
-                                                                     self_pos_ids,
-                                                                     enc_pos_ids,
-                                                                     enc_attention_residual)
+            output, enc_attn_weight, enc_attn_scores = self.enc_attention(output, 
+                                                                          enc_keys, 
+                                                                          enc_values, 
+                                                                          dec_enc_attn_mask,
+                                                                          cached_kv,
+                                                                          self_pos_ids,
+                                                                          enc_pos_ids,
+                                                                          enc_attention_residual)
 
             if self.layer_scale is None:
                 output = residual + output
@@ -986,7 +1086,11 @@ class TransformerLayer(nn.Module):
                 output = self.norm_3(output)
             else:
                 output = self.norm_2(output)
-        output = self.ffn(output)
+        
+        if self.use_moe == False:
+            output = self.ffn(output)
+        else:
+            output, moe_logits, moe_weights, moe_indices = self.ffn(output)
 
         if self.layer_scale is None:
             output = residual + output
@@ -1001,13 +1105,23 @@ class TransformerLayer(nn.Module):
                 output = self.norm_3(output)
             else:
                 output = self.norm_2(output)
-   
-        outputs = [output, self_attn_scores, self_scores]
+  
+        outputs = {}
+        outputs["output"] = output
+        outputs["self_attn_weight"] = self_attn_weight
+        outputs["self_attn_scores"] = self_attn_scores
         if self.with_across_attention == True:
-            outputs += [enc_attn_scores, enc_scores]
+            outputs["enc_attn_weight"] = enc_attn_weight
+            outputs["enc_attn_scores"] = enc_attn_scores
+
+        if self.use_moe == True:
+            outputs["moe_logits"] = moe_logits
+            outputs["moe_weights"] = moe_weights
+            outputs["moe_indices"] = moe_indices
 
         if cached_kv == True:
-            outputs = outputs + [self_keys, self_values]
+            outputs["cache_sa_keys"] = self_keys
+            outputs["cache_sa_values"] = self_values
         
         return outputs
 

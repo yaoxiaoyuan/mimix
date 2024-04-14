@@ -275,7 +275,7 @@ class EncDecGenerator():
                                              enc_self_attn_mask,
                                              self_pos_ids=enc_pos_ids)
         
-            enc_output = enc_outputs[0]
+            enc_output = enc_outputs["output"]
             
             enc_output = enc_output[map_ids]
             dec_self_attn_mask = self.model.get_subsequent_mask(y)
@@ -295,7 +295,7 @@ class EncDecGenerator():
                                              past_pos_ids=dec_pos_ids,
                                              embedding=trg_embedding)
     
-            logits = dec_outputs[0]
+            logits = dec_outputs["logits"]
             
             log_probs = -F.nll_loss(F.log_softmax(logits.view(-1, self.trg_vocab_size), -1),
                                     y_target.contiguous().view(-1),
@@ -331,7 +331,7 @@ class EncDecGenerator():
         with torch.no_grad():
             outputs = self.model([x,y])
                 
-            logits = outputs[0]
+            logits = outputs["logits"]
             logits = logits.view(-1, self.trg_vocab_size)
             
             probs = F.softmax(logits, -1)
@@ -612,7 +612,7 @@ class LMGenerator():
         with torch.no_grad():
             outputs = self.model([y])
                 
-            logits = outputs[0]
+            logits = outputs["logits"]
             logits = logits.view(-1, self.trg_vocab_size)
             
             probs = F.softmax(logits, -1)
@@ -720,7 +720,7 @@ class TextEncoder():
         with torch.no_grad():
             outputs = self.model([y])
         
-        return outputs[0]
+        return outputs["output"]
 
 
     def predict_mlm(self, src_list, top_k=-1, top_p=-1):
@@ -732,7 +732,7 @@ class TextEncoder():
         self.model.eval()
         with torch.no_grad():
             outputs = self.model([y])
-            logits = outputs[0]
+            logits = outputs["mlm_logits"]
             probs = torch.softmax(logits, -1)
             score,indice = probs.topk(return_k, -1)
 
@@ -772,12 +772,11 @@ class TextEncoder():
 
         self.model.eval()
         with torch.no_grad():
-            outputs = self.model([x])
-        
-        logits = outputs[0]
-
-        y = torch.softmax(logits, 1)
-        prob,label = torch.topk(y, self.num_class)
+            outputs = self.model([x])        
+            logits = outputs["cls_logits"]
+            y = torch.softmax(logits, 1)
+            prob,label = torch.topk(y, self.num_class)
+            
         prob = prob.cpu().numpy()
         label = label.cpu().numpy()
           
@@ -804,7 +803,7 @@ class TextEncoder():
             if self.model.crf is not None:
                 labels = crf_model_decoding(self.model, x)
             else:
-                labels = self.model.compute_logits([x])
+                labels = self.model.get_emission(x).argmax(-1)
                 
         labels = labels.cpu().numpy()
 
@@ -897,7 +896,7 @@ class ImageEncoder():
         with torch.no_grad():
             outputs = self.model([x])
 
-        logits = outputs[0]
+        logits = outputs["cls_logits"]
 
         y = torch.softmax(logits, 1)
         prob,label = torch.topk(y, self.num_class)
@@ -984,7 +983,7 @@ class ClipMatcher():
         with torch.no_grad():
             outputs = self.model.text_encoder([y])
         
-        return outputs[0]
+        return outputs["output"]
 
 
     def transform_image(self, images):
@@ -1007,7 +1006,7 @@ class ClipMatcher():
         with torch.no_grad():
             outputs = self.model.img_encoder([x])
         
-        return outputs[0]
+        return outputs["output"]
     
 
     def predict_sim(self, images, texts):
@@ -1097,7 +1096,13 @@ class MAE():
 
         self.model.eval()
         with torch.no_grad():
-            dec_output, reconstruct, mask, patchify_x = self.model([x.float(), self.mask_ratio])
+            outputs = self.model([x.float(), self.mask_ratio])
+            
+            dec_output = outputs["output"]
+            reconstruct = outputs["reconstruct"]
+            mask = outputs["mask"]
+            patchify_x = outputs["patchify_x"]
+        
             y = torch.einsum('nchw->nhwc', reconstruct)
     
             mask = mask.detach()

@@ -102,12 +102,12 @@ def train(model,
             if use_amp == True:
                 with torch.cuda.amp.autocast():
                     outputs = model(inputs, targets=targets, compute_loss=True)
-                    loss = outputs[0]        
+                    loss = outputs["loss"] 
                     history_loss = history_loss[-999:] + [loss.item()]
                     loss = loss / accumulate_steps
             else:
                 outputs = model(inputs, targets=targets, compute_loss=True)                    
-                loss = outputs[0]        
+                loss = outputs["loss"]     
                 history_loss = history_loss[-999:] + [loss.item()]
                 loss = loss / accumulate_steps
                 

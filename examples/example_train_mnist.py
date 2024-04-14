@@ -6,6 +6,7 @@ Created on Fri Jul 28 22:06:35 2023
 """
 import sys
 import os
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../"))
 from argparse import ArgumentParser
 from mimix.models import build_model
 from mimix.optimizer import build_optimizer
@@ -63,7 +64,7 @@ def main(model_config, train_config):
     
     model = model.to(device)
     eps = train_config.get("eps", 0)
-    model.loss_fn = lambda x,y:classify_loss(x[0], y[0], eps)
+    model.loss_fn = lambda x,y:classify_loss(x["cls_logits"], y[0], eps)
     symbol2id = model_config["symbol2id"]
     batch_size = train_config["batch_size"]
     

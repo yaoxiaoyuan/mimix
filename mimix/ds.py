@@ -94,7 +94,7 @@ def train(model,
             inputs = [inputs.to(model.device)]
             targets = [targets.to(model.device)] 
             outputs = model(inputs, targets=targets, compute_loss=True)
-            loss = outputs[0]        
+            loss = outputs["loss"]     
             history_loss = history_loss[-999:] + [loss.item()]
                 
             if total_steps % print_every_n_steps == 0:

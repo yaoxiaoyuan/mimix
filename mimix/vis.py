@@ -61,19 +61,19 @@ def analysis_search(enc_dec_gen, src, trg):
     x,y = enc_dec_gen.encode_inputs(src_list, trg_list, add_bos=True, add_eos=True)
     enc_dec_gen.model.eval()
     with torch.no_grad():
-        outputs = enc_dec_gen.model([x,y[:, :-1]], return_states=True)
-
-        dec_enc_attn_scores_list = outputs[4]
+        outputs = enc_dec_gen.model([x,y[:, :-1]])
+        
+        dec_enc_attn_weights_list = outputs["enc_attn_weights_list"]
         
         attn_score_list = []
         
         for i in range(enc_dec_gen.model.n_dec_layers):
             
-            attn_scores = dec_enc_attn_scores_list[i]
+            attn_weights = dec_enc_attn_weights_list[i]
             
-            attn_scores = attn_scores.mean(1).cpu().numpy()
+            attn_weights = attn_weights.mean(1).cpu().numpy()
             
-            attn_score_list.append(attn_scores)
+            attn_score_list.append(attn_weights)
     
     res_list = []
     
@@ -121,7 +121,9 @@ def run_visualize():
     parser = ArgumentParser()
 
     parser.add_argument("--model_conf", type=str)
-    conf_file = options.model_conf
+    args = parser.parse_args(sys.argv[1:])
+    
+    conf_file = args.model_conf
     config = load_model_config(real_path(conf_file))
         
     if config["task"] == "enc_dec":

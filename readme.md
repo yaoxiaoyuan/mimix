@@ -11,63 +11,55 @@ Mimix is a tool for text generation based on Pytorch.  Mimix support following T
 7. Image  classification
 8. MAE 
 
-For single task, I have trained some Chinese text  generation Models which are listed in Single Task Models section. Each of the model can only do a single task.  The sizes of these models' parameters vary from 50 million to 370 million. Thus you can easily run them on a laptop without GPU. You can follow the instructions and run the demo. 
+For single task, I have trained some Chinese text  generation Models which are listed in Single Task Models section. Each of the model can only do a single task.  The sizes of these models' parameters vary from 50 million to 370 million. Thus they can easily run on a laptop without GPU. You can follow the instructions to run the demo. 
 
-I also trained a small Chinese LLM MimixLM-0.7b-sft. You can chat with it.
+I also trained small Chinese LLMs MimixLM-0.7b-sft and MimixLM-0.4bx4-moe-sft. You are welcome to try them out. 
 
  **You must follow the agreement to use the model. Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/agreement/Mimix%20Model%20Release%20Agreement.docx).** 
 
-### MimixLM-0.7b-sft
+### MimixLM
 
-A pretrained small Chinese LLM MimixLM-0.7b-sft is now available, you are welcome to try them out. 
-
-1. Download model from below links and place conf and model in the corresponding folder. 
+1. Download model you want to use from below links and place conf and model in the corresponding folder. 
 2. Run python chat.py --model_conf path/to/conf to play with it. 
 
 Start a new session at any time by typing ":restart" and pressing Enter.
 
-| Architecture  |                       |
-| ------------- | --------------------- |
-| max_len       | 2048                  |
-| n_heads       | 12                    |
-| d_model       | 1536                  |
-| n_dec_layers  | 24                    |
-| vocab_size    | 100000                |
-| norm          | rms_norm              |
-| attention     | multi_query_attention |
-| pos_embedding | RoPE                  |
-| activation    | SwiGLU                |
+| Architecture  | MimixLM-0.7b-sft      | MimixLM-0.4bx4-moe-sft |
+| ------------- | --------------------- | ---------------------- |
+| max_len       | 2048                  | 2048                   |
+| n_heads       | 12                    | 16                     |
+| d_model       | 1536                  | 1024                   |
+| n_dec_layers  | 24                    | 2560                   |
+| vocab_size    | 100000                | 100000                 |
+| norm          | rms_norm              | rms_norm               |
+| attention     | multi_query_attention | multi_query_attention  |
+| pos_embedding | RoPE                  | RoPE                   |
+| activation    | SwiGLU                | SwiGLU                 |
 
 ![mimix](image/mimix.png)
 
-v0.1:
+Run commands: 
 
-Run: python chat.py --model_conf conf/MimixLM-0.7b-sft_conf
+1. python chat.py --model_conf conf/MimixLM-0.7b-sft_conf
 
-Download link：
+2. python chat.py --model_conf conf/MimixLM-0.7b-sft-0.2_conf
 
-Google: https://drive.google.com/drive/folders/1ZfGq0HBYLQYWI152w-0PEUeXbBjtvywH?usp=sharing
+3. python chat.py --model_conf conf/MimixLM-0.7b-sft-0.3_conf
 
-or
-
-Baidu: https://pan.baidu.com/s/13jkMDd_ScrPCycg40UdCtA?pwd=c3pu 
-
-v0.2: 
-
-Run: python chat.py --model_conf conf/MimixLM-0.7b-sft-0.2_conf
+4. python chat.py --model_conf conf/MimixLM-0.4bx4-sft_conf
 
 Download link：
 
-Google: https://drive.google.com/drive/folders/1oQsH_qsBPu_QDZohr-bvXta37pJOvJxQ?usp=sharing
+Google: https://drive.google.com/drive/folders/1vEdWMGc0wUysA3RHVINaRjlvixkYba_3?usp=sharing
 
 or
 
-Baidu: https://pan.baidu.com/s/14yDpEfK2eCyn-6VKvRZnbg?pwd=vc6w 
+Baidu: https://pan.baidu.com/s/1Cqo0CAHy7J5W1mlzFuU2WQ?pwd=d0tm 
 
 ### TODO LIST
 
 * [ ] Swin Transformer
-* [ ] Comformer
+* [ ] Conformer
 * [ ] DiT
 
 ### Contact
@@ -611,7 +603,7 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
          (Weights are converted from Google's open-source model)  ![streamlit](image/streamlit8.png)
    
     33. Piano midi generation: python gen_midi.py
-            It will generate a midi file in current directory. A generated sample is here: [test.mid](test.mid)
+            It will generate a midi file in current directory. A generated sample is here: [test.mid](examples/test.mid)
    
     34. Sudoku BERT: python sudoku.py  (It may failed/get wrong answer on very hard puzzles. Model achieve 92% success rate on hard puzzles test)
    
