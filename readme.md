@@ -29,7 +29,7 @@ Start a new session at any time by typing ":restart" and pressing Enter.
 | max_len       | 2048                  | 2048                   |
 | n_heads       | 12                    | 16                     |
 | d_model       | 1536                  | 1024                   |
-| n_dec_layers  | 24                    | 2560                   |
+| n_dec_layers  | 24                    | 26                     |
 | vocab_size    | 100000                | 100000                 |
 | norm          | rms_norm              | rms_norm               |
 | attention     | multi_query_attention | multi_query_attention  |
