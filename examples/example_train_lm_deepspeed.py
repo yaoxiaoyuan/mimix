@@ -47,21 +47,6 @@ class Scheduler():
         """
         self.steps += 1
 
-        if self.steps < 1500:
-            self.lr = 3e-4 * (self.steps - 0) / 1500
-        elif self.steps < 3000:
-            self.lr = 3e-4 - 2e-4 * (self.steps - 1500) / 1500
-        elif self.steps < 4500:
-            self.lr = 1e-4
-        elif self.steps < 6000:
-            self.lr = 1e-4 - 5e-5 * (self.steps - 4500) / 1500
-        elif self.steps < 7500:
-            self.lr = 5e-5
-        elif self.steps < 100000:
-            self.lr = 5e-5 - 3.5e-5 * (self.steps - 7500) / 92500
-        else:
-            self.lr = 1e-5 + 0.5e-5 * np.cos((self.steps % 100000) / 100000 * 2 * np.pi)
-
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = self.lr
 
@@ -74,7 +59,7 @@ def main(model_config, train_config, ds_config):
         model = load_model_weights(model, real_path(train_config["reload_model"]))
     PAD = model.PAD
     eps = train_config.get("eps", 0)
-    model.loss_fn = lambda x,y:seq_cross_entropy(x[0], y[0], eps, PAD)
+    model.loss_fn = lambda x,y:seq_cross_entropy(x["logits"], y["y_target"], eps, PAD)
     parameters = filter(lambda p: p.requires_grad, model.parameters())
  
     model_engine, optimizer, _, __ = deepspeed.initialize(

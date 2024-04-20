@@ -62,7 +62,7 @@ class LMDataset(SimpleDataset):
         y = torch.tensor(y, dtype=torch.long)
         y_target = torch.tensor(y_target, dtype=torch.long)
         
-        return [y], [y_target]
+        return {"y":y}, {"y_target":y_target}
 
 
 def main(model_config, train_config):
@@ -77,7 +77,7 @@ def main(model_config, train_config):
     
     model = model.to(device)
     eps = train_config.get("eps", 0)
-    model.loss_fn = lambda x,y:seq_cross_entropy(x["logits"], y[0], eps, model.PAD)
+    model.loss_fn = lambda x,y:seq_cross_entropy(x["logits"], y["y_target"], eps, model.PAD)
     symbol2id = model_config["symbol2id"]
     train_dir = os.path.join(train_config["tmp_dir"], "train")
     batch_size = train_config["batch_size"]

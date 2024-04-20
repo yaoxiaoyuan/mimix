@@ -97,7 +97,7 @@ x = transform(image).unsqueeze(0)
 
 vit.eval()
 with torch.no_grad():
-    outputs = vit([x])
+    outputs = vit({"x":x})
 
 #predict label: 0    
 print(outputs["cls_logits"].argmax(-1))    

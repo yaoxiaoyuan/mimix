@@ -111,7 +111,7 @@ tokenizer = build_tokenizer(**{"tokenizer":"bert", "vocab_file":os.path.join(ber
 #Test for Chinese BERT MLM Task: [MASK]国的首都是曼谷
 #output: ['泰'] 0.9495071768760681
 x = [101,103] + tokenizer.tokenize_to_ids("国的首都是曼谷") + [102]
-y = model([torch.tensor([x], dtype=torch.long), torch.zeros([1,len(x)], dtype=torch.long)])["mlm_logits"]
+y = model({"x":torch.tensor([x], dtype=torch.long), "type_ids":torch.zeros([1,len(x)], dtype=torch.long)})["mlm_logits"]
 prob = torch.softmax(y, -1)
 word_id = y[0][x.index(103)].argmax().item()
 prob = prob[0][x.index(103)][word_id].item()
@@ -120,7 +120,7 @@ print(tokenizer.convert_ids_to_tokens([word_id]), prob)
 #Test for Chinese BERT MLM Task: 韩国的首都是[MASK]尔
 #output: ['首'] 0.9999905824661255
 x = [101] + tokenizer.tokenize_to_ids("韩国的首都是") + [103] + tokenizer.tokenize_to_ids("尔") + [102]
-y = model([torch.tensor([x], dtype=torch.long), torch.zeros([1,len(x)], dtype=torch.long)])["mlm_logits"]
+y = model({"x":torch.tensor([x], dtype=torch.long), "type_ids":torch.zeros([1,len(x)], dtype=torch.long)})["mlm_logits"]
 prob = torch.softmax(y, -1)
 word_id = y[0][x.index(103)].argmax().item()
 prob = prob[0][x.index(103)][word_id].item()

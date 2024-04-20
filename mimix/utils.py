@@ -151,12 +151,22 @@ def derange(xs):
 def nested_to_device(nested_tensor, device):
     """
     """
+    import torch
     res = nested_tensor
-    if isinstance(nested_tensor, list) == True or isinstance(nested_tensor, tuple) == True:
+    if isinstance(nested_tensor, list) == True:
         res = []
         for elem in nested_tensor:
             res.append(nested_to_device(elem, device))
-    else:
+    elif isinstance(nested_tensor, tuple) == True:
+        res = []
+        for elem in nested_tensor:
+            res.append(nested_to_device(elem, device))
+        res = tuple(res)
+    elif isinstance(nested_tensor, dict) == True:
+        res = {}
+        for k in nested_tensor:
+            res[k] = nested_to_device(nested_tensor[k], device)
+    elif isinstance(nested_tensor, torch.Tensor) == True:
         res = nested_tensor.to(device)
     return res
 

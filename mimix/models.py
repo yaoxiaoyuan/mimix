@@ -451,7 +451,7 @@ class TransformerSeq2seq(nn.Module):
     def forward(self, inputs, targets=None, compute_loss=False):
         """
         """
-        x, y = inputs
+        x, y = inputs["x"], inputs["y"]
 
         enc_self_attn_mask = None
         if self.use_vit_encoder == False and self.encoder.use_word_embedding == True:
@@ -667,7 +667,7 @@ class TransformerLM(nn.Module):
     def forward(self, inputs, targets=None, compute_loss=False):
         """
         """
-        y = inputs[0]
+        y = inputs["y"]
         
         if len(inputs) > 1 and inputs[1] is not None:
             dec_self_attn_mask = inputs[1]
@@ -903,10 +903,10 @@ class TransformerEncoder(nn.Module):
     def forward(self, inputs, targets=None, compute_loss=False):
         """
         """
-        x = inputs[0]
+        x = inputs["x"]
         type_ids = None
         if self.n_types is not None:
-            type_ids = inputs[1]
+            type_ids = inputs["type_ids"]
 
         if self.use_vit_encoder == False and self.src_vocab_size is not None:
             enc_self_attn_mask = self.get_attn_mask(x, x)
@@ -1004,7 +1004,7 @@ class CLIP(nn.Module):
     def forward(self, inputs, targets=None, compute_loss=False):
         """
         """
-        img, text = inputs
+        img, text = inputs["img"], inputs["text"]
               
         img_outputs = self.img_encoder([img])
         text_outputs = self.text_encoder([text])
@@ -1062,7 +1062,7 @@ class MAE(nn.Module):
     def forward(self, inputs, targets=None, compute_loss=False):
         """
         """
-        x, mask_ratio = inputs[:2]
+        x, mask_ratio = inputs["x"],inputs["mask_ratio"]
         
         enc_output, mask, ids_restore = self.encoder.get_mask_image_enc(x, mask_ratio)
         

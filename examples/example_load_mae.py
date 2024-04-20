@@ -149,7 +149,7 @@ def run_one_image(img, model):
     model.eval()
     with torch.no_grad():
 
-        outputs = model([x.float(), 0.75])
+        outputs = model({"x":x.float(), "mask_ratio":0.75})
         dec_output = outputs["output"]
         reconstruct = outputs["reconstruct"]
         mask = outputs["mask"]

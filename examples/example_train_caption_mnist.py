@@ -50,7 +50,7 @@ class MNIST():
             y = y.long().to(self.device)
             y_target = torch.tensor([[18, 8 + self.data[j][1], 2] for j in self.idx[i:i+self.batch_size]])
             y_target = y_target.long().to(self.device)
-            yield [x, y], [y_target]
+            yield {"x":x, "y":y}, {"y_target":y_target}
             i += self.batch_size
 
 
@@ -68,7 +68,7 @@ def main(model_config, train_config):
     
     model = model.to(device)
     eps = train_config.get("eps", 0)
-    model.loss_fn = lambda x,y:seq_cross_entropy(x["logits"], y[0], eps, model.PAD)
+    model.loss_fn = lambda x,y:seq_cross_entropy(x["logits"], y["y_target"], eps, model.PAD)
     symbol2id = model_config["symbol2id"]
     batch_size = train_config["batch_size"]
     

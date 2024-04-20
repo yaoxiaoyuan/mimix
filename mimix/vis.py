@@ -61,7 +61,7 @@ def analysis_search(enc_dec_gen, src, trg):
     x,y = enc_dec_gen.encode_inputs(src_list, trg_list, add_bos=True, add_eos=True)
     enc_dec_gen.model.eval()
     with torch.no_grad():
-        outputs = enc_dec_gen.model([x,y[:, :-1]])
+        outputs = enc_dec_gen.model({"x":x,"y":y[:, :-1]})
         
         dec_enc_attn_weights_list = outputs["enc_attn_weights_list"]
         
@@ -113,6 +113,8 @@ def visualize_enc_dec(config):
         for i in range(enc_dec_gen.model.n_dec_layers):
             
             draw_heatmap(src, trg, attn_score_list[i], "logger/dec_enc_%d.png" % i)
+            
+        print("generate heatmap done.")
 
 
 def run_visualize():

@@ -48,7 +48,7 @@ class MNIST():
             x = x.float().unsqueeze(1).to(self.device)
             y = torch.tensor([self.data[j][1] for j in self.idx[i:i+self.batch_size]])
             y = y.long().to(self.device)
-            yield [x], [y]
+            yield {"x":x}, {"labels":y}
             i += self.batch_size
 
 
@@ -64,7 +64,7 @@ def main(model_config, train_config):
     
     model = model.to(device)
     eps = train_config.get("eps", 0)
-    model.loss_fn = lambda x,y:classify_loss(x["cls_logits"], y[0], eps)
+    model.loss_fn = lambda x,y:classify_loss(x["cls_logits"], y["labels"], eps)
     symbol2id = model_config["symbol2id"]
     batch_size = train_config["batch_size"]
     

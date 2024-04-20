@@ -329,7 +329,7 @@ class EncDecGenerator():
     
         self.model.eval()
         with torch.no_grad():
-            outputs = self.model([x,y])
+            outputs = self.model({"x":x, "y":y})
                 
             logits = outputs["logits"]
             logits = logits.view(-1, self.trg_vocab_size)
@@ -610,7 +610,7 @@ class LMGenerator():
     
         self.model.eval()
         with torch.no_grad():
-            outputs = self.model([y])
+            outputs = self.model({"y":y})
                 
             logits = outputs["logits"]
             logits = logits.view(-1, self.trg_vocab_size)
@@ -714,11 +714,11 @@ class TextEncoder():
     def encode_texts(self, src_list):
         """
         """
-        y = self.encode_inputs(src_list)
+        x = self.encode_inputs(src_list)
         
         self.model.eval()
         with torch.no_grad():
-            outputs = self.model([y])
+            outputs = self.model({"x":x})
         
         return outputs["output"]
 
@@ -727,11 +727,11 @@ class TextEncoder():
         """
         """
         return_k = self.return_k
-        y = self.encode_inputs(src_list)
+        x = self.encode_inputs(src_list)
 
         self.model.eval()
         with torch.no_grad():
-            outputs = self.model([y])
+            outputs = self.model({"x":x})
             logits = outputs["mlm_logits"]
             probs = torch.softmax(logits, -1)
             score,indice = probs.topk(return_k, -1)
@@ -740,7 +740,7 @@ class TextEncoder():
         score = score.cpu().numpy()
         
         res = []
-        for i,src in enumerate(y):
+        for i,src in enumerate(x):
             res.append([src_list[i], []])
             for j,ww in enumerate(src):
 
@@ -772,7 +772,7 @@ class TextEncoder():
 
         self.model.eval()
         with torch.no_grad():
-            outputs = self.model([x])        
+            outputs = self.model({"x":x})        
             logits = outputs["cls_logits"]
             y = torch.softmax(logits, 1)
             prob,label = torch.topk(y, self.num_class)
@@ -894,7 +894,7 @@ class ImageEncoder():
 
         self.model.eval()
         with torch.no_grad():
-            outputs = self.model([x])
+            outputs = self.model({"x":x})
 
         logits = outputs["cls_logits"]
 
@@ -959,29 +959,29 @@ class ClipMatcher():
         
         src_ids = list(map(self.src_tokenizer.tokenize_to_ids, src_list))
 
-        y = cut_and_pad_seq_list(src_ids,
+        x = cut_and_pad_seq_list(src_ids,
                                  self.src_max_len, 
                                  self.model.PAD,
                                  True)
 
-        if y is not None:
-            y = torch.tensor(y, dtype=torch.long)
+        if x is not None:
+            x = torch.tensor(x, dtype=torch.long)
 
         if self.use_cuda == True:
-            if y is not None:
-                y = y.to(self.device)
+            if x is not None:
+                x = y.to(self.device)
         
-        return y
+        return x
 
 
     def encode_texts(self, src_list):
         """
         """
-        y = self.encode_inputs(src_list)
+        x = self.encode_inputs(src_list)
         
         self.model.eval()
         with torch.no_grad():
-            outputs = self.model.text_encoder([y])
+            outputs = self.model.text_encoder({"x":x})
         
         return outputs["output"]
 
@@ -1004,7 +1004,7 @@ class ClipMatcher():
 
         self.model.eval()
         with torch.no_grad():
-            outputs = self.model.img_encoder([x])
+            outputs = self.model.img_encoder({"x":x})
         
         return outputs["output"]
     
@@ -1096,7 +1096,7 @@ class MAE():
 
         self.model.eval()
         with torch.no_grad():
-            outputs = self.model([x.float(), self.mask_ratio])
+            outputs = self.model({"x":x.float(), "mask_ratio":self.mask_ratio})
             
             dec_output = outputs["output"]
             reconstruct = outputs["reconstruct"]
