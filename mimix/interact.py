@@ -48,7 +48,9 @@ def enc_dec_demo(config):
             
         prefix_list = None
         if "\t" in line:
-            prefix_list = [line.split("\t")[1]]
+            arr = line.strip().split("\t")
+            src_list = [s for i,s in enumerate(arr) if i % 2 == 0]
+            prefix_list = [s for i,s in enumerate(arr) if i % 2 == 1]
         
         start = time.time()
         search_res = enc_dec_gen.predict(src_list, prefix_list=prefix_list)
@@ -71,7 +73,7 @@ def lm_demo(config):
         line = line.strip()
         prefix_list = None
         if len(line) > 0:
-            prefix_list = [line] 
+            prefix_list = line.split("\t")
         
         start = time.time()
         search_res = lm_gen.predict(prefix_list=prefix_list) 
@@ -461,8 +463,9 @@ def stream_lm_demo(config):
 def chat(config):
     
     print("loading model...")
-    max_history_len = 2000
-    max_history_turn = 20
+    max_history_len = config.get("max_history_len", 2000)
+    max_history_turn = config.get("max_history_turn", 20)
+    sysinfo = config.get("sysinfo", "")
     
     assert config["is_mimix_chat"] == True
     assert max_history_len < config["trg_max_len"]
@@ -498,7 +501,7 @@ def chat(config):
                 context = " _mimixuser_ " + text + context
             else:
                 context = " _mimix_ " + text + context
-        context = context.strip()
+        context = (sysinfo + context).strip()
         
         search_res = lm_gen.predict_stream(prefix_list=[context])
         resp = ""

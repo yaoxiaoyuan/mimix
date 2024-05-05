@@ -211,8 +211,8 @@ class Transformer(nn.Module):
 
         embeded = x
         if embedding is not None:
-            embeded = embedding(x)
-         
+            embeded = embedding(x) 
+        
         if self.use_pos_embedding == True:   
             embeded = embeded + self.pos_embedding(self_pos_ids)
 
@@ -401,11 +401,7 @@ class TransformerSeq2seq(nn.Module):
         self.MASK = kwargs["symbol2id"]["_mask_"]
         self.MAX_LOGITS = 10000.
         self.MIN_LOGITS = -10000.
-        
-        self.share_src_trg_emb = kwargs.get("share_src_trg_emb", False)
-        self.n_dec_layers = kwargs["n_dec_layers"]
-        self.trg_vocab_size = kwargs["trg_vocab_size"]
- 
+                
         self.use_vit_encoder = kwargs.get("use_vit_encoder", False)
         enc_config = kwargs.copy()
         if self.use_vit_encoder == False:
@@ -425,11 +421,32 @@ class TransformerSeq2seq(nn.Module):
         if kwargs.get("share_src_trg_emb", False) == True:
             dec_config["use_word_embedding"] = False
         self.decoder = Transformer(**dec_config)
+        self.share_src_trg_emb = kwargs.get("share_src_trg_emb", False)
+        self.n_dec_layers = kwargs["n_dec_layers"]
+        self.trg_vocab_size = kwargs["trg_vocab_size"]
+        self.trg_max_len = kwargs["trg_vocab_size"]
         
-        
+    
+    def get_seq_mask(self, seq, seq_len=None):
+        """
+        """
+        mask = None
+        if seq_len is None:
+            if seq.dtype == torch.long:
+                mask = seq.ne(self.PAD)
+            return mask
+        bz, len_seq = seq.size(0), seq.size(1)
+        mask = (torch.arange(len_seq).unsqueeze(0).repeat(bz, 1) < self.PAD).int()
+        mask = mask.to(seq.device)
+        return mask
+
+    
     def get_attn_mask(self, seq_query, seq_key):
         """
         """
+        if seq_query is None or seq_key is None:
+            return None
+        
         len_query = seq_query.size(1)
         mask = seq_key.eq(self.PAD).byte()
         mask = mask.unsqueeze(1).repeat(1, len_query, 1)
@@ -441,8 +458,10 @@ class TransformerSeq2seq(nn.Module):
         """
         """
         len_seq = seq.size(1)
-        mask = torch.triu(torch.ones(len_seq, len_seq, 
-                                     device=seq.device, dtype=torch.uint8), 
+        mask = torch.triu(torch.ones(len_seq, 
+                                     len_seq, 
+                                     device=seq.device, 
+                                     dtype=torch.uint8), 
                           diagonal=1)
 
         return mask
@@ -452,28 +471,28 @@ class TransformerSeq2seq(nn.Module):
         """
         """
         x, y = inputs["x"], inputs["y"]
-
-        enc_self_attn_mask = None
-        if self.use_vit_encoder == False and self.encoder.use_word_embedding == True:
-            enc_self_attn_mask = self.get_attn_mask(x, x)
         
-        dec_self_attn_mask = self.get_subsequent_mask(y)
-        dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y, y)
+        x_mask = self.get_seq_mask(x, inputs.get("x_len", None))
+        y_mask = self.get_seq_mask(y)
         
-        dec_enc_attn_mask = None
-        if self.use_vit_encoder == False:
-            dec_enc_attn_mask = self.get_attn_mask(y, x)
+        enc_self_attn_mask = self.get_attn_mask(x_mask, x_mask)
         
-        if self.use_vit_encoder == False:              
-            enc_pos_ids = x.ne(self.PAD).cumsum(-1) - 1
-        else:
+        dec_self_attn_mask = self.get_subsequent_mask(y_mask)
+        dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y_mask, y_mask)
+        
+        dec_enc_attn_mask = self.get_attn_mask(y_mask, x_mask)
+        
+        if self.use_vit_encoder == True:
             enc_pos_ids = torch.arange(self.src_max_len).repeat([x.size(0), 1]).to(x.device)
-        dec_pos_ids = y.ne(self.PAD).cumsum(-1) - 1
+        else:
+            enc_pos_ids = torch.arange(x.size(1)).repeat([x.size(0), 1]).to(x.device)
+        dec_pos_ids = y.ne(self.PAD).cumsum(-1) - 1       
                     
         enc_outputs = self.encoder(x, 
                                    self_attn_mask=enc_self_attn_mask,
                                    self_pos_ids=enc_pos_ids,
                                    past_pos_ids=enc_pos_ids)
+        
         enc_output = enc_outputs["output"]
 
         trg_embedding = None
@@ -502,17 +521,16 @@ class TransformerSeq2seq(nn.Module):
     def init_search(self, states, inputs):
         """
         """
-        x = inputs[0]
+        x = inputs["x"]
         
-        if self.use_vit_encoder == False:
-            enc_pos_ids = x.ne(self.PAD).cumsum(-1) - 1
-            enc_attn_mask = self.get_attn_mask(x, x)
-        else:
+        x_mask = self.get_seq_mask(x, inputs.get("x_len", None))
+        enc_self_attn_mask = self.get_attn_mask(x_mask, x_mask)
+        if self.use_vit_encoder == True:
             enc_pos_ids = torch.arange(self.src_max_len).repeat([x.size(0), 1]).to(x.device)
-            enc_attn_mask = None 
-            
+        else:
+            enc_pos_ids = torch.arange(x.size(1)).repeat([x.size(0), 1]).to(x.device)
         enc_outputs = self.encoder(x, 
-                                   self_attn_mask=enc_attn_mask, 
+                                   self_attn_mask=enc_self_attn_mask, 
                                    self_pos_ids=enc_pos_ids,
                                    past_pos_ids=enc_pos_ids)      
         enc_output = enc_outputs["output"]
@@ -521,20 +539,21 @@ class TransformerSeq2seq(nn.Module):
         dec_pos_ids = states[0].ne(self.PAD).cumsum(-1) - 1         
         dec_kv_list = self.decoder.cache_dec_kv()
         past_pos_ids = dec_pos_ids
-        dec_enc_attn_mask = None
-        if len(inputs) > 1 and inputs[1] is not None: 
-            y = inputs[1][:, :-1].clone()
-            states[0] = inputs[1][:,-1][:,None].clone() 
-            states[4] = inputs[1].clone()
+        
+        prefix = inputs.get("y", None)
+        if prefix is not None:
+            y = prefix[:, :-1].clone()
+            states[0] = prefix[:,-1][:,None].clone() 
+            states[4] = prefix.clone()
             
             dec_pos_ids = y.ne(self.PAD).cumsum(-1) - 1 
             
-            dec_self_attn_mask = self.get_subsequent_mask(y)
+            y_mask = self.get_seq_mask(y)
             
-            dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y, y)
+            dec_self_attn_mask = self.get_subsequent_mask(y_mask)            
+            dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y_mask, y_mask)
             
-            if self.use_vit_encoder == False:
-                dec_enc_attn_mask = self.get_attn_mask(y, x)
+            dec_enc_attn_mask = self.get_attn_mask(y_mask, x_mask)
             
             trg_embedding = None
             if self.share_src_trg_emb == True:
@@ -551,8 +570,9 @@ class TransformerSeq2seq(nn.Module):
             past_pos_ids = dec_pos_ids
             dec_pos_ids = dec_pos_ids[:,-1][:,None] + 1 
             past_pos_ids = torch.cat([past_pos_ids, dec_pos_ids], -1)
-        if self.use_vit_encoder == False:
-            dec_enc_attn_mask = x.eq(self.PAD).unsqueeze(1).byte()
+        
+        y_mask = self.get_seq_mask(states[0])
+        dec_enc_attn_mask = self.get_attn_mask(y_mask, x_mask)
         
         cache = [enc_kv_list, dec_kv_list, dec_enc_attn_mask, enc_pos_ids, dec_pos_ids, past_pos_ids]
         
@@ -669,15 +689,13 @@ class TransformerLM(nn.Module):
         """
         y = inputs["y"]
         
-        if len(inputs) > 1 and inputs[1] is not None:
-            dec_self_attn_mask = inputs[1]
-        else:
+        dec_self_attn_mask = inputs.get("attn_mask", None)
+        if dec_self_attn_mask is None:
             dec_self_attn_mask = self.get_subsequent_mask(y)
             dec_self_attn_mask = dec_self_attn_mask | self.get_attn_mask(y, y)            
-            
-        if len(inputs) > 2 and inputs[2] is not None:
-            self_pos_ids = inputs[2]
-        else:
+        
+        self_pos_ids = inputs.get("pos_ids", None)
+        if self_pos_ids is None:
             self_pos_ids = y.ne(self.PAD).cumsum(-1) - 1
         
         dec_outputs = self.decoder(y, 
@@ -701,11 +719,11 @@ class TransformerLM(nn.Module):
         dec_kv_list = self.decoder.cache_dec_kv()
         past_pos_ids = self_pos_ids
         
-        if len(inputs) > 0 and inputs[0] is not None:
-
-            y = inputs[0][:,:-1].clone() 
-            states[0] = inputs[0][:,-1][:,None].clone() 
-            states[4] = inputs[0].clone() 
+        prefix = inputs.get("y", None)
+        if prefix is not None:
+            y = prefix[:,:-1].clone() 
+            states[0] = prefix[:,-1][:,None].clone() 
+            states[4] = prefix.clone() 
             
             self_pos_ids = y.ne(self.PAD).cumsum(-1) - 1
             
@@ -872,10 +890,27 @@ class TransformerEncoder(nn.Module):
             if weight is not None:
                 weight.data.zero_()
                 
+
+    def get_seq_mask(self, seq, seq_len=None):
+        """
+        """
+        mask = None
+        if seq_len is None:
+            if seq.dtype == torch.long:
+                mask = seq.ne(self.PAD)
+            return mask
+        bz, len_seq = seq.size(0), seq.size(1)
+        mask = (torch.arange(len_seq).unsqueeze(0).repeat(bz, 1) < self.PAD).int()
+        mask = mask.to(seq.device)
+        return mask
+
                 
     def get_attn_mask(self, seq_query, seq_key):
         """
         """
+        if seq_query is None or seq_key is None:
+            return None
+        
         len_query = seq_query.size(1)
         mask = seq_key.eq(self.PAD)
         mask = mask.unsqueeze(1).repeat(1, len_query, 1)
@@ -886,9 +921,13 @@ class TransformerEncoder(nn.Module):
     def get_emission(self, x):
         """
         """
-        enc_self_attn_mask = self.get_attn_mask(x, x)
-        self_pos_ids = x.ne(self.PAD).cumsum(-1)-1
- 
+        x_mask = self.get_seq_mask(x, inputs.get("x_len", None))
+        enc_self_attn_mask = self.get_attn_mask(x_mask, x_mask)
+        if self.use_vit_encoder == True:
+            enc_pos_ids = torch.arange(self.src_max_len).repeat([x.size(0), 1]).to(x.device)
+        else:
+            enc_pos_ids = torch.arange(x.size(1)).repeat([x.size(0), 1]).to(x.device)
+        
         enc_outputs = self.encoder(x, enc_self_attn_mask, self_pos_ids=self_pos_ids)
         enc_output = enc_outputs["output"]
         
@@ -908,18 +947,17 @@ class TransformerEncoder(nn.Module):
         if self.n_types is not None:
             type_ids = inputs["type_ids"]
 
-        if self.use_vit_encoder == False and self.src_vocab_size is not None:
-            enc_self_attn_mask = self.get_attn_mask(x, x)
-            self_pos_ids = x.ne(self.PAD).cumsum(-1)-1
-            enc_outputs = self.encoder(x, 
-                                       enc_self_attn_mask,
-                                       self_pos_ids=self_pos_ids, 
-                                       past_pos_ids=self_pos_ids, 
-                                       type_ids=type_ids)
+        x_mask = self.get_seq_mask(x, inputs.get("x_len", None))
+        enc_self_attn_mask = self.get_attn_mask(x_mask, x_mask)
+        if self.use_vit_encoder == True:
+            enc_pos_ids = torch.arange(self.src_max_len).repeat([x.size(0), 1]).to(x.device)
         else:
-            pos_ids = torch.arange(self.src_max_len).repeat([x.size(0), 1]).to(x.device)
-
-            enc_outputs = self.encoder(x, self_pos_ids=pos_ids)
+            enc_pos_ids = torch.arange(x.size(1)).repeat([x.size(0), 1]).to(x.device)
+        enc_outputs = self.encoder(x, 
+                                   enc_self_attn_mask,
+                                   self_pos_ids=enc_pos_ids, 
+                                   past_pos_ids=enc_pos_ids, 
+                                   type_ids=type_ids) 
 
         enc_output = enc_outputs["output"]   
         mlm_enc_output = enc_output
@@ -941,12 +979,7 @@ class TransformerEncoder(nn.Module):
 
             outputs["cls_output"] = enc_output
             outputs["cls_logits"] = enc_output[:,0,:] 
-        
-        if self.crf is not None:
-            mask = x.ne(self.PAD).to(enc_output.dtype)
-            nlg = self.crf(enc_output, inputs[1], mask)
-            outputs["crf_nlg"] = nlg
-        
+                
         if self.with_mlm == True:
             enc_output = F.linear(mlm_enc_output, self.W_mlm) + self.b_mlm
             
@@ -957,13 +990,19 @@ class TransformerEncoder(nn.Module):
             if self.share_emb_out_proj == False:
                 W = self.W_out_mlm
             else:
-                W = self.encoder.src_embedding.get_embedding().T
+                W = self.encoder.word_embedding.get_embedding().T
             
             logits = torch.matmul(enc_output, W) + self.b_out_mlm
 
             outputs["mlm_logits"] = logits
         
         if compute_loss == True:
+            
+            if self.crf is not None:
+                mask = x.ne(self.PAD).to(enc_output.dtype)
+                nlg = self.crf(enc_output, targets["labels"], mask)
+                outputs["crf_nlg"] = nlg
+            
             loss = self.loss_fn(outputs, targets)
             outputs["loss"] = loss
         
@@ -1006,8 +1045,8 @@ class CLIP(nn.Module):
         """
         img, text = inputs["img"], inputs["text"]
               
-        img_outputs = self.img_encoder([img])
-        text_outputs = self.text_encoder([text])
+        img_outputs = self.img_encoder({"x":img})
+        text_outputs = self.text_encoder({"x":text})
 
         outputs = {}
         outputs["img_outputs"] = img_outputs
@@ -1157,7 +1196,9 @@ def build_model(config, load_model_path=None):
             model = MAE(**config)
         else:
             raise ValueError("model not correct!")  
-            
+    else:
+        raise ValueError("model not correct!")  
+        
     if load_model_path is not None:
         model = load_model_weights(model, load_model_path)
      

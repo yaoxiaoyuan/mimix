@@ -19,10 +19,10 @@ def eval_acc(model, generator):
         for inputs,targets in generator():
             outputs = model(inputs)
             pred = outputs["cls_logits"]
-            shot = torch.sum(pred.argmax(1) == targets[0].view(-1))
+            shot = torch.sum(pred.argmax(1) == targets["labels"].view(-1))
                 
             shot_count = shot_count + shot.item()
-            total_count = total_count + targets[0].size(0)
+            total_count = total_count + targets["labels"].size(0)
         
     acc = shot_count / total_count
     return {"acc":acc}
@@ -41,9 +41,9 @@ def eval_perplexity(model, generator):
 
             log_probs = torch.gather(F.log_softmax(logits, 2), 
                                      2, 
-                                     targets[0].unsqueeze(-1))
+                                     targets["y_target"].unsqueeze(-1))
             
-            mask = (inputs[0] != model.PAD).float()
+            mask = (inputs["y"] != model.PAD).float()
             seq_len = torch.sum(mask)
             log_probs = torch.sum(mask * log_probs.squeeze(-1))
             sum_log_p = sum_log_p + log_probs.item()

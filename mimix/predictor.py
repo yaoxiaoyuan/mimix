@@ -143,7 +143,7 @@ class EncDecGenerator():
             if self.strategy in ["beam_search", "sample"]:
                 for states, cache in search(self.model, 
                                             self.beam_size, 
-                                            inputs=[x,y],
+                                            inputs={"x":x, "y":y},
                                             device=self.device,
                                             strategy=self.strategy,
                                             top_k=self.top_k,
@@ -194,7 +194,7 @@ class EncDecGenerator():
             if self.strategy in ["beam_search", "sample"]:
                 it = search(self.model, 
                             self.beam_size, 
-                            inputs=[x,y],
+                            inputs={"x":x, "y":y},
                             device=self.device,
                             strategy=self.strategy,
                             top_k=self.top_k,
@@ -457,7 +457,7 @@ class LMGenerator():
             if self.strategy in ["beam_search", "sample"]:
                 for states, cache in search(self.model, 
                                             self.beam_size, 
-                                            inputs=[y],
+                                            inputs={"y":y},
                                             device=self.device,
                                             strategy=self.strategy,
                                             top_k=self.top_k,
@@ -512,7 +512,7 @@ class LMGenerator():
             if self.strategy in ["beam_search", "sample"]:
                 it = search(self.model,
                             self.beam_size,
-                            inputs=[y],
+                            inputs={"y":y},
                             device=self.device,
                             strategy=self.strategy,
                             top_k=self.top_k,
@@ -969,7 +969,7 @@ class ClipMatcher():
 
         if self.use_cuda == True:
             if x is not None:
-                x = y.to(self.device)
+                x = x.to(self.device)
         
         return x
 

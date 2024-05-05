@@ -1,28 +1,18 @@
 # Mimix: A Text Generation Tool and Pretrained Chinese Models  
 
-Mimix is a tool for text generation based on Pytorch.  Mimix support following Tasks:
+Mimix is a tool for text generation based on Pytorch.  For single task, I have trained some Chinese text  generation Models which are listed in Single Task Models section. Each of the model can only do a single task.  The sizes of these models' parameters vary from 50 million to 370 million. Thus they can easily run on a laptop without GPU. You can follow the instructions to run the demo. 
 
-1. Text to text
-2. Text-text match  
-3. MLM
-4. Text classification
-5. Image to text
-6. Image-text match
-7. Image  classification
-8. MAE 
-
-For single task, I have trained some Chinese text  generation Models which are listed in Single Task Models section. Each of the model can only do a single task.  The sizes of these models' parameters vary from 50 million to 370 million. Thus they can easily run on a laptop without GPU. You can follow the instructions to run the demo. 
-
-I also trained small Chinese LLMs MimixLM-0.7b-sft and MimixLM-0.4bx4-moe-sft. You are welcome to try them out. 
-
- **You must follow the agreement to use the model. Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/agreement/Mimix%20Model%20Release%20Agreement.docx).** 
+I also trained small Chinese LLMs MimixLM-0.7b-sft and MimixLM-0.4bx4-moe-sft. You are welcome to try them out. **You must follow the agreement to use the model. Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/agreement/Mimix%20Model%20Release%20Agreement.docx).** 
 
 ### MimixLM
 
 1. Download model you want to use from below links and place conf and model in the corresponding folder. 
-2. Run python chat.py --model_conf path/to/conf to play with it. 
 
-Start a new session at any time by typing ":restart" and pressing Enter.
+2. Run command: python chat.py --model_conf path/to/conf to play with it.  
+
+   Example: python chat.py --model_conf conf/MimixLM-0.7b-sft-0.3_conf
+
+Start a new session at any time by typing ":restart" and pressing Enter. 
 
 | Architecture  | MimixLM-0.7b-sft      | MimixLM-0.4bx4-moe-sft |
 | ------------- | --------------------- | ---------------------- |
@@ -36,18 +26,6 @@ Start a new session at any time by typing ":restart" and pressing Enter.
 | pos_embedding | RoPE                  | RoPE                   |
 | activation    | SwiGLU                | SwiGLU                 |
 
-![mimix](image/mimix.png)
-
-Run commands: 
-
-1. python chat.py --model_conf conf/MimixLM-0.7b-sft_conf
-
-2. python chat.py --model_conf conf/MimixLM-0.7b-sft-0.2_conf
-
-3. python chat.py --model_conf conf/MimixLM-0.7b-sft-0.3_conf
-
-4. python chat.py --model_conf conf/MimixLM-0.4bx4-sft_conf
-
 Download link：
 
 Google: https://drive.google.com/drive/folders/1vEdWMGc0wUysA3RHVINaRjlvixkYba_3?usp=sharing
@@ -55,6 +33,8 @@ Google: https://drive.google.com/drive/folders/1vEdWMGc0wUysA3RHVINaRjlvixkYba_3
 or
 
 Baidu: https://pan.baidu.com/s/1Cqo0CAHy7J5W1mlzFuU2WQ?pwd=d0tm 
+
+![mimix](image/mimix.png)
 
 ### TODO LIST
 

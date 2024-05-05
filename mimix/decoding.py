@@ -105,8 +105,11 @@ def search(model,
     """
     """ 
     batch_size = 1
-    if len(inputs) > 0 and inputs[0] is not None:
-        batch_size = inputs[0].size(0)
+    if inputs is not None:
+        if inputs.get("x", None) is not None:
+            batch_size = inputs["x"].size(0)
+        elif inputs.get("y", None) is not None:
+            batch_size = inputs["y"].size(0)
     
     states = init_search(model, batch_size, device)
 
