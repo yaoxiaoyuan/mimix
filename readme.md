@@ -1,6 +1,6 @@
 # Mimix: A Text Generation Tool and Pretrained Chinese Models  
 
-Mimix is a tool for text generation based on Pytorch.  For single task, I have trained some Chinese text  generation Models which are listed in Single Task Models section. Each of the model can only do a single task.  The sizes of these models' parameters vary from 50 million to 370 million. Thus they can easily run on a laptop without GPU. You can follow the instructions to run the demo. 
+Mimix is a tool for text generation based on Pytorch. For single task, I have trained some Chinese text  generation Models which are listed in Single Task Models section. Each of the model can only do a single task.  The sizes of these models' parameters vary from 50 million to 370 million. Thus they can easily run on a laptop without GPU. You can follow the instructions to run the demo. 
 
 I also trained small Chinese LLMs MimixLM-0.7b-sft and MimixLM-0.4bx4-moe-sft. You are welcome to try them out. **You must follow the agreement to use the model. Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/agreement/Mimix%20Model%20Release%20Agreement.docx).** 
 
@@ -8,9 +8,9 @@ I also trained small Chinese LLMs MimixLM-0.7b-sft and MimixLM-0.4bx4-moe-sft. Y
 
 1. Download model you want to use from below links and place conf and model in the corresponding folder. 
 
-2. Run command: python chat.py --model_conf path/to/conf to play with it.  
+2. Run command: python interact.py --model_conf path/to/conf to play with it.  
 
-   Example: python chat.py --model_conf conf/MimixLM-0.7b-sft-0.3_conf
+   Example: python interact.py --model_conf conf/MimixLM-0.7b-sft-0.3_conf
 
 Start a new session at any time by typing ":restart" and pressing Enter. 
 
@@ -585,7 +585,7 @@ Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z
     33. Piano midi generation: python gen_midi.py
             It will generate a midi file in current directory. A generated sample is here: [test.mid](examples/test.mid)
    
-    34. Sudoku BERT: python sudoku.py  (It may failed/get wrong answer on very hard puzzles. Model achieve 92% success rate on hard puzzles test)
+    34. Sudoku BERT: python solve_sudoku.py  (It may failed/get wrong answer on very hard puzzles. Model achieve 92% success rate on hard puzzles test)
    
            1. input:
    
