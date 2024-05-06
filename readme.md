@@ -2,7 +2,7 @@
 
 Mimix is a tool for text generation based on Pytorch. For single task, I have trained some Chinese text  generation Models which are listed in Single Task Models section. Each of the model can only do a single task.  The sizes of these models' parameters vary from 50 million to 370 million. Thus they can easily run on a laptop without GPU. You can follow the instructions to run the demo. 
 
-I also trained small Chinese LLMs MimixLM-0.7b-sft and MimixLM-0.4bx4-moe-sft. You are welcome to try them out. **You must follow the agreement to use the model. Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/agreement/Mimix%20Model%20Release%20Agreement.docx).** 
+I also trained Chinese SLMs MimixLM-0.7b-sft and MimixLM-0.4bx4-moe-sft. You are welcome to try them out. **You must follow the agreement to use the model. Please scan the completed [agreement](https://github.com/yaoxiaoyuan/mimix/blob/main/agreement/Mimix%20Model%20Release%20Agreement.docx).** 
 
 ### MimixLM
 
