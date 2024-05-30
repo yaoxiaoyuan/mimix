@@ -44,9 +44,9 @@ Baidu: https://pan.baidu.com/s/1Cqo0CAHy7J5W1mlzFuU2WQ?pwd=d0tm
 
 ### Contact
 
-Email address can be found in the agreement. 
+Email address can be found in the agreement.  Or you can add my WeChat:
 
-Wechat: ![wechat](image/wechat.jpg)
+ ![wechat](image/wechat.jpg)
 
 ### Cite
 
