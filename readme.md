@@ -93,7 +93,7 @@ Email address can be found in the agreement.  Or you can add my WeChat:
 | piano midi generation | transformer dec-only lm | 89m       | 12       | 768     | 12      | 11k       | 350m      |
 | Sudoku Bert | transformer enc | 300m | 24 | 1024 | 24 | 30m | 5G |
 
-Download link: Please add my wechat to get the download link.
+Download link: Send me an email to get the download link.
 
 ### HOW TO RUN SINGLE TASK MODELS
 
