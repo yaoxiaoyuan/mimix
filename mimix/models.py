@@ -1386,7 +1386,7 @@ def load_model_weights(model, weights_path):
     model_path = real_path(weights_path)
     state_dict = torch.load(model_path,
                             map_location=lambda storage, loc: storage)
-    state_dict = {k.replace("module.",""):state_dict[k] for k in state_dict}
+
     param_dict = {}
     for k,v in model.named_parameters():
         if k in state_dict:

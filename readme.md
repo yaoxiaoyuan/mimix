@@ -44,7 +44,9 @@ Baidu: https://pan.baidu.com/s/1Cqo0CAHy7J5W1mlzFuU2WQ?pwd=d0tm
 
 ### Contact
 
-Email address can be found in the agreement.
+Email address can be found in the agreement. 
+
+Wechat: ![wechat](image/wechat.jpg)
 
 ### Cite
 
@@ -91,7 +93,7 @@ Email address can be found in the agreement.
 | piano midi generation | transformer dec-only lm | 89m       | 12       | 768     | 12      | 11k       | 350m      |
 | Sudoku Bert | transformer enc | 300m | 24 | 1024 | 24 | 30m | 5G |
 
-Download link：https://pan.baidu.com/s/1BJ9we7rs9PYxA_0yqt91pw?pwd=hn7z 
+Download link: Please add my wechat to get the download link.
 
 ### HOW TO RUN SINGLE TASK MODELS
 
