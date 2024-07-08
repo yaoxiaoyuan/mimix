@@ -192,17 +192,19 @@ class FactorizedEmbedding(nn.Module):
 class PositionEmbedding(nn.Module):
     """
     """
-    def __init__(self, max_len, d_model, pos_type="learned"):
+    def __init__(self, max_len, d_model, pos_type="learned", base=10000):
         super(PositionEmbedding, self).__init__()
         self.max_len = max_len
         self.embedding_size = d_model
         self.pos_type = pos_type
-        if pos_type == "sinusoidal":
-            W = torch.zeros(max_len, d_model)
-            for i in range(max_len):
-                for j in range(0, d_model, 2):
-                    W[i, j] = np.sin(i / np.power(10000, j / d_model))
-                    W[i, j + 1] = np.cos(i / np.power(10000, j / d_model))
+        if pos_type == "sinusoidal":  
+                  
+            W = np.zeros([max_len, d_model])
+            angle = np.arange(max_len).reshape([-1,1])/np.power(base, np.arange(0, d_model, 2).reshape(1,-1)/d_model)
+            W[:,0::2] = np.sin(angle)
+            W[:,1::2] = np.cos(angle)
+            W = torch.from_numpy(W).float()
+            
             self.register_buffer('W', W)
         elif pos_type == "learned":
             self.W = nn.Parameter(torch.Tensor(max_len, d_model))
@@ -229,17 +231,19 @@ class PositionEmbedding(nn.Module):
 class RoPE(nn.Module):
     """
     """
-    def __init__(self, max_len, d_qk, pos_type="sinusoidal"):
+    def __init__(self, max_len, d_qk, pos_type="sinusoidal", base=10000):
         super(RoPE, self).__init__()
         self.max_len = max_len
         self.embedding_size = d_qk
         self.pos_type = pos_type
         if pos_type == "sinusoidal":
-            W = torch.zeros(max_len, d_qk)
-            for i in range(max_len):
-                for j in range(0, d_qk, 2):
-                    W[i, j] = np.sin(i / np.power(10000, j / d_qk))
-                    W[i, j + 1] = np.cos(i / np.power(10000, j / d_qk))
+
+            W = np.zeros([max_len, d_qk])
+            angle = np.arange(max_len).reshape([-1,1])/np.power(base, np.arange(0, d_qk, 2).reshape(1,-1)/d_qk)
+            W[:,0::2] = np.sin(angle)
+            W[:,1::2] = np.cos(angle)
+            W = torch.from_numpy(W).float()            
+
             self.register_buffer('W', W)
         elif pos_type == "learned":
             self.W = nn.Parameter(torch.Tensor(max_len, d_qk))
