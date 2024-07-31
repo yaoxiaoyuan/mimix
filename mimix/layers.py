@@ -299,11 +299,12 @@ class RelativePositionEmbedding(nn.Module):
         self.max_relative_len = max_relative_len
         self.pos_type = pos_type
         if pos_type == "sinusoidal":
-            W = torch.zeros(2*max_relative_len+1, d_model)
-            for i in range(2*max_relative_len+1):
-                for j in range(0, d_model, 2):
-                    W[i, j] = np.sin(i / np.power(10000, 2 * j / d_model))
-                    W[i, j + 1] = np.cos(i / np.power(10000, 2 * j / d_model))
+            max_len = 2*max_relative_len + 1
+            W = np.zeros([max_len, d_model])
+            angle = np.arange(max_len).reshape([-1,1])/np.power(base, np.arange(0, d_model, 2).reshape(1,-1)/d_model)
+            W[:,0::2] = np.sin(angle)
+            W[:,1::2] = np.cos(angle)
+            W = torch.from_numpy(W).float()
             self.register_buffer('W', W)
         elif pos_type == "learned":
             self.W = nn.Parameter(torch.Tensor(2*max_relative_len+1, d_model))
