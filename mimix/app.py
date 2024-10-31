@@ -105,6 +105,7 @@ def image2text_app(model):
             model.beam_size = beam_size
             model.group_size = group_size
             model.max_decode_steps = max_decode_steps
+            model.temperature = temperature
             model.repetition_penalty = repetition_penalty
             model.top_k = top_k
             model.top_p = top_p

@@ -29,7 +29,7 @@ class Linear(nn.Module):
         """
         """
         stdv = math.sqrt(6) / np.sqrt(self.d_in + self.d_out)
-        self.W.data.uniform_(-0.1, 0.1)
+        self.W.data.uniform_(-stdv, stdv)
         self.b.data.fill_(0)
 
 
@@ -264,7 +264,7 @@ class RoPE(nn.Module):
             pe = Variable(self.W[pos_ids], requires_grad=False)
         elif self.pos_type == "learned":
             pe = self.W[pos_ids]
-        
+
         #B x L x d_qk -> B x 1 x L x d_qk
         cos_pos = pe[:, :, 1::2].repeat([1, 1, 2]).unsqueeze(2).transpose(1,2)
         sin_pos = pe[:, :, 0::2].repeat([1, 1, 2]).unsqueeze(2).transpose(1,2)
@@ -291,7 +291,7 @@ class RoPE(nn.Module):
 class RelativePositionEmbedding(nn.Module):
     """
     """
-    def __init__(self, max_relative_len, d_model, pos_type="learned"):
+    def __init__(self, max_relative_len, d_model, pos_type="learned", base=10000):
         """
         """
         super(RelativePositionEmbedding, self).__init__()
@@ -656,7 +656,7 @@ def scaled_dot_product_attention(query,
         scores = scores.masked_fill(attn_mask, -1e4)
     
     attn_weight = F.softmax(scores, dim = -1)
-    
+
     if talking_w_post_softmax is not None:
         attn_weight = torch.einsum("bmqk,mn->bnqk", attn_weight, talking_w_post_softmax)
     
@@ -801,7 +801,7 @@ class MultiHeadAttention(nn.Module):
                 query, key = self.rope_emb(query, q_pos_ids, key, kv_pos_ids)
             else:
                 query = self.rope_emb(query, q_pos_ids)
-        
+
         if attn_mask is not None:
             attn_mask = attn_mask.unsqueeze(1).repeat(1, self.n_heads, 1, 1)
         
@@ -865,19 +865,19 @@ class MultiHeadAttention(nn.Module):
         """
         """
         batch_size = x.size(0)
-        
+
         key = F.linear(x, self.W_k)
         value = F.linear(x, self.W_v) 
         if self.use_bias == True:
             key = key + self.b_k
             value = value + self.b_v
-        
+
         key = key.view(batch_size, -1, self.n_kv_heads, self.d_qk).transpose(1, 2)
         value = value.view(batch_size, -1, self.n_kv_heads, self.d_v).transpose(1, 2)
-        
+
         if self.use_rope_embedding == True:
             key = self.rope_emb(key, pos_ids)
-        
+
         return [key, value]
 
 
@@ -1001,10 +1001,10 @@ class TransformerLayer(nn.Module):
 
         if self.layer_scale == "learned":
             init_layer_scale = kwargs.get("init_layer_scale", 1)
-            self.gamma_1 = nn.Parameter(init_values * torch.ones((dim)), requires_grad=True)
-            self.gamma_2 = nn.Parameter(init_values * torch.ones((dim)), requires_grad=True)
+            self.gamma_1 = nn.Parameter(init_layer_scale * torch.ones((self.d_model)), requires_grad=True)
+            self.gamma_2 = nn.Parameter(init_layer_scale * torch.ones((self.d_model)), requires_grad=True)
             if self.with_across_attention == True:
-                self.gamma_3 = nn.Parameter(init_values * torch.ones((dim)), requires_grad=True)
+                self.gamma_3 = nn.Parameter(init_layer_scale * torch.ones((self.d_model)), requires_grad=True)
         
         
     def forward(self, 
@@ -1024,7 +1024,7 @@ class TransformerLayer(nn.Module):
         """
         """
         output = x
-        
+
         residual = output
         if self.use_pre_norm == True:
             output = self.norm_1(output)
@@ -1091,7 +1091,7 @@ class TransformerLayer(nn.Module):
                 output = self.norm_3(output)
             else:
                 output = self.norm_2(output)
-        
+
         if self.use_moe == False:
             output = self.ffn(output)
         else:
@@ -1104,13 +1104,13 @@ class TransformerLayer(nn.Module):
                 output = residual + self.gamma_3 * output
             else:
                 output = residual + self.gamma_2 * output
-            
+
         if self.use_pre_norm == False:
             if self.with_across_attention == True:
                 output = self.norm_3(output)
             else:
                 output = self.norm_2(output)
-  
+
         outputs = {}
         outputs["output"] = output
         outputs["self_attn_weight"] = self_attn_weight

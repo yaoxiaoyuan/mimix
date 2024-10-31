@@ -94,7 +94,7 @@ def text_clustering(model_config, fi_path, fo_path, search_n, threshold, min_siz
     print("text clustering...")
     ann_clustering(fo_path + ".vec", 
                    fo_path + ".clu", 
-                   config["d_model"],
+                   model_config["d_model"],
                    search_n, 
                    threshold,
                    min_size
@@ -162,9 +162,9 @@ def run_clustering():
     text_clustering(model_config, 
                     real_path(args.fi), 
                     real_path(args.fo),
-                    n,
-                    threshold,
-                    min_size)
+                    args.n,
+                    args.threshold,
+                    args.min_size)
 
 
 if __name__ == "__main__":

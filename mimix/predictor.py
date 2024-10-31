@@ -4,6 +4,7 @@ Created on Thu Aug 29 10:34:48 2019
 
 @author: Xiaoyuan Yao
 """
+import json
 import re
 import numpy as np
 import torch
@@ -507,6 +508,7 @@ class LMGenerator():
             prefix_list = [prefix_list[i] for i in range(len(prefix_list))]
             y = self.encode_inputs(prefix_list, add_bos=True, pad_trg_left=True)
             batch_size = len(prefix_list)
+
         self.model.eval()
         with torch.no_grad():
             if self.strategy in ["beam_search", "sample"]:
@@ -816,7 +818,7 @@ class TextEncoder():
         return res
 
 
-    def dump_encode_text(self, fi_path, fo_path):
+    def dump_encode_text(self, fi_path, fo_path, test_batch_size=8):
         """
         """
         fo = open(fo_path, "w", encoding="utf-8")
@@ -834,7 +836,7 @@ class TextEncoder():
         for line in open(fi_path, "r", encoding="utf-8"):
             data = json.loads(line)
             cache.append(data)
-            if len(cache) >= config["test_batch_size"]:
+            if len(cache) >= test_batch_size:
                 process_batch(cache)
                 cache = []
         if len(cache) > 0:

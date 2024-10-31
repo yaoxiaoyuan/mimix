@@ -114,7 +114,7 @@ def search(model,
     states = init_search(model, batch_size, device)
 
     states, cache = model.init_search(states, inputs)
-    
+
     steps = 0
     last_beam_size = 1
     cur_batch_size = batch_size

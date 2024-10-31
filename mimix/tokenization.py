@@ -487,10 +487,8 @@ def build_tokenizer(**args):
     elif args["tokenizer"] == "mimix-cased":
         tokenizer = MimixTokenizer(vocab_file=args["vocab_file"], uncased=False)
     elif args["tokenizer"] == "bert":
-        from mimix.bert_tokenizer import FullTokenizer as bert_tokenizer
         tokenizer = BertTokenizer(vocab_file=args["vocab_file"], uncased=True)
     elif args["tokenizer"] == "bert-cased":
-        from mimix.bert_tokenizer import FullTokenizer as bert_tokenizer
         tokenizer = BertTokenizer(vocab_file=args["vocab_file"], uncased=False)
     else:
         raise ValueError("tokenizer not correct!")
